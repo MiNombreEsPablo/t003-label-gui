@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=T003 Label Printer
+GenericName=Label Printer
+Comment=Print text, QR codes and images to the T003 thermal label printer
+Exec=/home/pablo/code/t003-label-gui/.venv/bin/t003-gui
+Icon=printer
+Terminal=false
+Categories=Graphics;
+Keywords=label;sticker;thermal;printer;qr;

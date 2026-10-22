@@ -3,14 +3,18 @@ from __future__ import annotations
 
 import sys
 
+from pathlib import Path
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QImage, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
+    QComboBox,
     QFileDialog,
     QFormLayout,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QMainWindow,
@@ -23,14 +27,30 @@ from PySide6.QtWidgets import (
 )
 
 from . import core
+from .presets import PresetStore
 
 PREVIEW_SCALE = 2
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"}
+NO_PRESET = "— presets —"
 
 
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("T003 Label Printer")
+        self.setAcceptDrops(True)
+        self.presets = PresetStore()
+
+        self.preset_box = QComboBox()
+        self.preset_box.activated.connect(self.load_preset)
+        save_preset = QPushButton("Save…")
+        save_preset.clicked.connect(self.save_preset)
+        self.delete_preset_button = QPushButton("Delete")
+        self.delete_preset_button.clicked.connect(self.delete_preset)
+        preset_row = QHBoxLayout()
+        preset_row.addWidget(self.preset_box, 1)
+        preset_row.addWidget(save_preset)
+        preset_row.addWidget(self.delete_preset_button)
 
         self.text = QPlainTextEdit()
         self.text.setPlaceholderText("Label text (Enter for a new line)")
@@ -59,6 +79,7 @@ class MainWindow(QMainWindow):
         self.density.setValue(7)
 
         form = QFormLayout()
+        form.addRow("Preset", preset_row)
         form.addRow("Text", self.text)
         form.addRow("QR", self.qr)
         form.addRow("Image", image_row)
@@ -99,6 +120,7 @@ class MainWindow(QMainWindow):
             self.border.toggled,
         ):
             signal.connect(self.refresh_preview)
+        self.reload_presets()
         self.refresh_preview()
 
     def spec(self) -> core.LabelSpec:
@@ -111,6 +133,69 @@ class MainWindow(QMainWindow):
             copies=self.copies.value(),
             density=self.density.value(),
         )
+
+    def set_spec(self, spec: core.LabelSpec) -> None:
+        self.text.setPlainText(spec.text)
+        self.qr.setText(spec.qr)
+        self.image.setText(spec.image_path)
+        self.hard_threshold.setChecked(spec.threshold is not None)
+        if spec.threshold is not None:
+            self.threshold.setValue(spec.threshold)
+        self.border.setChecked(spec.border)
+        self.copies.setValue(spec.copies)
+        self.density.setValue(spec.density)
+
+    def reload_presets(self, select: str | None = None) -> None:
+        self.preset_box.clear()
+        self.preset_box.addItem(NO_PRESET)
+        self.preset_box.addItems(self.presets.names())
+        if select:
+            self.preset_box.setCurrentText(select)
+        self.delete_preset_button.setEnabled(self.preset_box.currentIndex() > 0)
+
+    def load_preset(self, index: int) -> None:
+        self.delete_preset_button.setEnabled(index > 0)
+        spec = self.presets.get(self.preset_box.itemText(index)) if index > 0 else None
+        if spec:
+            self.set_spec(spec)
+            self.status.setText("")
+
+    def save_preset(self) -> None:
+        current = self.preset_box.currentText()
+        name, ok = QInputDialog.getText(
+            self, "Save preset", "Preset name:", text="" if current == NO_PRESET else current
+        )
+        name = name.strip()
+        if not ok or not name or name == NO_PRESET:
+            return
+        self.presets.save(name, self.spec())
+        self.reload_presets(select=name)
+        self.status.setText(f"Saved preset {name!r}.")
+
+    def delete_preset(self) -> None:
+        name = self.preset_box.currentText()
+        if self.preset_box.currentIndex() == 0:
+            return
+        if QMessageBox.question(self, "Delete preset", f"Delete preset {name!r}?") == QMessageBox.Yes:
+            self.presets.delete(name)
+            self.reload_presets()
+
+    @staticmethod
+    def _dropped_image(event) -> str | None:
+        for url in event.mimeData().urls():
+            if url.isLocalFile() and Path(url.toLocalFile()).suffix.lower() in IMAGE_SUFFIXES:
+                return url.toLocalFile()
+        return None
+
+    def dragEnterEvent(self, event) -> None:
+        if self._dropped_image(event):
+            event.acceptProposedAction()
+
+    def dropEvent(self, event) -> None:
+        path = self._dropped_image(event)
+        if path:
+            self.image.setText(path)
+            event.acceptProposedAction()
 
     def pick_image(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Choose image", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp)")
