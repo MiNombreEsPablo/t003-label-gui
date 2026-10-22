@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QSpinBox,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -33,6 +34,21 @@ from .presets import PresetStore
 PREVIEW_SCALE = 2
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"}
 NO_PRESET = "— presets —"
+
+
+LABELS = {"3d": "3D WordArt", "grid": "Graph paper", "dots": "Polka dots", "stars": "Stars", "bevel": "Win95 bevel"}
+
+
+def _choice_box(values, default=None, none_label=None) -> QComboBox:
+    """Combo whose item data is the spec value; none_label adds a leading item with data None."""
+    box = QComboBox()
+    if none_label:
+        box.addItem(none_label, None)
+    for v in values:
+        box.addItem(LABELS.get(v, v.capitalize()), v)
+    if default:
+        box.setCurrentIndex(box.findData(default))
+    return box
 
 
 class MainWindow(QMainWindow):
@@ -52,22 +68,13 @@ class MainWindow(QMainWindow):
         preset_row.addWidget(self.preset_box, 1)
         preset_row.addWidget(save_preset)
         preset_row.addWidget(self.delete_preset_button)
+        preset_form = QFormLayout()
+        preset_form.addRow("Preset", preset_row)
 
+        # Content tab
         self.text = QPlainTextEdit()
         self.text.setPlaceholderText("Label text (Enter for a new line)")
         self.text.setFixedHeight(90)
-        self.font_box = QFontComboBox()
-        self.font_box.setFontFilters(QFontComboBox.ScalableFonts)
-        self.font_box.setCurrentFont(QFont(core.DEFAULT_FONT))
-        self.bold = QCheckBox("Bold")
-        self.bold.setChecked(True)
-        self.align = QComboBox()
-        for name in core.ALIGNMENTS:
-            self.align.addItem(name.capitalize(), name)
-        self.align.setCurrentIndex(core.ALIGNMENTS.index("center"))
-        font_row = QHBoxLayout()
-        font_row.addWidget(self.font_box, 1)
-        font_row.addWidget(self.bold)
         self.qr = QLineEdit()
         self.qr.setPlaceholderText("QR code content (optional)")
         self.image = QLineEdit()
@@ -77,32 +84,70 @@ class MainWindow(QMainWindow):
         image_row = QHBoxLayout()
         image_row.addWidget(self.image)
         image_row.addWidget(browse)
-
         self.hard_threshold = QCheckBox("Hard black/white cutoff (flat-colour art)")
         self.threshold = QSpinBox()
         self.threshold.setRange(0, 255)
         self.threshold.setValue(160)
         self.threshold.setEnabled(False)
         self.hard_threshold.toggled.connect(self.threshold.setEnabled)
-        self.border = QCheckBox("Border")
+
+        content = QFormLayout()
+        content.addRow("Text", self.text)
+        content.addRow("QR", self.qr)
+        content.addRow("Image", image_row)
+        content.addRow("", self.hard_threshold)
+        content.addRow("Cutoff", self.threshold)
+
+        # Text tab
+        self.font_box = QFontComboBox()
+        self.font_box.setFontFilters(QFontComboBox.ScalableFonts)
+        self.font_box.setCurrentFont(QFont(core.DEFAULT_FONT))
+        self.bold = QCheckBox("Bold")
+        self.bold.setChecked(True)
+        self.italic = QCheckBox("Italic")
+        font_row = QHBoxLayout()
+        font_row.addWidget(self.font_box, 1)
+        font_row.addWidget(self.bold)
+        font_row.addWidget(self.italic)
+        self.size = QSpinBox()
+        self.size.setRange(0, 120)
+        self.size.setSpecialValueText("Auto (fit)")
+        self.size.setToolTip("Largest text size in dots; Auto picks the biggest that fits")
+        self.align = _choice_box(core.ALIGNMENTS, default="center")
+        self.valign = _choice_box(core.VALIGNMENTS, default="middle")
+        self.effect = _choice_box(core.EFFECTS)
+
+        text_tab = QFormLayout()
+        text_tab.addRow("Font", font_row)
+        text_tab.addRow("Size", self.size)
+        text_tab.addRow("Align", self.align)
+        text_tab.addRow("Vertical", self.valign)
+        text_tab.addRow("Effect", self.effect)
+
+        # Retro tab
+        self.border_box = _choice_box(core.BORDER_STYLES, none_label="None")
+        self.background = _choice_box(core.BACKGROUNDS)
+        self.bars = QCheckBox("Under-construction bars")
+
+        retro = QFormLayout()
+        retro.addRow("Border", self.border_box)
+        retro.addRow("Background", self.background)
+        retro.addRow("", self.bars)
+
+        tabs = QTabWidget()
+        for title, layout in (("Content", content), ("Text", text_tab), ("Retro", retro)):
+            page = QWidget()
+            page.setLayout(layout)
+            tabs.addTab(page, title)
+
         self.copies = QSpinBox()
         self.copies.setRange(1, 99)
         self.density = QSpinBox()
         self.density.setRange(0, 15)
         self.density.setValue(7)
-
-        form = QFormLayout()
-        form.addRow("Preset", preset_row)
-        form.addRow("Text", self.text)
-        form.addRow("Font", font_row)
-        form.addRow("Align", self.align)
-        form.addRow("QR", self.qr)
-        form.addRow("Image", image_row)
-        form.addRow("", self.hard_threshold)
-        form.addRow("Cutoff", self.threshold)
-        form.addRow("", self.border)
-        form.addRow("Copies", self.copies)
-        form.addRow("Darkness", self.density)
+        output = QFormLayout()
+        output.addRow("Copies", self.copies)
+        output.addRow("Darkness", self.density)
 
         self.print_button = QPushButton("Print")
         self.print_button.setDefault(True)
@@ -111,7 +156,9 @@ class MainWindow(QMainWindow):
         self.status.setWordWrap(True)
 
         controls = QVBoxLayout()
-        controls.addLayout(form)
+        controls.addLayout(preset_form)
+        controls.addWidget(tabs)
+        controls.addLayout(output)
         controls.addWidget(self.print_button)
         controls.addWidget(self.status)
         controls.addStretch()
@@ -128,31 +175,45 @@ class MainWindow(QMainWindow):
 
         for signal in (
             self.text.textChanged,
-            self.font_box.currentFontChanged,
-            self.bold.toggled,
-            self.align.currentIndexChanged,
             self.qr.textChanged,
             self.image.textChanged,
             self.hard_threshold.toggled,
             self.threshold.valueChanged,
-            self.border.toggled,
+            self.font_box.currentFontChanged,
+            self.bold.toggled,
+            self.italic.toggled,
+            self.size.valueChanged,
+            self.align.currentIndexChanged,
+            self.valign.currentIndexChanged,
+            self.effect.currentIndexChanged,
+            self.border_box.currentIndexChanged,
+            self.background.currentIndexChanged,
+            self.bars.toggled,
         ):
             signal.connect(self.refresh_preview)
         self.reload_presets()
         self.refresh_preview()
 
     def spec(self) -> core.LabelSpec:
+        border_style = self.border_box.currentData()
         return core.LabelSpec(
             text=self.text.toPlainText().strip(),
             qr=self.qr.text().strip(),
             image_path=self.image.text().strip(),
             threshold=self.threshold.value() if self.hard_threshold.isChecked() else None,
-            border=self.border.isChecked(),
             copies=self.copies.value(),
             density=self.density.value(),
             font=self.font_box.currentFont().family(),
             bold=self.bold.isChecked(),
+            italic=self.italic.isChecked(),
+            size=self.size.value(),
             align=self.align.currentData(),
+            valign=self.valign.currentData(),
+            effect=self.effect.currentData(),
+            border=border_style is not None,
+            border_style=border_style or "solid",
+            background=self.background.currentData(),
+            bars=self.bars.isChecked(),
         )
 
     def set_spec(self, spec: core.LabelSpec) -> None:
@@ -162,12 +223,17 @@ class MainWindow(QMainWindow):
         self.hard_threshold.setChecked(spec.threshold is not None)
         if spec.threshold is not None:
             self.threshold.setValue(spec.threshold)
-        self.border.setChecked(spec.border)
         self.copies.setValue(spec.copies)
         self.density.setValue(spec.density)
         self.font_box.setCurrentFont(QFont(spec.font))
         self.bold.setChecked(spec.bold)
-        self.align.setCurrentIndex(max(0, self.align.findData(spec.align)))
+        self.italic.setChecked(spec.italic)
+        self.size.setValue(spec.size)
+        for box, value in ((self.align, spec.align), (self.valign, spec.valign), (self.effect, spec.effect),
+                           (self.background, spec.background)):
+            box.setCurrentIndex(max(0, box.findData(value)))
+        self.border_box.setCurrentIndex(max(0, self.border_box.findData(spec.border_style)) if spec.border else 0)
+        self.bars.setChecked(spec.bars)
 
     def reload_presets(self, select: str | None = None) -> None:
         self.preset_box.clear()

@@ -58,8 +58,9 @@ def test_multiline_lines_align_within_block():
 
 def test_font_choice_changes_output_and_resolves():
     import os
-    assert os.path.exists(core.font_path("DejaVu Sans", True))
-    assert core.font_path("DejaVu Sans", True) != core.font_path("DejaVu Sans", False)
+    bold, _ = core.font_path("DejaVu Sans", True)
+    regular, _ = core.font_path("DejaVu Sans", False)
+    assert os.path.exists(bold) and bold != regular
     a = core.render(core.LabelSpec(text="Hello", font="DejaVu Sans"))
     b = core.render(core.LabelSpec(text="Hello", font="Noto Sans Mono", bold=False))
     assert a.tobytes() != b.tobytes()

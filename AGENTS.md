@@ -15,8 +15,10 @@ packaging/install.sh                          # KDE launcher + ~/.local/bin/prin
 
 ## Layout
 
-- `src/t003gui/core.py` — Qt-free: renders a `LabelSpec` to a 1-bit bitmap, builds the TSPL payload, sends it over USB with pyusb. All printing logic lives here.
-- `src/t003gui/app.py` — the Qt window; live preview uses `core.to_bitmap`, so it shows exactly what will print. Supports drag-and-drop of image files and named presets.
+- `src/t003gui/spec.py` — `LabelSpec` dataclass (everything a label can be) plus geometry constants and the allowed choices (`EFFECTS`, `BACKGROUNDS`, `BORDER_STYLES`, …). Presets are `asdict(LabelSpec)`, so new fields must have defaults.
+- `src/t003gui/render.py` — Qt-free drawing: fonts via fontconfig, auto-fit text layers (shadow/outline/3D, synthetic italic), backgrounds, borders, hazard bars, QR. Text is positioned by measured ink bounds, not Pillow's bbox (side-bearings). Over a background pattern text gets a white halo. Nothing may be drawn below `SH` (tests enforce it).
+- `src/t003gui/core.py` — builds the TSPL payload and sends it over USB with pyusb; re-exports spec/render names so callers use `core.X`.
+- `src/t003gui/app.py` — the Qt window; live preview uses `core.to_bitmap`, so it shows exactly what will print. Tabs: Content / Text / Retro. Supports drag-and-drop of image files and named presets.
 - `src/t003gui/presets.py` — Qt-free preset store, JSON at `$XDG_CONFIG_HOME/t003-label-gui/presets.json`. Shared by the GUI and `t003-print --preset NAME`.
 - `src/t003gui/cli.py` — `t003-print`, installed as `~/.local/bin/print-label` by `packaging/install.sh`.
 - `packaging/` — `.desktop` launcher template and the installer (rewrites the Exec path for this checkout).
