@@ -11,6 +11,7 @@ EXAMPLES = r"""
 examples:
   print-label "Hello"                          auto-fit text
   print-label "Line 1\nLine 2" --border        multiple lines
+  print-label "Left" --align left --font "Noto Sans Mono" --no-bold
   print-label "Wi-Fi" --qr "WIFI:S:x;;"        text left, QR right
   print-label --image art.png --threshold 160  hard cutoff, good for flat colours
   print-label --preset shelf --copies 3        saved GUI preset
@@ -29,6 +30,9 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--qr", help="QR code content")
     p.add_argument("--image", help="image file to print")
     p.add_argument("--threshold", type=int, help="image: hard black/white cutoff 0-255 instead of dithering")
+    p.add_argument("--font", help="font family, e.g. 'Noto Sans Mono' (default DejaVu Sans)")
+    p.add_argument("--bold", action=argparse.BooleanOptionalAction, default=None, help="bold text (default on)")
+    p.add_argument("--align", choices=core.ALIGNMENTS, help="text alignment (default center)")
     p.add_argument("--border", action="store_true", help="draw a border")
     p.add_argument("--copies", type=int, help="number of copies (default 1)")
     p.add_argument("--density", type=int, help="darkness 0-15 (default 7)")
@@ -41,7 +45,7 @@ def main(argv: list[str] | None = None) -> None:
         spec = PresetStore().get(args.preset)
         if spec is None:
             p.error(f"no preset named {args.preset!r}")
-    for field in ("text", "qr", "threshold", "copies", "density"):
+    for field in ("text", "qr", "threshold", "copies", "density", "font", "bold", "align"):
         if getattr(args, field) is not None:
             setattr(spec, field, getattr(args, field))
     if args.image:

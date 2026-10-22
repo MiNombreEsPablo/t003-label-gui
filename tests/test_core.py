@@ -29,3 +29,41 @@ def test_image_threshold_removes_light_colours(tmp_path):
     Image.new("RGB", (100, 100), (255, 230, 0)).save(path)
     img = core.render(core.LabelSpec(image_path=str(path), threshold=160))
     assert img.getextrema() == (255, 255)
+
+
+def _ink_extent(img):
+    """(min_x, max_x) of black pixels."""
+    inverted = img.point(lambda v: 255 - v)
+    left, _, right, _ = inverted.getbbox()
+    return left, right - 1
+
+
+def test_alignment_moves_text_block():
+    left = _ink_extent(core.render(core.LabelSpec(text="Hi", align="left")))
+    centre = _ink_extent(core.render(core.LabelSpec(text="Hi", align="center")))
+    right = _ink_extent(core.render(core.LabelSpec(text="Hi", align="right")))
+    assert left[0] <= core.MARGIN + 2
+    assert right[1] >= core.W - core.MARGIN - 2
+    assert left[0] < centre[0] < right[0]
+
+
+def test_multiline_lines_align_within_block():
+    # short line under a long one: left-aligned starts at the block's left edge, right-aligned ends at its right edge
+    spec = core.LabelSpec(text="WWWWWWWW\ni", align="left")
+    left = core.render(spec).crop((0, core.SH // 2 + 20, core.W, core.SH))
+    spec.align = "right"
+    right = core.render(spec).crop((0, core.SH // 2 + 20, core.W, core.SH))
+    assert _ink_extent(left)[0] < _ink_extent(right)[0]
+
+
+def test_font_choice_changes_output_and_resolves():
+    import os
+    assert os.path.exists(core.font_path("DejaVu Sans", True))
+    assert core.font_path("DejaVu Sans", True) != core.font_path("DejaVu Sans", False)
+    a = core.render(core.LabelSpec(text="Hello", font="DejaVu Sans"))
+    b = core.render(core.LabelSpec(text="Hello", font="Noto Sans Mono", bold=False))
+    assert a.tobytes() != b.tobytes()
+
+
+def test_unknown_font_and_bad_align_do_not_crash():
+    core.render(core.LabelSpec(text="x", font="NoSuchFontXYZ", align="sideways"))

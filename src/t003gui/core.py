@@ -7,6 +7,9 @@ Geometry: 58 mm paper, 384 printable dots wide (203 dpi). The label pitch is 240
 """
 from __future__ import annotations
 
+import functools
+import math
+import subprocess
 import time
 from dataclasses import dataclass
 
@@ -20,7 +23,9 @@ EP_OUT, EP_IN = 0x01, 0x82
 W, H = 384, 240  # printable dots; H is the label pitch
 SH = 224  # sticker height in dots
 MARGIN = 8
-FONT_PATHS = ("/usr/share/fonts/TTF/DejaVuSans-Bold.ttf", "DejaVuSans-Bold.ttf")
+DEFAULT_FONT = "DejaVu Sans"
+FALLBACK_FONT_PATHS = ("/usr/share/fonts/TTF/DejaVuSans-Bold.ttf", "DejaVuSans-Bold.ttf")
+ALIGNMENTS = ("left", "center", "right")
 
 STATUS_FLAGS = {0x01: "head open", 0x02: "paper jam", 0x04: "out of paper", 0x08: "out of ribbon", 0x80: "error"}
 
@@ -38,25 +43,57 @@ class LabelSpec:
     border: bool = False
     copies: int = 1
     density: int = 7
+    font: str = DEFAULT_FONT  # family name, resolved through fontconfig
+    bold: bool = True
+    align: str = "center"  # left | center | right: lines within the block and the block within the text area
 
 
-def _font(size: int) -> ImageFont.FreeTypeFont:
-    for path in FONT_PATHS:
+@functools.cache
+def font_path(family: str, bold: bool) -> str:
+    """Font file for a family name via fontconfig (it falls back to a default for unknown names)."""
+    try:
+        out = subprocess.run(
+            ["fc-match", "-f", "%{file}", f"{family}:{'bold' if bold else 'regular'}"],
+            capture_output=True, text=True, timeout=5, check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        out = ""
+    return out or FALLBACK_FONT_PATHS[0]
+
+
+def _font(path: str, size: int) -> ImageFont.FreeTypeFont:
+    for candidate in (path, *FALLBACK_FONT_PATHS):
         try:
-            return ImageFont.truetype(path, size)
+            return ImageFont.truetype(candidate, size)
         except OSError:
             continue
-    raise PrinterError("DejaVu Sans Bold font not found")
+    raise PrinterError(f"cannot load font {path!r}")
 
 
-def _fit_text(draw: ImageDraw.ImageDraw, text: str, box_w: int, box_h: int):
+def _ink_box(text: str, font: ImageFont.FreeTypeFont, align: str):
+    """Real pixel bounds (l, t, r, b) of the rendered text relative to its draw origin.
+
+    textbbox includes glyph side-bearings, so aligning by it leaves a visible gap; render and measure instead.
+    """
+    spacing = font.size // 5
+    probe = ImageDraw.Draw(Image.new("L", (1, 1)))
+    l, t, r, b = (math.ceil(v) for v in probe.multiline_textbbox((0, 0), text, font=font, spacing=spacing, align=align))
+    ox, oy = 4 - min(l, 0), 4 - min(t, 0)
+    canvas = Image.new("L", (r + ox + 4, b + oy + 4), 0)
+    ImageDraw.Draw(canvas).multiline_text((ox, oy), text, font=font, fill=255, spacing=spacing, align=align)
+    il, it, ir, ib = canvas.getbbox() or (ox, oy, ox + 1, oy + 1)
+    return il - ox, it - oy, ir - ox, ib - oy
+
+
+def _fit_text(text: str, path: str, align: str, box_w: int, box_h: int):
+    """Largest font whose ink fits the box; returns (font, ink_box)."""
     for size in range(120, 8, -2):
-        font = _font(size)
-        bbox = draw.multiline_textbbox((0, 0), text, font=font, spacing=size // 5, align="center")
-        if bbox[2] - bbox[0] <= box_w and bbox[3] - bbox[1] <= box_h:
-            return font, bbox
-    font = _font(8)
-    return font, draw.multiline_textbbox((0, 0), text, font=font, align="center")
+        font = _font(path, size)
+        ink = _ink_box(text, font, align)
+        if ink[2] - ink[0] <= box_w and ink[3] - ink[1] <= box_h:
+            return font, ink
+    font = _font(path, 8)
+    return font, _ink_box(text, font, align)
 
 
 def _qr_image(data: str, side: int) -> Image.Image:
@@ -97,10 +134,12 @@ def render(spec: LabelSpec) -> Image.Image:
             img.paste(qimg, ((W - qimg.width) // 2, y))
     if spec.text:
         text = spec.text.replace("\\n", "\n")
-        font, (l, t, r, b) = _fit_text(draw, text, text_w, SH - 2 * MARGIN)
-        x = MARGIN + (text_w - (r - l)) // 2 - l
+        align = spec.align if spec.align in ALIGNMENTS else "center"
+        font, (l, t, r, b) = _fit_text(text, font_path(spec.font, spec.bold), align, text_w, SH - 2 * MARGIN)
+        slack = text_w - (r - l)
+        x = MARGIN - l + {"left": 0, "center": slack // 2, "right": slack}[align]
         y = (SH - (b - t)) // 2 - t
-        draw.multiline_text((x, y), text, font=font, fill=0, spacing=font.size // 5, align="center")
+        draw.multiline_text((x, y), text, font=font, fill=0, spacing=font.size // 5, align=align)
     if spec.border:
         draw.rectangle([1, 1, W - 2, SH - 2], outline=0, width=3)
     return img

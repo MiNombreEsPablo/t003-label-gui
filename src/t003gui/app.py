@@ -6,11 +6,12 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QImage, QPainter, QPixmap
+from PySide6.QtGui import QColor, QFont, QImage, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
+    QFontComboBox,
     QFileDialog,
     QFormLayout,
     QHBoxLayout,
@@ -55,6 +56,18 @@ class MainWindow(QMainWindow):
         self.text = QPlainTextEdit()
         self.text.setPlaceholderText("Label text (Enter for a new line)")
         self.text.setFixedHeight(90)
+        self.font_box = QFontComboBox()
+        self.font_box.setFontFilters(QFontComboBox.ScalableFonts)
+        self.font_box.setCurrentFont(QFont(core.DEFAULT_FONT))
+        self.bold = QCheckBox("Bold")
+        self.bold.setChecked(True)
+        self.align = QComboBox()
+        for name in core.ALIGNMENTS:
+            self.align.addItem(name.capitalize(), name)
+        self.align.setCurrentIndex(core.ALIGNMENTS.index("center"))
+        font_row = QHBoxLayout()
+        font_row.addWidget(self.font_box, 1)
+        font_row.addWidget(self.bold)
         self.qr = QLineEdit()
         self.qr.setPlaceholderText("QR code content (optional)")
         self.image = QLineEdit()
@@ -81,6 +94,8 @@ class MainWindow(QMainWindow):
         form = QFormLayout()
         form.addRow("Preset", preset_row)
         form.addRow("Text", self.text)
+        form.addRow("Font", font_row)
+        form.addRow("Align", self.align)
         form.addRow("QR", self.qr)
         form.addRow("Image", image_row)
         form.addRow("", self.hard_threshold)
@@ -113,6 +128,9 @@ class MainWindow(QMainWindow):
 
         for signal in (
             self.text.textChanged,
+            self.font_box.currentFontChanged,
+            self.bold.toggled,
+            self.align.currentIndexChanged,
             self.qr.textChanged,
             self.image.textChanged,
             self.hard_threshold.toggled,
@@ -132,6 +150,9 @@ class MainWindow(QMainWindow):
             border=self.border.isChecked(),
             copies=self.copies.value(),
             density=self.density.value(),
+            font=self.font_box.currentFont().family(),
+            bold=self.bold.isChecked(),
+            align=self.align.currentData(),
         )
 
     def set_spec(self, spec: core.LabelSpec) -> None:
@@ -144,6 +165,9 @@ class MainWindow(QMainWindow):
         self.border.setChecked(spec.border)
         self.copies.setValue(spec.copies)
         self.density.setValue(spec.density)
+        self.font_box.setCurrentFont(QFont(spec.font))
+        self.bold.setChecked(spec.bold)
+        self.align.setCurrentIndex(max(0, self.align.findData(spec.align)))
 
     def reload_presets(self, select: str | None = None) -> None:
         self.preset_box.clear()
