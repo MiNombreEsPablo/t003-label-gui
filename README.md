@@ -51,14 +51,20 @@ dithering. Regenerate with <code>python packaging/make_screenshots.py</code>.</s
 Downloads are on the [Releases](../../releases) page. Every build runs a self-test (fonts, licences, icons, a Japanese
 render, libusb) in CI before it is published.
 
-| OS | Get | Notes |
-|---|---|---|
-| **Linux** | `T003-Label-Studio-*-x86_64.AppImage` | `chmod +x` and run. Needs `libxcb-cursor0` (Qt 6 on X11). Install the udev rule below so you can use the printer without root. |
-| **Windows** | `…-windows-x64.zip` | Unzip and run `T003 Label Studio.exe`. libusb needs the printer bound to the **WinUSB** driver (e.g. with [Zadig](https://zadig.akeo.ie/)), which stops Windows' own printing to that device. |
-| **macOS** | `…-macos-arm64.zip` | Apple silicon only. The app is unsigned: right-click → Open the first time. |
+| OS | Get | Needs | Notes |
+|---|---|---|---|
+| **Linux** (x86-64) | `T003-Label-Studio-*-x86_64.AppImage` | glibc 2.28 or newer: Ubuntu 20.04+, Debian 10+, RHEL/Alma/Rocky 8+, Fedora, Arch and anything newer | `chmod +x` and run. On X11 it needs `libxcb-cursor0`. If it doesn't start, run it as `./T003-Label-Studio-*.AppImage --appimage-extract-and-run` (no FUSE needed). Install the udev rule below so you can use the printer without root. |
+| **Windows** (x64) | `…-windows-x64.zip` | Windows 10 or 11 | Unzip and run `T003 Label Studio.exe`. libusb needs the printer bound to the **WinUSB** driver (e.g. with [Zadig](https://zadig.akeo.ie/)), which stops Windows' own printing to that device. |
+| **macOS** (Apple silicon or Intel) | `…-macos-arm64.zip` or `…-macos-x86_64.zip` | macOS 12 or newer | The app is unsigned: right-click → Open the first time. |
 
-> **Tested on:** Linux with real hardware. The Windows and macOS builds are produced and self-tested by CI but
-> printing from them has not been tried on a physical machine; reports welcome.
+Not covered by a download? See the pip install below: it works on anything with Python 3.9+ and USB, including
+Linux on ARM (Raspberry Pi), older macOS and Python-capable systems we don't build for.
+
+> **What is tested.** Printing: Linux with real hardware only. Every release build runs its self-test in CI, and the
+> Linux AppImage is self-tested in Ubuntu 20.04 and 24.04, Debian 11 and 12, AlmaLinux 8 and 9, Fedora and Arch
+> containers. The macOS minimum (12) and the Linux minimum (glibc 2.28) are measured on each build, and the build
+> fails if a dependency raises them. Printing from Windows and macOS hasn't been tried on a physical machine, and
+> Windows on ARM should work through x64 emulation but is untested; reports welcome.
 
 **Linux udev rule** (lets your user open the printer):
 ```

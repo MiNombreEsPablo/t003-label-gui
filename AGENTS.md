@@ -23,6 +23,8 @@ python packaging/build.py                     # PyInstaller build for the curren
 - **A wheel needs every data file in `package-data`** (fonts, licences, `assets/*`); an editable install hides a missing one. `test_package_data_covers_every_asset_and_font` and CI's `package` job (build wheel, install it clean, run `--selftest`) guard this.
 - `libusb-package` is only required where it has wheels (Windows, macOS, Linux x86-64/arm64); elsewhere `core._backend()` falls back to the system libusb.
 
+- **Release floors are measured, not claimed**: the Linux AppImage is built inside AlmaLinux 8 with a python-build-standalone Python and `packaging/check_glibc.py --max 2.28` fails the build otherwise (PyInstaller bundles the *build machine's* libraries and libpython, so on the ubuntu-22.04 runner the floor was glibc 2.35, not what Qt's wheels need); the macOS builds run `packaging/check_macos_min.py --max 12.0`. Qt is pinned to 6.8.3 for the binaries in `packaging/build-constraints.txt` (the newest wheels need macOS 14+ / glibc 2.34+). Raising a floor means changing those numbers on purpose, and the README table with them. `smoke-linux` runs the AppImage's self-test in eight distro containers before anything is published.
+
 ## Layout
 
 - `src/t003gui/spec.py` — `LabelSpec` dataclass (everything a label can be) plus geometry constants and the allowed choices (`EFFECTS`, `BACKGROUNDS`, `BORDER_STYLES`, …). Presets are `asdict(LabelSpec)`, so new fields must have defaults.
