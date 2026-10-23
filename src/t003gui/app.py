@@ -10,6 +10,7 @@ from pathlib import Path
 from PySide6.QtCore import QEvent, QObject, QSettings, Qt
 from PySide6.QtGui import (
     QAction,
+    QActionGroup,
     QColor,
     QFont,
     QFontDatabase,
@@ -234,7 +235,7 @@ class MainWindow(QMainWindow):
         self.preview = QLabel()
         self.preview.setObjectName("screen")
         self.preview.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
-        bezel = QFrame()  # a chrome monitor bezel under the Y2K theme, invisible otherwise
+        bezel = QFrame()  # a chrome monitor bezel under the Y2K themes, invisible otherwise
         bezel.setObjectName("bezel")
         bezel_layout = QVBoxLayout(bezel)
         bezel_layout.setContentsMargins(14, 14, 14, 14)
@@ -248,11 +249,16 @@ class MainWindow(QMainWindow):
         container.setLayout(root)
         self.setCentralWidget(container)
 
-        self.y2k_action = QAction("Y2K theme", self, checkable=True)
-        self.y2k_action.toggled.connect(self.apply_theme)
-        self.menuBar().addMenu("&View").addAction(self.y2k_action)
-        self.y2k_action.setChecked(QSettings().value("y2k", True, type=bool))
-        self.apply_theme(self.y2k_action.isChecked())
+        theme_menu = self.menuBar().addMenu("&View").addMenu("&Theme")
+        self.theme_actions: dict[str, QAction] = {}
+        group = QActionGroup(self)
+        for key, label in [(theme.SYSTEM, "System")] + [(t.key, t.title) for t in theme.THEMES.values()]:
+            action = QAction(label, self, checkable=True)
+            action.triggered.connect(lambda _checked=False, key=key: self.apply_theme(key))
+            group.addAction(action)
+            theme_menu.addAction(action)
+            self.theme_actions[key] = action
+        self.apply_theme(self._saved_theme())
 
         for signal in (
             self.text.textChanged,
@@ -300,10 +306,24 @@ class MainWindow(QMainWindow):
             bars=self.bars.isChecked(),
         )
 
-    def apply_theme(self, y2k: bool) -> None:
-        self.setStyleSheet(theme.stylesheet() if y2k else "")  # on the window, not the app: the system file dialog must stay unstyled
-        self.banner.setVisible(y2k)
-        QSettings().setValue("y2k", y2k)
+    @staticmethod
+    def _saved_theme() -> str:
+        settings = QSettings()
+        key = settings.value("theme")
+        if key is None and settings.contains("y2k"):  # setting from before themes were selectable
+            key = theme.DEFAULT_THEME if settings.value("y2k", True, type=bool) else theme.SYSTEM
+        return key if key in theme.THEMES or key == theme.SYSTEM else theme.DEFAULT_THEME
+
+    def apply_theme(self, key: str) -> None:
+        chosen = theme.THEMES.get(key)
+        key = chosen.key if chosen else theme.SYSTEM
+        # On the window, not the app: the system file dialog must stay unstyled
+        self.setStyleSheet(theme.stylesheet(chosen) if chosen else "")
+        self.banner.setVisible(chosen is not None)
+        if chosen:
+            self.banner.set_style(chosen.banner)
+        self.theme_actions[key].setChecked(True)
+        QSettings().setValue("theme", key)
 
     def populate_fonts(self, show_all: bool = False) -> None:
         """Curated, grouped list by default; every installed family on request. The current font is kept."""

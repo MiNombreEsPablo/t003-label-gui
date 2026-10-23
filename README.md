@@ -17,7 +17,7 @@ Japanese (日本語).
   synthwave sun, matrix rain, halftone. **Borders:** solid, double, dotted, checker, Win95 bevel, marquee lights,
   cyber panel, HUD brackets, ruler ticks. **Bars:** under-construction hazard stripes.
 - **QR codes, images** (dithered or hard threshold, drag and drop), copies, darkness, saved **presets**.
-- A Y2K candy-plastic theme (View menu) or the plain platform look.
+- Themes (View > Theme): Y2K candy plastic in blue or pink, gunmetal with LCD-green text, or the plain platform look.
 - A CLI with the same options: `t003-print "NEON\nNIGHTS" --effect neon --frame brackets`.
 
 ## Install
@@ -61,6 +61,7 @@ The T003 speaks TSPL over a plain USB printer interface. The app renders a 384×
 Rough ideas, in no particular order and with no promised dates.
 
 **GUI**
+- [ ] More themes (Win95/98 grey) and user-defined colour themes
 - [ ] Undo/redo and a recent-labels history
 - [ ] Print several copies and batch-print from a CSV
 - [ ] Preset import/export

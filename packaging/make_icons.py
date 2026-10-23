@@ -47,13 +47,14 @@ def mark() -> None:
 
 
 def arrows() -> None:
-    """Small navy chevrons for combo/spin-box buttons in the Y2K theme (anti-aliased via 4x supersampling)."""
-    for name, points in (("arrow-down", [(0, 0), (12, 0), (6, 7)]), ("arrow-up", [(0, 7), (12, 7), (6, 0)])):
-        big = Image.new("RGBA", (48, 32), (0, 0, 0, 0))
-        from PIL import ImageDraw
+    """Small navy chevrons for combo/spin-box buttons in the Y2K themes (anti-aliased via 4x supersampling)."""
+    from PIL import ImageDraw
 
-        ImageDraw.Draw(big).polygon([(x * 4, y * 4 + 2) for x, y in points], fill=(11, 42, 99, 255))
-        big.resize((12, 8), Image.LANCZOS).save(ROOT / f"src/t003gui/assets/{name}.png")
+    for suffix, color in (("", (11, 42, 99, 255)), ("-plum", (90, 15, 61, 255)), ("-lcd", (0, 224, 0, 255))):  # Y2K Blue navy, Y2K Pink plum, Gunmetal LCD green
+        for name, points in (("arrow-down", [(0, 0), (12, 0), (6, 7)]), ("arrow-up", [(0, 7), (12, 7), (6, 0)])):
+            big = Image.new("RGBA", (48, 32), (0, 0, 0, 0))
+            ImageDraw.Draw(big).polygon([(x * 4, y * 4 + 2) for x, y in points], fill=color)
+            big.resize((12, 8), Image.LANCZOS).save(ROOT / f"src/t003gui/assets/{name}{suffix}.png")
 
 
 def main() -> None:
