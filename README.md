@@ -70,11 +70,7 @@ The T003 speaks TSPL over a plain USB printer interface. The app renders a 384×
 Ordered by priority, with no promised dates. Several ideas are inspired by 90s handheld cameras and their thermal
 printers.
 
-**Now** (the next release)
-- [x] Image and text on one label: the picture beside, above, below or behind the text
-- [x] An Image panel: choice of dither (Floyd–Steinberg, ordered/Bayer, hard threshold), brightness, contrast and gamma
-- [x] Image looks: pixelate (chunky low-res), mirror, flip, invert
-- [x] A four-shade green "handheld" theme
+**Now**
 - [ ] Screenshots in this README
 
 **Next**
