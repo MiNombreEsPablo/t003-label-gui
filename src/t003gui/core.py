@@ -5,6 +5,7 @@ description in spec.py; both are re-exported so `core` stays the one import for 
 """
 from __future__ import annotations
 
+import ctypes
 import time
 
 import usb.core
@@ -65,7 +66,11 @@ def backend_problem() -> str:
 
         found = libusb_package.find_library("usb-1.0")
         if libusb1.get_backend(find_library=libusb_package.find_library) is None:
-            return f"libusb-package found {found!r} but pyusb could not load it"
+            try:
+                ctypes.CDLL(found)
+            except OSError as e:  # the dynamic loader's own explanation, e.g. a missing system library
+                return f"libusb-package found {found!r} but it will not load: {e}"
+            return f"libusb-package found {found!r}, which loads, but pyusb rejected it (pyusb {usb.__version__})"
         return ""
     except Exception as e:
         return f"{type(e).__name__}: {e}"
