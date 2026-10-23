@@ -50,8 +50,16 @@ QWidget#root {{ background: transparent; }}
 QLabel {{ background: transparent; }}
 
 QTabWidget::pane {{
-    border: 2px solid {EDGE}; border-radius: 12px; top: -2px;
+    border: 2px solid {EDGE}; border-radius: 12px; border-top-left-radius: 0; top: -2px;
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffffff, stop:1 #e3f3ff);
+}}
+QGroupBox {{
+    margin-top: 11px; border: 2px solid {EDGE}; border-radius: 12px;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffffff, stop:1 #e3f3ff);
+}}
+QGroupBox::title {{
+    subcontrol-origin: margin; subcontrol-position: top left; left: 14px; padding: 1px 12px;
+    border: 2px solid {EDGE}; border-radius: 10px; background: {GEL}; font-weight: bold;
 }}
 QTabBar::tab {{
     padding: 5px 16px; margin-right: 3px; font-weight: bold;
@@ -60,7 +68,7 @@ QTabBar::tab {{
 }}
 QTabBar::tab:!selected {{ margin-top: 3px; color: #3a6aa8; background: {GEL_OFF}; }}
 QTabBar::tab:hover:!selected {{ background: {GEL_HOT}; }}
-QTabBar::tab:selected {{ background: {_gel("#ffffff", "#ffffff", "#f4faff", "#e3f3ff")}; }}
+QTabBar::tab:selected {{ background: #ffffff; }}  /* same as the top of the pane, so tab and pane read as one piece */
 
 QPushButton {{
     padding: 5px 14px; font-weight: bold; border: 2px solid {EDGE}; border-radius: 13px; background: {GEL};

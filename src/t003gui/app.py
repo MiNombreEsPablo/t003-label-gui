@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QCompleter,
     QFileDialog,
     QFrame,
+    QGroupBox,
     QFormLayout,
     QHBoxLayout,
     QInputDialog,
@@ -116,7 +117,8 @@ class MainWindow(QMainWindow):
         self.qr = QLineEdit()
         self.qr.setPlaceholderText("QR code content (optional)")
         self.image = QLineEdit()
-        self.image.setPlaceholderText("Image file (overrides text/QR)")
+        self.image.setPlaceholderText("Image file")
+        self.image.setToolTip("An image overrides the text and QR code")
         browse = QPushButton("Browse…")
         browse.clicked.connect(self.pick_image)
         image_row = QHBoxLayout()
@@ -198,9 +200,18 @@ class MainWindow(QMainWindow):
 
         for spin in (self.threshold, self.size_spin, self.copies, self.density):
             spin.lineEdit().setTextMargins(6, 0, 0, 0)  # QSS padding doesn't reach the inner editor
-        for form in (content, text_tab, retro, output, preset_form):
+        for form in (content, text_tab, retro, output):
             form.setHorizontalSpacing(14)
             form.setVerticalSpacing(8)
+            form.setContentsMargins(12, 12, 12, 12)
+            for row in range(form.rowCount()):  # one label column, so fields line up across tabs and the panel below
+                label = form.itemAt(row, QFormLayout.LabelRole)
+                if label and label.widget():
+                    label.widget().setMinimumWidth(66)
+        preset_form.setHorizontalSpacing(14)
+        output.setContentsMargins(12, 18, 12, 12)  # room for the caption sitting on the frame's top edge
+        output_panel = QGroupBox("Output")
+        output_panel.setLayout(output)
 
         self.print_button = QPushButton("Print")
         self.print_button.setDefault(True)
@@ -211,10 +222,11 @@ class MainWindow(QMainWindow):
 
         self.banner = theme.Banner()
         controls = QVBoxLayout()
+        controls.setSpacing(10)
         controls.addWidget(self.banner)
         controls.addLayout(preset_form)
         controls.addWidget(tabs)
-        controls.addLayout(output)
+        controls.addWidget(output_panel)
         controls.addWidget(self.print_button)
         controls.addWidget(self.status)
         controls.addStretch()
