@@ -117,3 +117,19 @@ def test_font_family_list_matches_fontconfig_names():
         pytest.skip("fontconfig not available")
     assert families == sorted(set(families), key=str.casefold)  # unique, sorted
     assert all(f and "[" not in f and not f.startswith(".") for f in families)  # no foundry tags, no hidden fonts
+
+
+@pytest.mark.parametrize("effect", core.EFFECTS)
+@pytest.mark.parametrize("italic", [False, True])
+def test_text_is_pure_black_and_white_before_dithering(effect, italic):
+    """Anti-aliased gray edges would be turned into scattered dots by the label-wide Floyd-Steinberg pass (ragged,
+    speckled letters). Text layers are binarised, so a text-only label never has gray left to dither."""
+    canvas = core.render(core.LabelSpec(text="Glossy\nOrb", font="Righteous", effect=effect, italic=italic))
+    assert set(canvas.tobytes()) <= {0, 255}
+
+
+def test_text_binarisation_keeps_the_ink():
+    """Thresholding at 50 % coverage must not thin the text out (it keeps about 97 % of the dithered ink)."""
+    spec = core.LabelSpec(text="Shelf 3 Resistors", font="DejaVu Sans", bold=True, size=24)
+    ink = core.to_bitmap(core.render(spec)).convert("L").tobytes().count(0)
+    assert ink > 1500
