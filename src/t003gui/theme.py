@@ -83,15 +83,16 @@ QLineEdit, QPlainTextEdit, QSpinBox, QComboBox {{
 QLineEdit:focus, QPlainTextEdit:focus, QSpinBox:focus, QComboBox:focus {{ border-color: #ff8a00; }}
 QLineEdit:disabled, QSpinBox:disabled {{ background: #eef2f7; color: #8da2bb; border-color: #aebfd3; }}
 
-QComboBox {{ padding-right: 30px; }}
+QComboBox {{ padding-right: 30px; combobox-popup: 0; }}
 QComboBox::drop-down {{
     subcontrol-origin: padding; subcontrol-position: top right; width: 26px;
     border-left: 2px solid {EDGE}; border-top-right-radius: 7px; border-bottom-right-radius: 7px; background: {GEL};
 }}
 QComboBox::down-arrow {{ image: url({arrows}/arrow-down.png); width: 12px; height: 8px; }}
 QSpinBox {{ padding-right: 26px; }}
+QSpinBox QLineEdit {{ border: none; background: transparent; padding: 0; }}
 QSpinBox::up-button, QSpinBox::down-button {{
-    subcontrol-origin: border; width: 22px; border-left: 2px solid {EDGE}; background: {GEL};
+    subcontrol-origin: padding; width: 22px; border-left: 2px solid {EDGE}; background: {GEL};
 }}
 QSpinBox::up-button {{ subcontrol-position: top right; border-top-right-radius: 7px; border-bottom: 1px solid {EDGE}; }}
 QSpinBox::down-button {{ subcontrol-position: bottom right; border-bottom-right-radius: 7px; }}
@@ -109,8 +110,11 @@ QCheckBox::indicator:disabled {{ border-color: #aebfd3; background: #e4e9f0; }}
 
 QAbstractItemView {{
     background: #ffffff; border: 2px solid {EDGE}; selection-background-color: {SKY}; selection-color: #ffffff;
-    outline: 0;
+    outline: 0; color: {NAVY};
 }}
+QAbstractItemView::item {{ color: {NAVY}; padding: 3px 6px; min-height: 20px; }}
+QAbstractItemView::item:selected {{ background: {SKY}; color: #ffffff; }}
+QComboBox QAbstractItemView {{ background: #ffffff; color: {NAVY}; }}
 QScrollBar:vertical {{ width: 16px; margin: 0; background: #e4f3ff; border-left: 1px solid #9cc7ee; }}
 QScrollBar::handle:vertical {{
     min-height: 28px; margin: 1px; border: 2px solid {EDGE}; border-radius: 7px;
@@ -145,7 +149,7 @@ class Banner(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setFixedHeight(54)
-        self._icon = QPixmap(str(ASSETS / "icon-256.png"))
+        self._icon = QPixmap(str(ASSETS / "icon-mark.png"))
 
     def paintEvent(self, event) -> None:
         p = QPainter(self)
@@ -167,7 +171,7 @@ class Banner(QWidget):
         p.setPen(QPen(QColor("#0b3a8c"), 2))
         p.drawPath(plate)
 
-        p.drawPixmap(int(r.left() + 8), int(r.top() + 4), 40, 40, self._icon)
+        p.drawPixmap(int(r.left() + 8), int(r.top() + 3), 46, 46, self._icon)
 
         font = QFont("Orbitron", 15)
         font.setWeight(QFont.Black)

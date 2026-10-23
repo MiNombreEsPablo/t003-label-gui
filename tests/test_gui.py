@@ -93,6 +93,20 @@ def test_dropping_only_accepts_images(window):
     assert window._dropped_image(drop("/tmp/x.PNG")) == "/tmp/x.PNG"
 
 
+def test_pasting_a_clipboard_image_sets_the_image_path(window, app):
+    from pathlib import Path
+
+    from PySide6.QtGui import QColor, QImage
+
+    img = QImage(20, 10, QImage.Format_RGB32)
+    img.fill(QColor("black"))
+    app.clipboard().setImage(img)
+    assert window.paste_image()
+    assert Path(window.image.text()).exists()
+    app.clipboard().clear()
+    assert not window.paste_image()
+
+
 def test_tabs_exist(window):
     tabs = window.findChild(QTabWidget)
     assert [tabs.tabText(i) for i in range(tabs.count())] == ["Content", "Text", "Retro"]

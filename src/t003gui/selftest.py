@@ -26,7 +26,7 @@ def run() -> int:
                 problems.append(f"missing font file {filename}")
         if not (fonts.FONT_DIR / "LICENSES" / font.license_file).exists():
             problems.append(f"missing licence {font.license_file}")
-    for asset in ("icon-256.png", "arrow-down.png", "arrow-up.png"):
+    for asset in ("icon-256.png", "icon-mark.png", "arrow-down.png", "arrow-up.png"):
         if not (theme.ASSETS / asset).exists():
             problems.append(f"missing asset {asset}")
 

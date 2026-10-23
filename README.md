@@ -56,6 +56,23 @@ The T003 speaks TSPL over a plain USB printer interface. The app renders a 384×
 28 mm stickers), sends it as a TSPL bitmap with pyusb/libusb, and needs no CUPS or kernel driver. See
 [AGENTS.md](AGENTS.md) for the hardware facts and the code layout.
 
+## Roadmap
+
+Rough ideas, in no particular order and with no promised dates.
+
+**GUI**
+- [ ] Undo/redo and a recent-labels history
+- [ ] Print several copies and batch-print from a CSV
+- [ ] Preset import/export
+- [ ] Zoomable preview with a ruler/grid overlay
+
+**Connectivity**
+- [ ] Bluetooth printing (USB only for now)
+- [ ] Windows printing through the spooler, so no Zadig/WinUSB driver is needed
+
+**Platforms**
+- [ ] Hardware testing on Windows and macOS (CI builds them, but they are untested with a printer)
+
 ## Building releases
 
 `python packaging/build.py` builds for the OS it runs on (PyInstaller does not cross-compile).

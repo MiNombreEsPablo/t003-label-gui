@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import sys
+import tempfile
+import time
 
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, Qt
+from PySide6.QtCore import QEvent, QObject, QSettings, Qt
 from PySide6.QtGui import (
     QAction,
     QColor,
@@ -13,6 +15,7 @@ from PySide6.QtGui import (
     QFontDatabase,
     QIcon,
     QImage,
+    QKeySequence,
     QPainter,
     QPixmap,
     QStandardItem,
@@ -89,6 +92,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("T003 Label Studio")
         self.setAcceptDrops(True)
+        QApplication.instance().installEventFilter(self)
         _register_bundled_fonts()
         self.presets = PresetStore()
 
@@ -118,6 +122,10 @@ class MainWindow(QMainWindow):
         image_row = QHBoxLayout()
         image_row.addWidget(self.image)
         image_row.addWidget(browse)
+        paste = QPushButton("Paste")
+        paste.setToolTip("Paste an image from the clipboard (Ctrl+V)")
+        paste.clicked.connect(self.paste_image)
+        image_row.addWidget(paste)
         self.hard_threshold = QCheckBox("Hard black/white cutoff (flat-colour art)")
         self.threshold = QSpinBox()
         self.threshold.setRange(0, 255)
@@ -141,10 +149,11 @@ class MainWindow(QMainWindow):
         self.bold = QCheckBox("Bold")
         self.bold.setChecked(True)
         self.italic = QCheckBox("Italic")
-        font_row = QHBoxLayout()
-        font_row.addWidget(self.font_box, 1)
-        font_row.addWidget(self.bold)
-        font_row.addWidget(self.italic)
+        style_row = QHBoxLayout()
+        style_row.addWidget(self.bold)
+        style_row.addSpacing(12)
+        style_row.addWidget(self.italic)
+        style_row.addStretch(1)
         self.size_spin = QSpinBox()
         self.size_spin.setRange(0, 120)
         self.size_spin.setSpecialValueText("Auto (fit)")
@@ -154,7 +163,8 @@ class MainWindow(QMainWindow):
         self.effect = _choice_box(core.EFFECTS)
 
         text_tab = QFormLayout()
-        text_tab.addRow("Font", font_row)
+        text_tab.addRow("Font", self.font_box)
+        text_tab.addRow("Style", style_row)
         text_tab.addRow("", self.all_fonts)
         text_tab.addRow("Size", self.size_spin)
         text_tab.addRow("Align", self.align)
@@ -185,6 +195,12 @@ class MainWindow(QMainWindow):
         output = QFormLayout()
         output.addRow("Copies", self.copies)
         output.addRow("Darkness", self.density)
+
+        for spin in (self.threshold, self.size_spin, self.copies, self.density):
+            spin.lineEdit().setTextMargins(6, 0, 0, 0)  # QSS padding doesn't reach the inner editor
+        for form in (content, text_tab, retro, output, preset_form):
+            form.setHorizontalSpacing(14)
+            form.setVerticalSpacing(8)
 
         self.print_button = QPushButton("Print")
         self.print_button.setDefault(True)
@@ -370,15 +386,47 @@ class MainWindow(QMainWindow):
                 return url.toLocalFile()
         return None
 
+    def _image_from_mime(self, mime) -> str | None:
+        """Path of an image in `mime`: a dropped file, else raw pixels saved to a temp PNG."""
+        if mime is None:
+            return None
+        for url in mime.urls():
+            if url.isLocalFile() and Path(url.toLocalFile()).suffix.lower() in IMAGE_SUFFIXES:
+                return url.toLocalFile()
+        if mime.hasImage():
+            image = QImage(mime.imageData())
+            if not image.isNull():
+                folder = Path(tempfile.gettempdir()) / "t003-label-gui"
+                folder.mkdir(exist_ok=True)
+                path = folder / f"pasted-{time.time_ns()}.png"
+                if image.save(str(path)):
+                    return str(path)
+        return None
+
     def dragEnterEvent(self, event) -> None:
-        if self._dropped_image(event):
+        mime = event.mimeData()
+        if self._dropped_image(event) or mime.hasImage():
             event.acceptProposedAction()
 
     def dropEvent(self, event) -> None:
-        path = self._dropped_image(event)
+        path = self._image_from_mime(event.mimeData())
         if path:
             self.image.setText(path)
             event.acceptProposedAction()
+
+    def paste_image(self) -> bool:
+        path = self._image_from_mime(QApplication.clipboard().mimeData())
+        if path:
+            self.image.setText(path)
+        return bool(path)
+
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+        # Ctrl+V pastes a clipboard image, but only when there is no text to paste into a field.
+        if event.type() == QEvent.KeyPress and event.matches(QKeySequence.Paste) and self.isActiveWindow():
+            mime = QApplication.clipboard().mimeData()
+            if mime and not mime.hasText() and (mime.hasImage() or mime.hasUrls()) and self.paste_image():
+                return True
+        return super().eventFilter(obj, event)
 
     def pick_image(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Choose image", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp)")
