@@ -88,6 +88,8 @@ Ordered by priority, with no promised dates. Several ideas are inspired by 90s h
 printers.
 
 **Next**
+- [ ] Sliders (with a small value box) for brightness, contrast, gamma, cutoff and pixelate, plus a cache of the decoded
+      photo so dragging stays smooth with phone-sized pictures
 - [ ] Batch-print from a CSV (`{column}` placeholders in the text and QR fields)
 - [ ] Undo/redo, then an album: recent and saved labels as a thumbnail gallery
 - [ ] Stickers and stamps: a built-in set of our own pixel icons (fragile, this side up, warning, arrows, ...) to place on a label
