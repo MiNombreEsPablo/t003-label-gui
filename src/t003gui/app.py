@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QFont, QImage, QPainter, QPixmap
+from PySide6.QtGui import QColor, QFont, QFontDatabase, QImage, QPainter, QPixmap, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
 )
 
 from . import core
+from . import fonts as bundled_fonts
 from .presets import PresetStore
 
 PREVIEW_SCALE = 2
@@ -43,20 +44,19 @@ LABELS = {
 }
 
 
+def _register_bundled_fonts() -> None:
+    """Make Qt aware of the shipped fonts so the picker can preview them even when they aren't installed."""
+    for font in bundled_fonts.BUNDLED:
+        for filename in font.files.values():
+            QFontDatabase.addApplicationFont(str(bundled_fonts.FONT_DIR / filename))
+
+
 def _font_box() -> QComboBox:
-    """Searchable family picker fed by fontconfig, each entry previewed in its own typeface."""
+    """Editable, so any installed family can be typed even when the list shows only the curated set."""
     box = QComboBox()
     box.setEditable(True)
     box.setInsertPolicy(QComboBox.NoInsert)
-    box.setMaxVisibleItems(20)
-    for family in core.list_font_families():
-        box.addItem(family)
-        box.setItemData(box.count() - 1, QFont(family), Qt.FontRole)
-    completer = QCompleter(box.model(), box)
-    completer.setCaseSensitivity(Qt.CaseInsensitive)
-    completer.setFilterMode(Qt.MatchContains)
-    box.setCompleter(completer)
-    box.setCurrentText(core.DEFAULT_FONT)
+    box.setMaxVisibleItems(24)
     return box
 
 
@@ -77,6 +77,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("T003 Label Printer")
         self.setAcceptDrops(True)
+        _register_bundled_fonts()
         self.presets = PresetStore()
 
         self.preset_box = QComboBox()
@@ -121,6 +122,9 @@ class MainWindow(QMainWindow):
 
         # Text tab
         self.font_box = _font_box()
+        self.all_fonts = QCheckBox("Show all installed fonts")
+        self.all_fonts.setToolTip("Off: the curated set that ships with the app. On: every installed family.")
+        self.all_fonts.toggled.connect(self.populate_fonts)
         self.bold = QCheckBox("Bold")
         self.bold.setChecked(True)
         self.italic = QCheckBox("Italic")
@@ -138,6 +142,7 @@ class MainWindow(QMainWindow):
 
         text_tab = QFormLayout()
         text_tab.addRow("Font", font_row)
+        text_tab.addRow("", self.all_fonts)
         text_tab.addRow("Size", self.size)
         text_tab.addRow("Align", self.align)
         text_tab.addRow("Vertical", self.valign)
@@ -211,6 +216,8 @@ class MainWindow(QMainWindow):
             self.bars.toggled,
         ):
             signal.connect(self.refresh_preview)
+        self.populate_fonts(False)
+        self.font_box.setCurrentText(core.DEFAULT_FONT)
         self.reload_presets()
         self.refresh_preview()
 
@@ -235,6 +242,38 @@ class MainWindow(QMainWindow):
             background=self.background.currentData(),
             bars=self.bars.isChecked(),
         )
+
+    def populate_fonts(self, show_all: bool = False) -> None:
+        """Curated, grouped list by default; every installed family on request. The current font is kept."""
+        current = self.font_box.currentText() or core.DEFAULT_FONT
+        model = QStandardItemModel(self.font_box)
+
+        def add(family: str, tip: str = "") -> None:
+            item = QStandardItem(family)
+            item.setFont(QFont(family))
+            item.setToolTip(tip)
+            model.appendRow(item)
+
+        if show_all:
+            for family in core.list_font_families():
+                add(family)
+        else:
+            own_japanese = {f.family for f in bundled_fonts.BUNDLED if f.ja}
+            for category, names in bundled_fonts.categories():
+                header = QStandardItem(f"— {category} —")
+                header.setEnabled(False)
+                model.appendRow(header)
+                for name in names:
+                    add(name, "Has its own Japanese glyphs" if name in own_japanese
+                        else f"Japanese text borrows {bundled_fonts.FALLBACK_JA.family}")
+        self.font_box.blockSignals(True)
+        self.font_box.setModel(model)
+        completer = QCompleter(model, self.font_box)
+        completer.setCaseSensitivity(Qt.CaseInsensitive)
+        completer.setFilterMode(Qt.MatchContains)
+        self.font_box.setCompleter(completer)
+        self.font_box.setCurrentText(current)
+        self.font_box.blockSignals(False)
 
     def set_spec(self, spec: core.LabelSpec) -> None:
         self.text.setPlainText(spec.text)

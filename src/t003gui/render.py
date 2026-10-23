@@ -7,8 +7,10 @@ import random
 import subprocess
 
 import qrcode
+from fontTools.ttLib import TTFont
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps
 
+from . import fonts as bundled_fonts
 from .spec import ALIGNMENTS, BACKGROUNDS, BORDER_STYLES, EFFECTS, H, MARGIN, SH, VALIGNMENTS, W, LabelSpec
 
 FALLBACK_FONT_PATHS = ("/usr/share/fonts/TTF/DejaVuSans-Bold.ttf", "DejaVuSans-Bold.ttf")
@@ -31,7 +33,11 @@ class PrinterError(Exception):
 
 @functools.cache
 def font_path(family: str, bold: bool, italic: bool = False) -> tuple[str, bool]:
-    """(file, has_native_slant) for a family via fontconfig, which falls back for unknown names."""
+    """(file, has_native_slant): a bundled font if the family is one of ours, else fontconfig (which falls back
+    for unknown names)."""
+    bundled = bundled_fonts.bundled_font(family)
+    if bundled:
+        return bundled.pick(bold, italic)
     style = ("bold" if bold else "regular") + (":italic" if italic else "")
     try:
         out = subprocess.run(
@@ -88,6 +94,39 @@ def _font(path: str, size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
     raise PrinterError(f"cannot load font {path!r}")
 
 
+@functools.cache
+def _cmap(path: str) -> frozenset[int] | None:
+    try:
+        return frozenset(TTFont(path, lazy=True, fontNumber=0).getBestCmap() or ())
+    except Exception:  # fontTools raises many types for odd files; unreadable means "assume covered"
+        return None
+
+
+def covers(path: str, ch: str) -> bool:
+    """Does the font file have a glyph for this character?"""
+    cmap = _cmap(path)
+    return cmap is None or ord(ch) in cmap
+
+
+class _FontSet:
+    """A primary font plus a Japanese fallback for the glyphs it lacks (Pillow has no per-glyph fallback)."""
+
+    def __init__(self, path: str, size: int, bold: bool) -> None:
+        self.path, self.size, self.bold = path, size, bold
+        self.primary = _font(path, size, bold)
+        self._fallback_path = bundled_fonts.FALLBACK_JA.pick(bold, False)[0]
+        self._fallback: ImageFont.FreeTypeFont | None = None
+
+    def pick(self, ch: str) -> ImageFont.FreeTypeFont:
+        if ch.isspace() or covers(self.path, ch):
+            return self.primary
+        if covers(self._fallback_path, ch):
+            if self._fallback is None:
+                self._fallback = _font(self._fallback_path, self.size, self.bold)
+            return self._fallback
+        return self.primary  # nothing has it: let the primary draw its own missing-glyph box
+
+
 # --- text --------------------------------------------------------------------------------------------------------
 
 
@@ -104,33 +143,53 @@ def _dots(w: int, h: int) -> Image.Image:
     return Image.frombytes("L", (w, h), b"".join(even if y % 2 == 0 else blank for y in range(h)))
 
 
-def _layout(probe: ImageDraw.ImageDraw, text: str, font, align: str, spacing: int):
-    """Place each line ourselves: [(line, x, y)] and the block's (l, t, r, b).
+def _runs(fs: _FontSet, line: str) -> list[list]:
+    """Split a line into [text, font] runs so each glyph is drawn by a font that has it."""
+    runs: list[list] = []
+    for ch in line:
+        font = fs.pick(ch)
+        if runs and runs[-1][1] is font:
+            runs[-1][0] += ch
+        else:
+            runs.append([ch, font])
+    return runs
+
+
+def _layout(probe: ImageDraw.ImageDraw, text: str, fs: _FontSet, align: str, spacing: int):
+    """Place every run ourselves. Returns (placed, bbox, pitch, line_count), placed = [(run, font, x, baseline, line)].
 
     Pillow's multiline_text widens the line pitch by 2*stroke_width, so a stroked pass (outline, glow, halo)
-    drifts further from the unstroked pass on every line. A fixed pitch keeps all passes registered.
+    drifts further from the unstroked pass on every line. A fixed pitch keeps all passes registered, and
+    baseline anchoring lets runs from different fonts sit on the same line.
     """
-    lines = text.split("\n")
-    pitch = probe.textbbox((0, 0), "A", font=font)[3] + spacing
-    widths = [probe.textlength(line, font=font) for line in lines]
+    primary = fs.primary
+    pitch = probe.textbbox((0, 0), "A", font=primary)[3] + spacing
+    ascent = primary.getmetrics()[0]
+    lines = [_runs(fs, line) for line in text.split("\n")]
+    widths = [sum(probe.textlength(run, font=f) for run, f in runs) for runs in lines]
     block = max(widths)
-    placed = [
-        (line, {"left": 0, "center": (block - lw) / 2, "right": block - lw}[align], i * pitch)
-        for i, (line, lw) in enumerate(zip(lines, widths))
-    ]
-    boxes = [probe.textbbox((x, y), line, font=font) for line, x, y in placed if line.strip()]
+    placed, boxes = [], []
+    for i, (runs, lw) in enumerate(zip(lines, widths)):
+        x = {"left": 0, "center": (block - lw) / 2, "right": block - lw}[align]
+        baseline = i * pitch + ascent
+        for run, f in runs:
+            placed.append((run, f, x, baseline, i))
+            if run.strip():
+                boxes.append(probe.textbbox((x, baseline), run, font=f, anchor="ls"))
+            x += probe.textlength(run, font=f)
     if not boxes:
-        return placed, (0, 0, 1, 1)
-    return placed, tuple(math.ceil(v) for v in (
+        return placed, (0, 0, 1, 1), pitch, len(lines)
+    bbox = tuple(math.ceil(v) for v in (
         min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes)))
+    return placed, bbox, pitch, len(lines)
 
 
-def _text_layer(text, font, align, effect, halo, shear):
+def _text_layer(text, fs, align, effect, halo, shear):
     """Render text with its effect. Returns (value, alpha) cropped to the painted area:
     paste `value` through `alpha` to draw it (value holds the black/white pixels, alpha where they apply)."""
-    spacing = font.size // 5
+    spacing = fs.size // 5
     probe = ImageDraw.Draw(Image.new("L", (1, 1)))
-    lines, (l, t, r, b) = _layout(probe, text, font, align, spacing)
+    lines, (l, t, r, b), pitch, n_lines = _layout(probe, text, fs, align, spacing)
     pad = 12
     ox, oy = pad - min(l, 0), pad - min(t, 0)
     w, h = r + ox + pad, b + oy + pad
@@ -138,9 +197,9 @@ def _text_layer(text, font, align, effect, halo, shear):
     draws = (ImageDraw.Draw(value), ImageDraw.Draw(alpha))
 
     def draw_lines(draw, off, fill, stroke):
-        for line, x, y in lines:
+        for run, font, x, y, _ in lines:
             draw.text(
-                (ox + off[0] + x, oy + off[1] + y), line, font=font, fill=fill,
+                (ox + off[0] + x, oy + off[1] + y), run, font=font, fill=fill, anchor="ls",
                 stroke_width=stroke, stroke_fill=fill,
             )
 
@@ -176,21 +235,21 @@ def _text_layer(text, font, align, effect, halo, shear):
         alpha.paste(255, mask=shadow)
         put((0, 0), 0)
     elif effect == "glitch":
-        unit = max(0.15, font.size / 60)  # displacements scale with the text so small labels stay legible
+        unit = max(0.15, fs.size / 60)  # displacements scale with the text so small labels stay legible
         base = glyph()
         sliced = base.copy()
-        pitch = probe.textbbox((0, 0), "A", font=font)[3] + spacing
-        for i, (_, _, ly) in enumerate(lines):  # displaced horizontal slices on every line, like a bad VHS frame
+        for i in range(n_lines):  # displaced horizontal slices on every line, like a bad VHS frame
+            ly = i * pitch
             for frac, dx in ((0.22, 8), (0.58, -10)):
                 y0 = min(h - 1, oy + ly + int(frac * pitch))
-                y1 = min(h, y0 + max(2, font.size // 10))
+                y1 = min(h, y0 + max(2, fs.size // 10))
                 shift = round((dx if i % 2 == 0 else -dx) * unit)
                 band = base.crop((0, y0, w, y1))
                 sliced.paste(0, (0, y0, w, y1))
                 sliced.paste(band, (shift, y0))
         # the fringe copy and scanline gaps only read at larger sizes; small text keeps just the slice shifts
         ghost = Image.new("L", (w, h), 0)
-        if font.size >= 24:
+        if fs.size >= 24:
             ghost = ImageChops.multiply(glyph((-max(1, round(6 * unit)), 0)), _checker(w, h))  # dithered fringe copy
         union = ImageChops.lighter(ImageChops.lighter(sliced, ghost), base)
         if halo:
@@ -198,7 +257,7 @@ def _text_layer(text, font, align, effect, halo, shear):
         paint(union, 255)
         value.paste(0, mask=ghost)
         value.paste(0, mask=sliced)
-        if font.size >= 30:
+        if fs.size >= 30:
             for y in range(oy, h, max(5, round(6 * unit))):  # thin white scanline gaps through the text
                 value.paste(255, (0, y, w, y + 1), mask=sliced.crop((0, y, w, y + 1)))
     elif effect == "neon":
@@ -212,7 +271,7 @@ def _text_layer(text, font, align, effect, halo, shear):
         if halo:
             put((0, 0), 255, 3)
         put((0, 0), 0)
-        period = max(4, font.size // 9)
+        period = max(4, fs.size // 9)
         gaps = Image.new("L", (w, h), 0)
         gd = ImageDraw.Draw(gaps)
         for y in range(oy, h, period):
@@ -239,7 +298,7 @@ def _fit_text_layer(text, path, bold, shear, align, effect, halo, box_w, box_h, 
         sizes.append(max_size)
 
     def build(size):
-        return _text_layer(text, _font(path, size, bold), align, effect, halo, shear)
+        return _text_layer(text, _FontSet(path, size, bold), align, effect, halo, shear)
 
     best, lo, hi = None, 0, len(sizes) - 1
     while lo <= hi:

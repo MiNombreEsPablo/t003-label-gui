@@ -80,20 +80,19 @@ def _line_tops(mask):
 def test_stroked_effects_stay_registered_on_every_line():
     # outline/3d/neon draw a thickened copy and a plain copy; if their line pitch differs the effect only looks
     # right on line one (Pillow's multiline_text adds 2*stroke_width per line)
-    from PIL import ImageFont
     from t003gui import render
 
-    font = ImageFont.truetype(render.font_path("DejaVu Sans", True)[0], 40)
+    fs = render._FontSet(render.font_path("DejaVu Sans", True)[0], 40, True)
     probe = render.ImageDraw.Draw(Image.new("L", (1, 1)))
-    lines, _ = render._layout(probe, "AAA\nAAA\nAAA", font, "left", 8)
-    pitches = [b[2] - a[2] for a, b in zip(lines, lines[1:])]
+    placed, _, _, _ = render._layout(probe, "AAA\nAAA\nAAA", fs, "left", 8)
+    pitches = [b[3] - a[3] for a, b in zip(placed, placed[1:])]
     assert len(set(pitches)) == 1 and pitches[0] > 0
 
     def tops(stroke):
         m = Image.new("L", (400, 300), 0)
         d = render.ImageDraw.Draw(m)
-        for line, x, y in lines:
-            d.text((20 + x, 20 + y), line, font=font, fill=255, stroke_width=stroke, stroke_fill=255)
+        for run, font, x, y, _ in placed:
+            d.text((20 + x, 20 + y), run, font=font, fill=255, anchor="ls", stroke_width=stroke, stroke_fill=255)
         return _line_tops(m)
 
     plain, thick = tops(0), tops(7)
