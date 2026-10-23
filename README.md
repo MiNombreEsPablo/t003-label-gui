@@ -21,6 +21,8 @@ Japanese (日本語).
   it works on another machine; drop one on the window to open it, or `t003-print --file x.t003label`). File > Export
   image writes the exact 1-bit label as a PNG, at printed size or enlarged 4×.
 - Themes (View > Theme): Y2K candy plastic in blue or pink, gunmetal with LCD-green text, or the plain platform look.
+- Help menu: version, an About box (with a printer-found check) and a manual **Check for updates** that compares your
+  version with the latest GitHub release. It only runs when you ask.
 - A CLI with the same options: `t003-print "NEON\nNIGHTS" --effect neon --frame brackets`.
 
 ## Install
@@ -66,7 +68,7 @@ Rough ideas, in no particular order and with no promised dates.
 **GUI**
 - [ ] More themes (Win95/98 grey) and user-defined colour themes
 - [ ] Undo/redo and a recent-labels history
-- [ ] Print several copies and batch-print from a CSV
+- [ ] Batch-print from a CSV
 - [ ] Zoomable preview with a ruler/grid overlay
 
 **Connectivity**
@@ -80,7 +82,7 @@ Rough ideas, in no particular order and with no promised dates.
 
 `python packaging/build.py` builds for the OS it runs on (PyInstaller does not cross-compile).
 Bump `__version__` in `src/t003gui/__init__.py` first (the About box, `--version` and the package metadata all read it).
-`.github/workflows/release.yml` builds Linux, Windows and macOS on tag push (`git tag v0.1.1 && git push --tags`; the tag must match `__version__`),
+`.github/workflows/release.yml` builds Linux, Windows and macOS on tag push (`git tag v0.2.1 && git push --tags`; the tag must match `__version__`),
 self-tests each, and attaches them to a GitHub release with checksums.
 
 ## Licence
