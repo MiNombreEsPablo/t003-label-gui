@@ -70,3 +70,32 @@ def test_all_combos_render_quickly():
     for effect, bg in itertools.product(("none", "3d"), ("none", "gradient")):
         core.render(core.LabelSpec(text="WELCOME TO MY\nHOMEPAGE", effect=effect, background=bg, italic=True))
     assert time.time() - start < 5
+
+
+def _line_tops(mask):
+    rows = [y for y in range(mask.height) if mask.crop((0, y, mask.width, y + 1)).getbbox()]
+    return [rows[0]] + [b for a, b in zip(rows, rows[1:]) if b - a > 1]
+
+
+def test_stroked_effects_stay_registered_on_every_line():
+    # outline/3d/neon draw a thickened copy and a plain copy; if their line pitch differs the effect only looks
+    # right on line one (Pillow's multiline_text adds 2*stroke_width per line)
+    from PIL import ImageFont
+    from t003gui import render
+
+    font = ImageFont.truetype(render.font_path("DejaVu Sans", True)[0], 40)
+    probe = render.ImageDraw.Draw(Image.new("L", (1, 1)))
+    lines, _ = render._layout(probe, "AAA\nAAA\nAAA", font, "left", 8)
+    pitches = [b[2] - a[2] for a, b in zip(lines, lines[1:])]
+    assert len(set(pitches)) == 1 and pitches[0] > 0
+
+    def tops(stroke):
+        m = Image.new("L", (400, 300), 0)
+        d = render.ImageDraw.Draw(m)
+        for line, x, y in lines:
+            d.text((20 + x, 20 + y), line, font=font, fill=255, stroke_width=stroke, stroke_fill=255)
+        return _line_tops(m)
+
+    plain, thick = tops(0), tops(7)
+    # a thickened copy grows by the same amount around every line, so tops shift by a constant
+    assert len({p - t for p, t in zip(plain, thick)}) == 1

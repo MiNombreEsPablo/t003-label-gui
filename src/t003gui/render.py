@@ -69,32 +69,54 @@ def _dots(w: int, h: int) -> Image.Image:
     return Image.frombytes("L", (w, h), b"".join(even if y % 2 == 0 else blank for y in range(h)))
 
 
+def _layout(probe: ImageDraw.ImageDraw, text: str, font, align: str, spacing: int):
+    """Place each line ourselves: [(line, x, y)] and the block's (l, t, r, b).
+
+    Pillow's multiline_text widens the line pitch by 2*stroke_width, so a stroked pass (outline, glow, halo)
+    drifts further from the unstroked pass on every line. A fixed pitch keeps all passes registered.
+    """
+    lines = text.split("\n")
+    pitch = probe.textbbox((0, 0), "A", font=font)[3] + spacing
+    widths = [probe.textlength(line, font=font) for line in lines]
+    block = max(widths)
+    placed = [
+        (line, {"left": 0, "center": (block - lw) / 2, "right": block - lw}[align], i * pitch)
+        for i, (line, lw) in enumerate(zip(lines, widths))
+    ]
+    boxes = [probe.textbbox((x, y), line, font=font) for line, x, y in placed if line.strip()]
+    if not boxes:
+        return placed, (0, 0, 1, 1)
+    return placed, tuple(math.ceil(v) for v in (
+        min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes)))
+
+
 def _text_layer(text, font, align, effect, halo, shear):
     """Render text with its effect. Returns (value, alpha) cropped to the painted area:
     paste `value` through `alpha` to draw it (value holds the black/white pixels, alpha where they apply)."""
     spacing = font.size // 5
     probe = ImageDraw.Draw(Image.new("L", (1, 1)))
-    l, t, r, b = (math.ceil(v) for v in probe.multiline_textbbox((0, 0), text, font=font, spacing=spacing, align=align))
+    lines, (l, t, r, b) = _layout(probe, text, font, align, spacing)
     pad = 12
     ox, oy = pad - min(l, 0), pad - min(t, 0)
     w, h = r + ox + pad, b + oy + pad
     value, alpha = Image.new("L", (w, h), 255), Image.new("L", (w, h), 0)
     draws = (ImageDraw.Draw(value), ImageDraw.Draw(alpha))
 
+    def draw_lines(draw, off, fill, stroke):
+        for line, x, y in lines:
+            draw.text(
+                (ox + off[0] + x, oy + off[1] + y), line, font=font, fill=fill,
+                stroke_width=stroke, stroke_fill=fill,
+            )
+
     def put(off, fill, stroke=0):
         for draw, f in zip(draws, (fill, 255)):
-            draw.multiline_text(
-                (ox + off[0], oy + off[1]), text, font=font, fill=f, spacing=spacing, align=align,
-                stroke_width=stroke, stroke_fill=f,
-            )
+            draw_lines(draw, off, f, stroke)
 
     def glyph(off=(0, 0), stroke=0):
         """Mask of the plain (optionally thickened) text."""
         m = Image.new("L", (w, h), 0)
-        ImageDraw.Draw(m).multiline_text(
-            (ox + off[0], oy + off[1]), text, font=font, fill=255, spacing=spacing, align=align,
-            stroke_width=stroke, stroke_fill=255,
-        )
+        draw_lines(ImageDraw.Draw(m), off, 255, stroke)
         return m
 
     def paint(mask, fill):
@@ -122,13 +144,15 @@ def _text_layer(text, font, align, effect, halo, shear):
         unit = max(0.15, font.size / 60)  # displacements scale with the text so small labels stay legible
         base = glyph()
         sliced = base.copy()
-        height = b - t
-        for frac, dx in ((0.28, 8), (0.55, -10), (0.78, 6)):  # displaced horizontal slices, like a bad VHS frame
-            y0 = min(h - 1, oy + int(frac * height))
-            y1 = min(h, y0 + max(2, height // 12))
-            band = base.crop((0, y0, w, y1))
-            sliced.paste(0, (0, y0, w, y1))
-            sliced.paste(band, (round(dx * unit), y0))
+        pitch = probe.textbbox((0, 0), "A", font=font)[3] + spacing
+        for i, (_, _, ly) in enumerate(lines):  # displaced horizontal slices on every line, like a bad VHS frame
+            for frac, dx in ((0.22, 8), (0.58, -10)):
+                y0 = min(h - 1, oy + ly + int(frac * pitch))
+                y1 = min(h, y0 + max(2, font.size // 10))
+                shift = round((dx if i % 2 == 0 else -dx) * unit)
+                band = base.crop((0, y0, w, y1))
+                sliced.paste(0, (0, y0, w, y1))
+                sliced.paste(band, (shift, y0))
         # the fringe copy and scanline gaps only read at larger sizes; small text keeps just the slice shifts
         ghost = Image.new("L", (w, h), 0)
         if font.size >= 24:
@@ -140,7 +164,7 @@ def _text_layer(text, font, align, effect, halo, shear):
         value.paste(0, mask=ghost)
         value.paste(0, mask=sliced)
         if font.size >= 30:
-            for y in range(oy, h, max(4, round(5 * unit))):  # thin white scanline gaps through the text
+            for y in range(oy, h, max(5, round(6 * unit))):  # thin white scanline gaps through the text
                 value.paste(255, (0, y, w, y + 1), mask=sliced.crop((0, y, w, y + 1)))
     elif effect == "neon":
         glow = glyph(stroke=7)
@@ -154,11 +178,11 @@ def _text_layer(text, font, align, effect, halo, shear):
             put((0, 0), 255, 3)
         put((0, 0), 0)
         period = max(4, font.size // 9)
-        lines = Image.new("L", (w, h), 0)
-        ld = ImageDraw.Draw(lines)
+        gaps = Image.new("L", (w, h), 0)
+        gd = ImageDraw.Draw(gaps)
         for y in range(oy, h, period):
-            ld.rectangle([0, y, w, y + max(1, period // 3) - 1], fill=255)
-        value.paste(255, mask=ImageChops.multiply(lines, glyph()))
+            gd.rectangle([0, y, w, y + max(1, period // 3) - 1], fill=255)
+        value.paste(255, mask=ImageChops.multiply(gaps, glyph()))
     else:
         if halo:
             put((0, 0), 255, 3)
