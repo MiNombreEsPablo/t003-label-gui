@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import sys
 
-from PySide6.QtCore import QEvent, QObject, QSettings, Qt
+from PySide6.QtCore import QEvent, QObject, QSettings, Qt, QUrl
 from PySide6.QtGui import (
     QAction,
     QActionGroup,
+    QDesktopServices,
     QColor,
     QFontDatabase,
     QIcon,
@@ -31,7 +32,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from . import core, panels, theme
+from . import __version__, about, core, panels, theme, updates
 from . import fonts as bundled_fonts
 from .presets import PresetStore
 
@@ -126,6 +127,15 @@ class MainWindow(QMainWindow):
             self.theme_actions[key] = action
         self.apply_theme(self._saved_theme())
 
+        help_menu = self.menuBar().addMenu("&Help")
+        help_menu.addAction(f"Version {__version__}").setEnabled(False)
+        help_menu.addSeparator()
+        help_menu.addAction("&About T003 Label Studio…", self.show_about)
+        help_menu.addAction("Check for &updates…", self.check_for_updates)
+        help_menu.addAction("&Report an issue…", lambda: self._open_url(about.ISSUES_URL))
+        help_menu.addSeparator()
+        help_menu.addAction("Open &presets folder", lambda: self._open_path(self.presets.path.parent))
+
         for panel in (self.content, self.text_panel, self.retro):
             panel.changed.connect(self.refresh_preview)
         self.reload_presets()
@@ -151,7 +161,7 @@ class MainWindow(QMainWindow):
 
     def apply_theme(self, key: str) -> None:
         chosen = theme.THEMES.get(key)
-        key = chosen.key if chosen else theme.SYSTEM
+        key = self.theme_key = chosen.key if chosen else theme.SYSTEM
         # On the window, not the app: the system file dialog must stay unstyled
         self.setStyleSheet(theme.stylesheet(chosen) if chosen else "")
         self.banner.setVisible(chosen is not None)
@@ -212,6 +222,62 @@ class MainWindow(QMainWindow):
             if mime and not mime.hasText() and (mime.hasImage() or mime.hasUrls()) and self.content.paste_image():
                 return True
         return super().eventFilter(obj, event)
+
+    @staticmethod
+    def _open_url(url: str) -> None:
+        QDesktopServices.openUrl(QUrl(url))
+
+    @staticmethod
+    def _open_path(folder) -> None:
+        folder.mkdir(parents=True, exist_ok=True)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
+
+    @staticmethod
+    def _plain_buttons(box: QMessageBox) -> None:
+        """Message-box buttons are not the primary action: the big orange default style clips their text."""
+        for button in box.buttons():
+            button.setAutoDefault(False)
+            button.setDefault(False)
+
+    def check_for_updates(self) -> None:
+        box = QMessageBox(self)
+        box.setWindowTitle("Check for updates")
+        box.setTextFormat(Qt.RichText)
+        box.setText(f"<p>You have version <b>{__version__}</b>.</p><p>Checking GitHub…</p>")
+        box.addButton(QMessageBox.Close)
+        self._plain_buttons(box)
+        box.setModal(True)
+        box.setAttribute(Qt.WA_DeleteOnClose)  # takes the checker (its child) with it
+        checker = updates.UpdateChecker(parent=box)  # owned by the dialog, gone with it
+
+        def show(result: updates.UpdateResult) -> None:
+            box.setText(updates.describe(__version__, result))
+            if result.kind != "current" and result.url:
+                label = "Download…" if result.kind == "newer" else "Open releases page"
+                button = box.addButton(label, QMessageBox.ActionRole)
+                button.clicked.connect(lambda: self._open_url(result.url))
+                self._plain_buttons(box)
+
+        checker.finished.connect(show)
+        box.open()  # non-blocking: the window stays responsive while the request runs
+        checker.check()
+
+    def show_about(self) -> None:
+        box = QMessageBox(self)
+        box.setWindowTitle("About T003 Label Studio")
+        box.setIconPixmap(QPixmap(str(theme.ASSETS / "icon-256.png")).scaled(
+            96, 96, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        box.setTextFormat(Qt.RichText)
+        box.setTextInteractionFlags(Qt.TextBrowserInteraction)  # clickable repo link
+        active = theme.THEMES.get(self.theme_key)
+        box.setText(about.about_html(core.printer_presence(), len(bundled_fonts.BUNDLED),
+                                     link_color=active.link if active else None))
+        licences = box.addButton("Font licences", QMessageBox.ActionRole)
+        box.addButton(QMessageBox.Close)
+        self._plain_buttons(box)
+        box.exec()
+        if box.clickedButton() is licences:
+            self._open_path(bundled_fonts.FONT_DIR / "LICENSES")
 
     def refresh_preview(self) -> None:
         spec = self.spec()

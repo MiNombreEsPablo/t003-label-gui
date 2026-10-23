@@ -39,14 +39,7 @@ def run() -> int:
     backend = core._backend()
     if backend is None:
         problems.append("no libusb backend found (libusb-package missing from the build?)")
-    printer = "not checked"
-    if backend is not None:  # informational only: CI has no printer, so absence is not a failure
-        try:
-            import usb.core
-
-            printer = "found" if usb.core.find(idVendor=core.VID, idProduct=core.PID, backend=backend) else "not connected"
-        except Exception as e:  # e.g. no USB subsystem in a container
-            printer = f"USB unavailable ({type(e).__name__})"
+    printer = core.printer_presence() if backend is not None else "not checked"  # informational: CI has no printer
 
     if problems:
         _report("selftest FAILED:\n  " + "\n  ".join(problems), error=True)

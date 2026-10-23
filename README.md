@@ -77,7 +77,8 @@ Rough ideas, in no particular order and with no promised dates.
 ## Building releases
 
 `python packaging/build.py` builds for the OS it runs on (PyInstaller does not cross-compile).
-`.github/workflows/release.yml` builds Linux, Windows and macOS on tag push (`git tag v0.1.0 && git push --tags`),
+Bump `__version__` in `src/t003gui/__init__.py` first (the About box, `--version` and the package metadata all read it).
+`.github/workflows/release.yml` builds Linux, Windows and macOS on tag push (`git tag v0.1.1 && git push --tags`; the tag must match `__version__`),
 self-tests each, and attaches them to a GitHub release with checksums.
 
 ## Licence

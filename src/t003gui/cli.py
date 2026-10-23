@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from . import core
+from . import __version__, core
 from .presets import PresetStore
 
 EXAMPLES = r"""
@@ -29,6 +29,7 @@ def main(argv: list[str] | None = None) -> None:
         epilog=EXAMPLES,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    p.add_argument("--version", action="version", version=f"t003-label-gui {__version__}")
     p.add_argument("text", nargs="?", help=r"text to print (use \n for newlines)")
     p.add_argument("--qr", help="QR code content")
     p.add_argument("--image", help="image file to print")

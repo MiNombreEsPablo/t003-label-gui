@@ -50,6 +50,7 @@ class Theme:
     title: str
     font: str
     text: str
+    link: str  # hyperlinks in rich-text labels
     edge: str  # outlines and separators
     bevel_hi: str  # raised controls: top/left edge ...
     bevel_lo: str  # ... bottom/right edge (same as hi for flat looks)
@@ -118,7 +119,7 @@ class Theme:
 
 _BLUE_PANEL = "qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffffff, stop:1 #e3f3ff)"
 Y2K_BLUE = Theme(
-    key="y2k-blue", title="Y2K Blue", font='"Verdana", "DejaVu Sans"', text="#0b2a63", edge="#3b7fc4",
+    key="y2k-blue", title="Y2K Blue", font='"Verdana", "DejaVu Sans"', text="#0b2a63", link="#1a5fb4", edge="#3b7fc4",
     bevel_hi="#3b7fc4", bevel_lo="#3b7fc4", inset_hi="#3b7fc4", inset_lo="#3b7fc4",
     window_bg="qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #f4fcff, stop:0.6 #d4edff, stop:1 #aad8f7)",
     panel_bg=_BLUE_PANEL,
@@ -155,7 +156,7 @@ Y2K_BLUE = Theme(
 # Bubblegum variant of the same candy plastic: only colours differ. Plum replaces navy, and the Print button goes grape
 # purple because the blue theme's orange would fight the pink.
 Y2K_PINK = replace(
-    Y2K_BLUE, key="y2k-pink", title="Y2K Pink", text="#5a0f3d", edge="#c2468f",
+    Y2K_BLUE, key="y2k-pink", title="Y2K Pink", text="#5a0f3d", link="#b0156f", edge="#c2468f",
     bevel_hi="#c2468f", bevel_lo="#c2468f", inset_hi="#c2468f", inset_lo="#c2468f",
     window_bg="qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #fff5fb, stop:0.6 #ffdcef, stop:1 #ffb6df)",
     panel_bg="qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffffff, stop:1 #ffeaf5)",
@@ -187,7 +188,7 @@ Y2K_PINK = replace(
 
 _GM_PANEL = _vgrad("#3a3d4e", "#2c2e3c")
 GUNMETAL = Theme(
-    key="gunmetal", title="Gunmetal", font='"Arial", "Liberation Sans", "DejaVu Sans"', text="#c8d0e0", edge="#0d0e14",
+    key="gunmetal", title="Gunmetal", font='"Arial", "Liberation Sans", "DejaVu Sans"', text="#c8d0e0", link="#00e000", edge="#0d0e14",
     bevel_hi="#9ba0b8", bevel_lo="#14151d", inset_hi="#0d0e14", inset_lo="#7c819a",
     window_bg=_vgrad("#3d4052", "#262835"),
     panel_bg=_GM_PANEL,

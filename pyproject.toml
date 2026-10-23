@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "t003-label-gui"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Desktop GUI for printing to the ORGBRO T003 thermal label printer over raw USB (TSPL)"
 requires-python = ">=3.11"
 dependencies = ["PySide6", "pillow", "pyusb", "qrcode", "fonttools", "libusb-package"]
@@ -15,6 +15,9 @@ dev = ["pytest"]
 [project.scripts]
 t003-gui = "t003gui.app:main"
 t003-print = "t003gui.cli:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "t003gui.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -68,3 +68,20 @@ def test_font_choice_changes_output_and_resolves():
 
 def test_unknown_font_and_bad_align_do_not_crash():
     core.render(core.LabelSpec(text="x", font="NoSuchFontXYZ", align="sideways"))
+
+
+def test_version_is_single_sourced():
+    import re
+    import tomllib
+    from pathlib import Path
+
+    import t003gui
+
+    project = tomllib.loads((Path(__file__).parent.parent / "pyproject.toml").read_text())
+    assert re.fullmatch(r"\d+\.\d+\.\d+", t003gui.__version__)
+    assert "version" in project["project"]["dynamic"] and "version" not in project["project"]
+    assert project["tool"]["setuptools"]["dynamic"]["version"] == {"attr": "t003gui.__version__"}
+
+
+def test_printer_presence_never_raises():
+    assert isinstance(core.printer_presence(), str)

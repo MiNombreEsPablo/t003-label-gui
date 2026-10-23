@@ -145,3 +145,14 @@ def test_widget_attributes_do_not_shadow_qt_methods(window):
     shadowed = [n for n in vars(window) if callable(getattr(QMainWindow, n, None)) and not callable(vars(window)[n])]
     assert shadowed == [], f"attributes hide Qt methods: {shadowed}"
     assert window.size().width() > 0  # the one that actually bit us
+
+
+def test_help_menu_and_about_text(window):
+    from t003gui import __version__, about
+
+    titles = [a.text() for top in window.menuBar().actions() if top.menu() for a in top.menu().actions()]
+    assert any("About" in t for t in titles) and any("updates" in t for t in titles)
+    assert f"Version {__version__}" in titles
+    html = about.about_html("found", 23)
+    assert __version__ in html and "found" in html and about.REPO_URL in html
+    assert about.RELEASES_URL.startswith(about.REPO_URL) and about.ISSUES_URL.startswith(about.REPO_URL)

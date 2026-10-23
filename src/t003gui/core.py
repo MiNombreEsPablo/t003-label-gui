@@ -78,5 +78,16 @@ def send(payload: bytes) -> list[str]:
     return [msg for bit, msg in STATUS_FLAGS.items() if status & bit]
 
 
+def printer_presence() -> str:
+    """Whether the printer is on the USB bus, as a short phrase (never raises); used by About and --selftest."""
+    backend = _backend()
+    if backend is None:
+        return "no libusb backend"
+    try:
+        return "found" if usb.core.find(idVendor=VID, idProduct=PID, backend=backend) else "not connected"
+    except Exception as e:  # e.g. no USB subsystem in a container
+        return f"USB unavailable ({type(e).__name__})"
+
+
 def print_label(spec: LabelSpec) -> list[str]:
     return send(tspl(spec))
