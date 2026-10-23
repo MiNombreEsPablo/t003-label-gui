@@ -6,7 +6,7 @@ Desktop GUI (PySide6) for the ORGBRO T003 USB thermal label printer.
 
 ```bash
 python -m venv --system-site-packages .venv   # PySide6 comes from the system package
-.venv/bin/pip install -e '.[dev]'
+.venv/bin/pip install -e '.[dev]'               # [dev] = pytest + PySide6; plain `pip install -e .` is the Qt-free core/CLI
 .venv/bin/t003-gui                            # run the app
 .venv/bin/t003-print "text" --qr URL          # CLI (same options as the GUI; --preview out.png to not print)
 .venv/bin/pytest                              # tests (no printer needed)
@@ -14,6 +14,14 @@ packaging/install.sh                          # KDE launcher, icons + ~/.local/b
 .venv/bin/t003-gui --selftest                 # verifies fonts/licences/assets/libusb/render (also what CI runs on built apps)
 python packaging/build.py                     # PyInstaller build for the current OS (dist/); make_appimage.sh wraps the Linux one
 ```
+
+## Compatibility (keep these true)
+
+- **Python 3.9+.** No 3.10-only syntax in `src` (`from __future__ import annotations` everywhere; no `match`, no `zip(strict=)`, no `tomllib` in code or tests). CI runs 3.9-3.14.
+- **Qt is optional.** `core`, `render`, `imaging`, `composition`, `presets`, `cli` never import PySide6; `pip install .` (no extra) is a working CLI. `t003-gui` goes through `launcher.py`, which prints what to install if PySide6 is missing (and re-raises any *other* ImportError). Tests that need Qt `importorskip("PySide6")`; `tests/test_packaging.py` runs the CLI with PySide6 blocked. Don't import Qt from a Qt-free module.
+- **Lower bounds are tested**: CI's `minimum-versions` job installs PySide6 6.5.3, Pillow 9.1.0, pyusb 1.2.1, qrcode 7.4, fontTools 4.30. Raise a bound in `pyproject.toml` only together with that job. `QFormLayout.setRowVisible` is why Qt >= 6.4.
+- **A wheel needs every data file in `package-data`** (fonts, licences, `assets/*`); an editable install hides a missing one. `test_package_data_covers_every_asset_and_font` and CI's `package` job (build wheel, install it clean, run `--selftest`) guard this.
+- `libusb-package` is only required where it has wheels (Windows, macOS, Linux x86-64/arm64); elsewhere `core._backend()` falls back to the system libusb.
 
 ## Layout
 

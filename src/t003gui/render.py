@@ -310,8 +310,8 @@ def _text_layer(text, fs, align, effect, halo, shear):
     if shear:
         w2 = w + math.ceil(shear * h)
         coeffs = (1, shear, -shear * h, 0, 1, 0)
-        value = value.transform((w2, h), Image.AFFINE, coeffs, fillcolor=255)
-        alpha = alpha.transform((w2, h), Image.AFFINE, coeffs, fillcolor=0)
+        value = value.transform((w2, h), Image.Transform.AFFINE, coeffs, fillcolor=255)
+        alpha = alpha.transform((w2, h), Image.Transform.AFFINE, coeffs, fillcolor=0)
     # Anti-aliased edges would be turned into scattered dots by the Floyd-Steinberg pass over the whole label (ragged,
     # speckled letters). Binarising at 50 % coverage keeps the ink (about 97 % on average) and gives clean edges.
     value, alpha = value.point(_BINARY), alpha.point(_BINARY)

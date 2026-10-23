@@ -1,8 +1,11 @@
+import pytest
+
+pytest.importorskip("PySide6")  # the window is the optional [gui] extra
+
 import http.server
 import threading
 import time
 
-import pytest
 from PySide6.QtWidgets import QApplication
 
 from t003gui import about, updates

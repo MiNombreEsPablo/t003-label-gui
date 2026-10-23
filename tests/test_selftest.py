@@ -1,3 +1,7 @@
+import pytest
+
+pytest.importorskip("PySide6")  # the window is the optional [gui] extra
+
 from t003gui import selftest
 
 

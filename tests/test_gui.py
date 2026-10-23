@@ -1,4 +1,6 @@
 import pytest
+
+pytest.importorskip("PySide6")  # the window is the optional [gui] extra
 from PySide6.QtWidgets import QApplication, QTabWidget
 
 from t003gui import core, fonts

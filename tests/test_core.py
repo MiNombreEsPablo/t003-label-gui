@@ -72,15 +72,15 @@ def test_unknown_font_and_bad_align_do_not_crash():
 
 def test_version_is_single_sourced():
     import re
-    import tomllib
     from pathlib import Path
 
     import t003gui
 
-    project = tomllib.loads((Path(__file__).parent.parent / "pyproject.toml").read_text())
+    text = (Path(__file__).parent.parent / "pyproject.toml").read_text(encoding="utf-8")
     assert re.fullmatch(r"\d+\.\d+\.\d+", t003gui.__version__)
-    assert "version" in project["project"]["dynamic"] and "version" not in project["project"]
-    assert project["tool"]["setuptools"]["dynamic"]["version"] == {"attr": "t003gui.__version__"}
+    project = text.split("[project]", 1)[1].split("\n[", 1)[0]
+    assert 'dynamic = ["version"]' in project and not re.search(r"^version\s*=", project, re.M)
+    assert 'version = {attr = "t003gui.__version__"}' in text
 
 
 def test_printer_presence_never_raises():

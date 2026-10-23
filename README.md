@@ -66,10 +66,22 @@ sudo cp packaging/70-t003-label-printer.rules /etc/udev/rules.d/
 sudo udevadm control --reload   # then replug the printer
 ```
 
+## With pip, on any system with Python 3.9+
+
+```bash
+pip install "t003-label-gui[gui] @ git+https://github.com/MiNombreEsPablo/t003-label-gui"   # the window and the CLI
+pip install "t003-label-gui @ git+https://github.com/MiNombreEsPablo/t003-label-gui"        # only the CLI (no Qt)
+```
+
+pip picks the newest Qt that exists for your system, so this reaches older distros and Python versions than the
+downloads above. The command-line tool `t003-print` needs no Qt at all, so it also runs on a Raspberry Pi, a server or
+anything else with Python and USB; on platforms without a bundled libusb, install the system one (`apt install
+libusb-1.0-0`). The window is `t003-gui`.
+
 ## From source
 
 ```bash
-python -m venv .venv && .venv/bin/pip install -e '.[dev]'
+python -m venv .venv && .venv/bin/pip install -e '.[dev]'   # [dev] includes the window (PySide6) and pytest
 .venv/bin/t003-gui          # the app
 .venv/bin/t003-print --help # the CLI
 .venv/bin/pytest            # tests, no printer needed
