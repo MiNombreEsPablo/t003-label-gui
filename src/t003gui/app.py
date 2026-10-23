@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
-    QFontComboBox,
+    QCompleter,
     QFileDialog,
     QFormLayout,
     QHBoxLayout,
@@ -41,6 +41,23 @@ LABELS = {
     "hexgrid": "Hex grid", "matrix": "Matrix rain", "circuit": "Circuit board", "chamfer": "Cyber panel",
     "brackets": "HUD brackets", "ticks": "Ruler ticks", "neon": "Neon glow",
 }
+
+
+def _font_box() -> QComboBox:
+    """Searchable family picker fed by fontconfig, each entry previewed in its own typeface."""
+    box = QComboBox()
+    box.setEditable(True)
+    box.setInsertPolicy(QComboBox.NoInsert)
+    box.setMaxVisibleItems(20)
+    for family in core.list_font_families():
+        box.addItem(family)
+        box.setItemData(box.count() - 1, QFont(family), Qt.FontRole)
+    completer = QCompleter(box.model(), box)
+    completer.setCaseSensitivity(Qt.CaseInsensitive)
+    completer.setFilterMode(Qt.MatchContains)
+    box.setCompleter(completer)
+    box.setCurrentText(core.DEFAULT_FONT)
+    return box
 
 
 def _choice_box(values, default=None, none_label=None) -> QComboBox:
@@ -103,9 +120,7 @@ class MainWindow(QMainWindow):
         content.addRow("Cutoff", self.threshold)
 
         # Text tab
-        self.font_box = QFontComboBox()
-        self.font_box.setFontFilters(QFontComboBox.ScalableFonts)
-        self.font_box.setCurrentFont(QFont(core.DEFAULT_FONT))
+        self.font_box = _font_box()
         self.bold = QCheckBox("Bold")
         self.bold.setChecked(True)
         self.italic = QCheckBox("Italic")
@@ -183,7 +198,8 @@ class MainWindow(QMainWindow):
             self.image.textChanged,
             self.hard_threshold.toggled,
             self.threshold.valueChanged,
-            self.font_box.currentFontChanged,
+            self.font_box.currentIndexChanged,
+            self.font_box.lineEdit().editingFinished,
             self.bold.toggled,
             self.italic.toggled,
             self.size.valueChanged,
@@ -207,7 +223,7 @@ class MainWindow(QMainWindow):
             threshold=self.threshold.value() if self.hard_threshold.isChecked() else None,
             copies=self.copies.value(),
             density=self.density.value(),
-            font=self.font_box.currentFont().family(),
+            font=self.font_box.currentText().strip() or core.DEFAULT_FONT,
             bold=self.bold.isChecked(),
             italic=self.italic.isChecked(),
             size=self.size.value(),
@@ -229,7 +245,7 @@ class MainWindow(QMainWindow):
             self.threshold.setValue(spec.threshold)
         self.copies.setValue(spec.copies)
         self.density.setValue(spec.density)
-        self.font_box.setCurrentFont(QFont(spec.font))
+        self.font_box.setCurrentText(spec.font)
         self.bold.setChecked(spec.bold)
         self.italic.setChecked(spec.italic)
         self.size.setValue(spec.size)

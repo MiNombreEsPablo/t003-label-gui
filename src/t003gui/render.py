@@ -44,12 +44,47 @@ def font_path(family: str, bold: bool, italic: bool = False) -> tuple[str, bool]
         return FALLBACK_FONT_PATHS[0], False
 
 
-def _font(path: str, size: int) -> ImageFont.FreeTypeFont:
+@functools.cache
+def list_font_families() -> list[str]:
+    """Installed font families that cover English, as fontconfig names them (what font_path resolves against)."""
+    try:
+        out = subprocess.run(
+            ["fc-list", ":lang=en", "family"], capture_output=True, text=True, timeout=15, check=True
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return []
+    families = {line.split(",")[0].strip() for line in out.splitlines()}
+    return sorted(filter(None, families), key=str.casefold)
+
+
+def _apply_weight(font: ImageFont.FreeTypeFont, bold: bool) -> None:
+    """Variable fonts load at their default instance, so the bold toggle must set the weight axis itself."""
+    try:
+        axes = font.get_variation_axes()
+    except (OSError, AttributeError):  # static font
+        return
+    target = 700 if bold else 400
+    values = []
+    for axis in axes:
+        name = axis["name"].decode(errors="ignore") if isinstance(axis["name"], bytes) else str(axis["name"])
+        if name.lower() == "weight":
+            values.append(min(max(target, axis["minimum"]), axis["maximum"]))
+        else:
+            values.append(axis["default"])
+    try:
+        font.set_variation_by_axes(values)
+    except OSError:
+        pass
+
+
+def _font(path: str, size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
     for candidate in (path, *FALLBACK_FONT_PATHS):
         try:
-            return ImageFont.truetype(candidate, size)
+            font = ImageFont.truetype(candidate, size)
         except OSError:
             continue
+        _apply_weight(font, bold)
+        return font
     raise PrinterError(f"cannot load font {path!r}")
 
 
@@ -197,14 +232,14 @@ def _text_layer(text, font, align, effect, halo, shear):
     return value.crop(box), alpha.crop(box)
 
 
-def _fit_text_layer(text, path, shear, align, effect, halo, box_w, box_h, max_size):
+def _fit_text_layer(text, path, bold, shear, align, effect, halo, box_w, box_h, max_size):
     """Largest font size (binary search) whose rendered layer fits the box."""
     sizes = list(range(8, max_size + 1, 2)) or [8]
     if sizes[-1] != max_size and max_size > 8:
         sizes.append(max_size)
 
     def build(size):
-        return _text_layer(text, _font(path, size), align, effect, halo, shear)
+        return _text_layer(text, _font(path, size, bold), align, effect, halo, shear)
 
     best, lo, hi = None, 0, len(sizes) - 1
     while lo <= hi:
@@ -474,7 +509,7 @@ def render(spec: LabelSpec) -> Image.Image:
         shear = ITALIC_SHEAR if spec.italic and not native_slant else 0
         max_size = min(MAX_FONT_SIZE, spec.size) if spec.size > 0 else MAX_FONT_SIZE
         value, alpha = _fit_text_layer(
-            spec.text.replace("\\n", "\n"), path, shear, align, effect, background != "none",
+            spec.text.replace("\\n", "\n"), path, spec.bold, shear, align, effect, background != "none",
             text_w, ay1 - ay0, max_size,
         )
         x = ax0 + {"left": 0, "center": (text_w - value.width) // 2, "right": text_w - value.width}[align]

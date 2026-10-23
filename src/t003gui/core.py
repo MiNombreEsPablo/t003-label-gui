@@ -10,7 +10,7 @@ import time
 import usb.core
 import usb.util
 
-from .render import PrinterError, font_path, render, to_bitmap  # noqa: F401
+from .render import PrinterError, font_path, list_font_families, render, to_bitmap  # noqa: F401
 from .spec import (  # noqa: F401
     ALIGNMENTS,
     BACKGROUNDS,

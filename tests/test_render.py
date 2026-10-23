@@ -99,3 +99,23 @@ def test_stroked_effects_stay_registered_on_every_line():
     plain, thick = tops(0), tops(7)
     # a thickened copy grows by the same amount around every line, so tops shift by a constant
     assert len({p - t for p, t in zip(plain, thick)}) == 1
+
+
+def test_bold_applies_to_variable_fonts():
+    # variable fonts load at their default weight; bold must set the weight axis itself
+    path, _ = core.font_path("Orbitron", True)
+    if "[" not in path:
+        pytest.skip("no variable font installed to test with")
+    bold = core.render(core.LabelSpec(text="HELLO", font="Orbitron", bold=True, size=60))
+    light = core.render(core.LabelSpec(text="HELLO", font="Orbitron", bold=False, size=60))
+    ink = lambda im: sum(255 - v for v in im.get_flattened_data()) if hasattr(im, "get_flattened_data") else sum(255 - v for v in im.getdata())
+    assert ink(bold) > ink(light) * 1.2
+
+
+def test_font_family_list_matches_fontconfig_names():
+    families = core.list_font_families()
+    if not families:
+        pytest.skip("fontconfig not available")
+    assert families == sorted(set(families), key=str.casefold)  # unique, sorted
+    assert all("[" not in f and f for f in families)
+    assert "DejaVu Sans" in families
