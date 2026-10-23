@@ -55,7 +55,7 @@ def test_italic_changes_output_and_stays_within_width():
 
 def test_effects_differ_from_plain():
     plain = core.render(core.LabelSpec(text="Hi")).tobytes()
-    for effect in ("shadow", "outline", "3d"):
+    for effect in core.EFFECTS[1:]:
         assert core.render(core.LabelSpec(text="Hi", effect=effect)).tobytes() != plain
 
 

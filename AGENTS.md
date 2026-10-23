@@ -16,7 +16,7 @@ packaging/install.sh                          # KDE launcher + ~/.local/bin/prin
 ## Layout
 
 - `src/t003gui/spec.py` — `LabelSpec` dataclass (everything a label can be) plus geometry constants and the allowed choices (`EFFECTS`, `BACKGROUNDS`, `BORDER_STYLES`, …). Presets are `asdict(LabelSpec)`, so new fields must have defaults.
-- `src/t003gui/render.py` — Qt-free drawing: fonts via fontconfig, auto-fit text layers (shadow/outline/3D, synthetic italic), backgrounds, borders, hazard bars, QR. Text is positioned by measured ink bounds, not Pillow's bbox (side-bearings). Over a background pattern text gets a white halo. Nothing may be drawn below `SH` (tests enforce it).
+- `src/t003gui/render.py` — Qt-free drawing: fonts via fontconfig, auto-fit text layers (shadow/outline/3D/glitch/neon/scanlines, synthetic italic), backgrounds (cached, seeded RNG so they are stable), borders, hazard bars, QR. Effect parameters scale with font size; glitch drops its fringe/gaps below ~24/30 dots because small text turns to mush. Text is positioned by measured ink bounds, not Pillow's bbox (side-bearings). Over a background pattern text gets a white halo. Nothing may be drawn below `SH` (tests enforce it).
 - `src/t003gui/core.py` — builds the TSPL payload and sends it over USB with pyusb; re-exports spec/render names so callers use `core.X`.
 - `src/t003gui/app.py` — the Qt window; live preview uses `core.to_bitmap`, so it shows exactly what will print. Tabs: Content / Text / Retro. Supports drag-and-drop of image files and named presets.
 - `src/t003gui/presets.py` — Qt-free preset store, JSON at `$XDG_CONFIG_HOME/t003-label-gui/presets.json`. Shared by the GUI and `t003-print --preset NAME`.

@@ -36,7 +36,11 @@ IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"}
 NO_PRESET = "— presets —"
 
 
-LABELS = {"3d": "3D WordArt", "grid": "Graph paper", "dots": "Polka dots", "stars": "Stars", "bevel": "Win95 bevel"}
+LABELS = {
+    "3d": "3D WordArt", "grid": "Graph paper", "dots": "Polka dots", "bevel": "Win95 bevel",
+    "hexgrid": "Hex grid", "matrix": "Matrix rain", "circuit": "Circuit board", "chamfer": "Cyber panel",
+    "brackets": "HUD brackets", "ticks": "Ruler ticks", "neon": "Neon glow",
+}
 
 
 def _choice_box(values, default=None, none_label=None) -> QComboBox:

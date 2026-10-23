@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import functools
 import math
+import random
 import subprocess
 
 import qrcode
-from PIL import Image, ImageChops, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps
 
 from .spec import ALIGNMENTS, BACKGROUNDS, BORDER_STYLES, EFFECTS, H, MARGIN, SH, VALIGNMENTS, W, LabelSpec
 
@@ -15,7 +16,10 @@ ITALIC_SHEAR = 0.25
 BAR_H = 14
 MAX_FONT_SIZE = 120
 # Space a border takes from the edge of the frame; text keeps this much distance plus a gap.
-BORDER_INSET = {"solid": 3, "double": 9, "dotted": 6, "checker": 8, "bevel": 9, "marquee": 15}
+BORDER_INSET = {
+    "solid": 3, "double": 9, "dotted": 6, "checker": 8, "bevel": 9, "marquee": 15,
+    "chamfer": 10, "brackets": 7, "ticks": 9,
+}
 
 
 class PrinterError(Exception):
@@ -58,6 +62,13 @@ def _checker(w: int, h: int) -> Image.Image:
     return Image.frombytes("L", (w, h), b"".join(even if y % 2 == 0 else odd for y in range(h)))
 
 
+def _dots(w: int, h: int) -> Image.Image:
+    """25% coverage: every other pixel on every other row (a light dither, used for glow)."""
+    even = bytes([255, 0] * (w // 2 + 1))[:w]
+    blank = bytes(w)
+    return Image.frombytes("L", (w, h), b"".join(even if y % 2 == 0 else blank for y in range(h)))
+
+
 def _text_layer(text, font, align, effect, halo, shear):
     """Render text with its effect. Returns (value, alpha) cropped to the painted area:
     paste `value` through `alpha` to draw it (value holds the black/white pixels, alpha where they apply)."""
@@ -77,6 +88,19 @@ def _text_layer(text, font, align, effect, halo, shear):
                 stroke_width=stroke, stroke_fill=f,
             )
 
+    def glyph(off=(0, 0), stroke=0):
+        """Mask of the plain (optionally thickened) text."""
+        m = Image.new("L", (w, h), 0)
+        ImageDraw.Draw(m).multiline_text(
+            (ox + off[0], oy + off[1]), text, font=font, fill=255, spacing=spacing, align=align,
+            stroke_width=stroke, stroke_fill=255,
+        )
+        return m
+
+    def paint(mask, fill):
+        value.paste(fill, mask=mask)
+        alpha.paste(255, mask=mask)
+
     if effect == "outline":
         put((0, 0), 0, 3)
         put((0, 0), 255)
@@ -89,14 +113,52 @@ def _text_layer(text, font, align, effect, halo, shear):
         if halo:
             put((4, 4), 255, 2)
             put((0, 0), 255, 2)
-        shadow = Image.new("L", (w, h), 0)
-        ImageDraw.Draw(shadow).multiline_text(
-            (ox + 4, oy + 4), text, font=font, fill=255, spacing=spacing, align=align
-        )
+        shadow = glyph((4, 4))
         value.paste(255, mask=shadow)  # opaque white under the dither so the background doesn't show through
         value.paste(0, mask=ImageChops.multiply(shadow, _checker(w, h)))
         alpha.paste(255, mask=shadow)
         put((0, 0), 0)
+    elif effect == "glitch":
+        unit = max(0.15, font.size / 60)  # displacements scale with the text so small labels stay legible
+        base = glyph()
+        sliced = base.copy()
+        height = b - t
+        for frac, dx in ((0.28, 8), (0.55, -10), (0.78, 6)):  # displaced horizontal slices, like a bad VHS frame
+            y0 = min(h - 1, oy + int(frac * height))
+            y1 = min(h, y0 + max(2, height // 12))
+            band = base.crop((0, y0, w, y1))
+            sliced.paste(0, (0, y0, w, y1))
+            sliced.paste(band, (round(dx * unit), y0))
+        # the fringe copy and scanline gaps only read at larger sizes; small text keeps just the slice shifts
+        ghost = Image.new("L", (w, h), 0)
+        if font.size >= 24:
+            ghost = ImageChops.multiply(glyph((-max(1, round(6 * unit)), 0)), _checker(w, h))  # dithered fringe copy
+        union = ImageChops.lighter(ImageChops.lighter(sliced, ghost), base)
+        if halo:
+            paint(union.filter(ImageFilter.MaxFilter(7)), 255)
+        paint(union, 255)
+        value.paste(0, mask=ghost)
+        value.paste(0, mask=sliced)
+        if font.size >= 30:
+            for y in range(oy, h, max(4, round(5 * unit))):  # thin white scanline gaps through the text
+                value.paste(255, (0, y, w, y + 1), mask=sliced.crop((0, y, w, y + 1)))
+    elif effect == "neon":
+        glow = glyph(stroke=7)
+        paint(glow, 255)
+        value.paste(0, mask=ImageChops.multiply(glow, _dots(w, h)))  # dithered halo
+        put((0, 0), 0, 3)
+        put((0, 0), 255, 1)  # white tube gap between the outer line and the core
+        put((0, 0), 0)
+    elif effect == "scanlines":
+        if halo:
+            put((0, 0), 255, 3)
+        put((0, 0), 0)
+        period = max(4, font.size // 9)
+        lines = Image.new("L", (w, h), 0)
+        ld = ImageDraw.Draw(lines)
+        for y in range(oy, h, period):
+            ld.rectangle([0, y, w, y + max(1, period // 3) - 1], fill=255)
+        value.paste(255, mask=ImageChops.multiply(lines, glyph()))
     else:
         if halo:
             put((0, 0), 255, 3)
@@ -136,7 +198,8 @@ def _fit_text_layer(text, path, shear, align, effect, halo, box_w, box_h, max_si
 _BAYER = ((0, 8, 2, 10), (12, 4, 14, 6), (3, 11, 1, 9), (15, 7, 13, 5))
 
 
-def _background(name: str) -> Image.Image:
+@functools.cache
+def _background(name: str) -> Image.Image:  # cached: some are slow and all are deterministic
     img = Image.new("L", (W, SH), 255)
     d = ImageDraw.Draw(img)
     if name == "checker":
@@ -170,7 +233,82 @@ def _background(name: str) -> Image.Image:
             d.line([(x, 0), (x, SH)], fill=0, width=1)
         for y in range(0, SH, 16):
             d.line([(0, y), (W, y)], fill=0, width=1)
+    elif name == "scanlines":
+        for y in range(0, SH, 4):
+            d.line([(0, y), (W, y)], fill=0, width=1)
+    elif name == "circuit":
+        _circuit(d)
+    elif name == "hexgrid":
+        r = 12
+        for col in range(-1, int(W / (1.5 * r)) + 2):
+            for row in range(-1, int(SH / (math.sqrt(3) * r)) + 2):
+                cx = col * 1.5 * r
+                cy = row * math.sqrt(3) * r + (math.sqrt(3) / 2 * r if col % 2 else 0)
+                pts = [(cx + r * math.cos(math.radians(a)), cy + r * math.sin(math.radians(a))) for a in range(0, 360, 60)]
+                d.line(pts + [pts[0]], fill=0, width=1)
+    elif name == "synthwave":
+        _synthwave(img)
+    elif name == "matrix":
+        _matrix(d)
+    elif name == "halftone":
+        for row, y in enumerate(range(4, SH, 8)):
+            radius = 0.5 + 3.4 * y / SH  # dots swell towards the bottom
+            for x in range(4 + 4 * (row % 2), W, 8):
+                d.ellipse([x - radius, y - radius, x + radius, y + radius], fill=0)
     return img
+
+
+def _circuit(d: ImageDraw.ImageDraw) -> None:
+    """PCB traces: random walks along 45-degree directions ending in via rings (seeded, so stable)."""
+    rng = random.Random(7)
+    dirs = ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1), (1, -1), (-1, 1))
+    for _ in range(26):
+        x, y = rng.randrange(0, W, 8), rng.randrange(0, SH, 8)
+        d.ellipse([x - 3, y - 3, x + 3, y + 3], outline=0, width=2)
+        for _ in range(rng.randint(2, 4)):
+            dx, dy = rng.choice(dirs)
+            n = rng.randrange(2, 6) * 8
+            nx, ny = x + dx * n, y + dy * n
+            d.line([(x, y), (nx, ny)], fill=0, width=2)
+            x, y = nx, ny
+        d.ellipse([x - 3, y - 3, x + 3, y + 3], outline=0, fill=255, width=2)
+
+
+def _synthwave(img: Image.Image) -> None:
+    """Striped dithered sun on the horizon over a perspective grid."""
+    d = ImageDraw.Draw(img)
+    horizon, cx, radius = int(SH * 0.55), W // 2, 62
+    px = img.load()
+    for y in range(horizon - radius, horizon):
+        level = 0.3 + 0.55 * (y - (horizon - radius)) / radius  # denser towards the horizon
+        half = math.sqrt(max(0, radius**2 - (y - horizon) ** 2))
+        for x in range(int(cx - half), int(cx + half) + 1):
+            if 0 <= x < W and level > (_BAYER[y % 4][x % 4] + 0.5) / 16:
+                px[x, y] = 0
+    for offset, thickness in ((6, 4), (16, 3), (27, 2), (40, 2), (55, 1)):  # slats get thicker near the horizon
+        d.rectangle([0, horizon - offset, W, horizon - offset + thickness - 1], fill=255)
+    d.rectangle([0, horizon, W, SH], fill=255)
+    d.line([(0, horizon), (W, horizon)], fill=0, width=2)
+    for i in range(-14, 15):
+        d.line([(cx, horizon), (cx + i * 44, SH)], fill=0, width=1)
+    for k in range(1, 8):
+        y = horizon + int((k / 7) ** 2 * (SH - horizon))
+        d.line([(0, y), (W, y)], fill=0, width=1)
+
+
+def _matrix(d: ImageDraw.ImageDraw) -> None:
+    """Falling columns of 0/1, dense at the head and thinning to a tail (seeded)."""
+    rng = random.Random(11)
+    font = _font(font_path("DejaVu Sans Mono", False)[0], 10)
+    for x in range(2, W, 11):
+        length, start = rng.randrange(4, 20), rng.randrange(-8, 14)
+        for i in range(length):
+            if rng.random() < (i + 1) / length:
+                d.text((x, (start + i) * 11), rng.choice("01"), font=font, fill=0)
+
+
+def sorted_box(xa: int, ya: int, xb: int, yb: int) -> list[int]:
+    return [min(xa, xb), min(ya, yb), max(xa, xb), max(ya, yb)]
 
 
 def _border(d: ImageDraw.ImageDraw, style: str, x0: int, y0: int, x1: int, y1: int) -> None:
@@ -207,6 +345,31 @@ def _border(d: ImageDraw.ImageDraw, style: str, x0: int, y0: int, x1: int, y1: i
         bulbs += [(x0 + 7, y) for y in range(y1 - 7 - 14, y0 + 7, -14)]
         for i, (cx, cy) in enumerate(bulbs):
             d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=0, fill=0 if i % 2 == 0 else 255, width=1)
+    elif style == "chamfer":
+        c = 10  # cut corners plus little tabs, like a game-UI panel
+        # the 3-wide line is centred on its path, so keep the path 1 dot inside the frame
+        ax0, ay0, ax1, ay1 = x0 + 1, y0 + 1, x1 - 1, y1 - 1
+        pts = [(ax0 + c, ay0), (ax1 - c, ay0), (ax1, ay0 + c), (ax1, ay1 - c), (ax1 - c, ay1), (ax0 + c, ay1), (ax0, ay1 - c), (ax0, ay0 + c)]
+        d.line(pts + [pts[0]], fill=0, width=3, joint="curve")
+        d.rectangle([x0 + c + 10, y0, x0 + c + 44, y0 + 6], fill=0)
+        d.rectangle([x1 - c - 44, y1 - 6, x1 - c - 10, y1], fill=0)
+    elif style == "brackets":
+        arm, t = 28, 4  # HUD corner brackets around a hairline frame
+        d.rectangle([x0 + 6, y0 + 6, x1 - 6, y1 - 6], outline=0, width=1)
+        for cx, sx in ((x0, 1), (x1, -1)):
+            for cy, sy in ((y0, 1), (y1, -1)):
+                d.rectangle(sorted_box(cx, cy, cx + sx * arm, cy + sy * t), fill=0)
+                d.rectangle(sorted_box(cx, cy, cx + sx * t, cy + sy * arm), fill=0)
+    elif style == "ticks":
+        d.rectangle([x0 + 6, y0 + 6, x1 - 6, y1 - 6], outline=0, width=1)  # ruler scale around a hairline frame
+        for i, x in enumerate(range(x0 + 6, x1 - 5, 8)):
+            n = 6 if i % 5 == 0 else 3
+            d.line([(x, y0 + 6), (x, y0 + 6 - n)], fill=0)
+            d.line([(x, y1 - 6), (x, y1 - 6 + n)], fill=0)
+        for i, y in enumerate(range(y0 + 6, y1 - 5, 8)):
+            n = 6 if i % 5 == 0 else 3
+            d.line([(x0 + 6, y), (x0 + 6 - n, y)], fill=0)
+            d.line([(x1 - 6, y), (x1 - 6 + n, y)], fill=0)
     else:  # solid
         d.rectangle([x0, y0, x1, y1], outline=0, width=3)
 

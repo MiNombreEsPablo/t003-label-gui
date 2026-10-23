@@ -14,9 +14,12 @@ MARGIN = 8
 DEFAULT_FONT = "DejaVu Sans"
 ALIGNMENTS = ("left", "center", "right")
 VALIGNMENTS = ("top", "middle", "bottom")
-EFFECTS = ("none", "shadow", "outline", "3d")
-BACKGROUNDS = ("none", "checker", "dots", "stripes", "gradient", "stars", "grid")
-BORDER_STYLES = ("solid", "double", "dotted", "checker", "bevel", "marquee")
+EFFECTS = ("none", "shadow", "outline", "3d", "glitch", "neon", "scanlines")
+BACKGROUNDS = (
+    "none", "checker", "dots", "stripes", "gradient", "stars", "grid",
+    "scanlines", "circuit", "hexgrid", "synthwave", "matrix", "halftone",
+)
+BORDER_STYLES = ("solid", "double", "dotted", "checker", "bevel", "marquee", "chamfer", "brackets", "ticks")
 
 
 @dataclass
