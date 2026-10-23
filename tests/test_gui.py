@@ -54,9 +54,9 @@ def test_font_picker_is_curated_by_default_and_keeps_your_font(window):
 
 def test_theme_toggle_applies_and_clears_the_stylesheet(window, app):
     window.y2k_action.setChecked(True)
-    assert "qlineargradient" in app.styleSheet() and window.banner.isVisibleTo(window)
+    assert "qlineargradient" in window.styleSheet() and app.styleSheet() == "" and window.banner.isVisibleTo(window)
     window.y2k_action.setChecked(False)
-    assert app.styleSheet() == "" and not window.banner.isVisibleTo(window)
+    assert window.styleSheet() == "" and not window.banner.isVisibleTo(window)
 
 
 def test_y2k_stylesheet_references_assets_that_exist(window):

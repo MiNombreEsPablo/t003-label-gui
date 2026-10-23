@@ -82,7 +82,7 @@ QPushButton:default {{
 }}
 QPushButton:default:hover {{ border-color: #ff8a00; }}
 QPushButton:default:pressed {{ background: {GEL_ORANGE_DOWN}; }}
-QPushButton:default:disabled {{ color: #9a8a70; border-color: #c9b48d; background: {GEL_OFF}; }}
+QPushButton:default:disabled {{ color: #6f7c8c; border-color: #c9b48d; background: {GEL_OFF}; }}
 
 QLineEdit, QPlainTextEdit, QSpinBox, QComboBox {{
     background: #ffffff; border: 2px solid {EDGE}; border-radius: 9px; padding: 3px 7px;

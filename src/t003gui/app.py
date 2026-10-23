@@ -301,7 +301,7 @@ class MainWindow(QMainWindow):
         )
 
     def apply_theme(self, y2k: bool) -> None:
-        QApplication.instance().setStyleSheet(theme.stylesheet() if y2k else "")
+        self.setStyleSheet(theme.stylesheet() if y2k else "")  # on the window, not the app: the system file dialog must stay unstyled
         self.banner.setVisible(y2k)
         QSettings().setValue("y2k", y2k)
 
@@ -441,7 +441,8 @@ class MainWindow(QMainWindow):
         return super().eventFilter(obj, event)
 
     def pick_image(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Choose image", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp)")
+        # No parent: a dialog parented to this window would inherit the Y2K stylesheet
+        path, _ = QFileDialog.getOpenFileName(None, "Choose image", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp)")
         if path:
             self.image.setText(path)
 
