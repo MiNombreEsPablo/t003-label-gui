@@ -15,6 +15,14 @@ packaging/install.sh                          # KDE launcher, icons + ~/.local/b
 python packaging/build.py                     # PyInstaller build for the current OS (dist/); make_appimage.sh wraps the Linux one
 ```
 
+## Scope (read before adding anything)
+
+This is a hobby app: a fun, Y2K-flavoured label studio for cheap thermal printers (see README, "What this is"). A change
+should be **fun**, or **small and useful**. Roadmap items carry tags (`fun`, `useful`, `polish`, `infra`, `research`,
+`big`); prefer `fun` and `polish`, treat `big` as "only if it's fun to build and cheap to keep working", and don't start
+`infra` items (new platforms, PyPI) unless someone asks. Don't grow the build or CI further: it was scaled back on
+purpose. Put creative effort into the *labels* (effects, stickers, frames, fonts) before the app's own chrome.
+
 ## Compatibility (keep these true)
 
 - **Python 3.9+.** No 3.10-only syntax in `src` (`from __future__ import annotations` everywhere; no `match`, no `zip(strict=)`, no `tomllib` in code or tests). CI runs 3.9-3.14.

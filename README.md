@@ -6,6 +6,14 @@ Design and print stickers on the **ORGBRO T003** USB thermal label printer, with
 printer will burn. Text, QR codes and images, plus a pile of early-web and cyberpunk styling, and every font can print
 Japanese (日本語).
 
+## What this is
+
+A fun, Y2K-flavoured label studio for cheap thermal printers: made by a hobbyist for the joy of it, and open to anyone
+who likes the same corner of the internet. It aims to stay small and playful. A new feature should be **fun**, or
+**small and useful**; heavier "serious label software" ideas (batch printing, databases, accounts) are tagged on the
+roadmap and only happen if they stay simple and are fun to build. It's maintained as a hobby, best effort, and
+nothing here is a promise. Kind issues and pull requests are welcome.
+
 <table>
   <tr>
     <td><img src="docs/screenshots/theme-y2k-blue.png" alt="Y2K Blue theme with a neon-effect label"></td>
@@ -106,31 +114,33 @@ The T003 speaks TSPL over a plain USB printer interface. The app renders a 384×
 ## Roadmap
 
 Ordered by priority, with no promised dates. Several ideas are inspired by 90s handheld cameras and their thermal
-printers.
+printers. Each item has tags: `fun` (it's about play), `useful` (it makes the app handier), `polish` (a small quality
+fix), `infra` (builds, packaging, CI), `research` (needs hardware or a question answered first) and `big` (a lot of
+work to build and to keep working).
 
 **Next**
-- [ ] Publish to PyPI, so `pip install t003-label-gui` works without the git URL (the wheel is already built and tested in CI)
-- [ ] New label (Ctrl+N), File > Open Recent, and the last label restored when the app starts
-- [ ] Batch-print from a CSV (`{column}` placeholders in the text and QR fields)
-- [ ] Undo/redo (Edit menu), then an album: recent and saved labels as a thumbnail gallery
-- [ ] One idea for saving a design: presets (kept in the app) and `.t003label` files overlap, so merge them (e.g. Save as preset in the File menu, or a templates folder) or make the difference obvious
-- [ ] Stickers and stamps: a built-in set of our own pixel icons (fragile, this side up, warning, arrows, ...) to place on a label
-- [ ] Poster mode: split one large image across several stickers, with alignment marks
+- [ ] `useful` New label (Ctrl+N), File > Open Recent, and the last label restored when the app starts
+- [ ] `useful` `big` Batch-print from a CSV (`{column}` placeholders in the text and QR fields)
+- [ ] `useful` `big` Undo/redo (Edit menu), then an album: recent and saved labels as a thumbnail gallery
+- [ ] `polish` One idea for saving a design: presets (kept in the app) and `.t003label` files overlap, so merge them (e.g. Save as preset in the File menu, or a templates folder) or make the difference obvious
+- [ ] `fun` Stickers and stamps: a built-in set of our own pixel icons (fragile, this side up, warning, arrows, ...) to place on a label
+- [ ] `fun` Poster mode: split one large image across several stickers, with alignment marks
 
 **Later**
-- [ ] Native Linux ARM64 and Windows ARM64 builds (newer ARM Linux needs glibc 2.39; until then use the pip install)
-- [ ] More themes: Win95/98 grey, and user-defined colour themes
-- [ ] Zoomable preview (View > Zoom, Ctrl+plus/minus/0) with a ruler/grid overlay
-- [ ] Draw tool: freehand doodling on the label
-- [ ] Accessibility pass: the image controls have screen-reader names; name the rest, try Orca and NVDA, and show a checkbox's state with a tick as well as colour
-- [ ] A keyboard-shortcuts window (Ctrl+?) and F1 help, once there are enough shortcuts to list
-- [ ] Move "Open presets folder" out of Help (it's a utility, so File or a Settings menu)
-- [ ] Webcam capture: take a photo and print it (needs Qt Multimedia, so a larger download)
+- [ ] `fun` More themes: Win95/98 grey, and user-defined colour themes
+- [ ] `useful` Zoomable preview (View > Zoom, Ctrl+plus/minus/0) with a ruler/grid overlay
+- [ ] `fun` `big` Draw tool: freehand doodling on the label
+- [ ] `fun` `big` Webcam capture: take a photo and print it (needs Qt Multimedia, so a larger download)
+- [ ] `polish` Accessibility pass: the image controls have screen-reader names; name the rest, try Orca and NVDA, and show a checkbox's state with a tick as well as colour
+- [ ] `polish` A keyboard-shortcuts window (Ctrl+?) and F1 help, once there are enough shortcuts to list
+- [ ] `polish` Move "Open presets folder" out of Help (it's a utility, so File or a Settings menu)
+- [ ] `infra` Publish to PyPI, so `pip install t003-label-gui` works without the git URL (the wheel is already built and tested in CI); only if someone asks
+- [ ] `infra` Native Linux ARM64 and Windows ARM64 builds (newer ARM Linux needs glibc 2.39; until then use the pip install); only if someone asks
 
 **Needs hardware or research first**
-- [ ] Hardware testing on Windows and macOS (CI builds them, but they are untested with a printer). Testers wanted.
-- [ ] Windows printing through the spooler, so no Zadig/WinUSB driver is needed (needs a Windows machine to test)
-- [ ] Bluetooth printing (USB only for now; first check whether the T003 has Bluetooth at all)
+- [ ] `research` Hardware testing on Windows and macOS (CI builds them, but they are untested with a printer). Testers wanted.
+- [ ] `useful` `research` Windows printing through the spooler, so no Zadig/WinUSB driver is needed (needs a Windows machine to test)
+- [ ] `big` `research` Bluetooth printing (USB only for now; first check whether the T003 has Bluetooth at all)
 
 ## Building releases
 
