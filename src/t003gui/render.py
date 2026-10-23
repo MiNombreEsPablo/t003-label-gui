@@ -68,7 +68,8 @@ def list_font_families() -> list[str]:
     except (OSError, subprocess.SubprocessError):
         return []
     families = {line.split(",")[0].strip() for line in out.splitlines()}
-    return sorted(filter(None, families), key=str.casefold)
+    # macOS lists hidden internal families (".SF NS", ".Aqua Kana"); users can't sensibly pick those
+    return sorted((f for f in families if f and not f.startswith(".")), key=str.casefold)
 
 
 def _apply_weight(font: ImageFont.FreeTypeFont, bold: bool) -> None:

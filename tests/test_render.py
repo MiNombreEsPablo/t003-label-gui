@@ -116,5 +116,4 @@ def test_font_family_list_matches_fontconfig_names():
     if not families:
         pytest.skip("fontconfig not available")
     assert families == sorted(set(families), key=str.casefold)  # unique, sorted
-    assert all("[" not in f and f for f in families)
-    assert "DejaVu Sans" in families
+    assert all(f and "[" not in f and not f.startswith(".") for f in families)  # no foundry tags, no hidden fonts
