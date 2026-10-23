@@ -38,6 +38,8 @@ dithering. Regenerate with <code>python packaging/make_screenshots.py</code>.</s
   ordered (Bayer) crosshatch or hard-cutoff dithering; sliders with exact-value boxes for brightness, contrast, gamma and
   the cutoff (double-click a slider to reset it); pixelate for chunky handheld-camera dots; mirror, flip and invert.
   Transparent PNGs print on white and phone photos keep their orientation.
+- **Menus:** File (open/save a composition, export an image, **Print, Ctrl+P**), Edit (paste a clipboard image, clear it,
+  copy the label as an image with Ctrl+Shift+C), View (themes), Help.
 - **Save and share:** File > Save/Open composition keeps a whole label in one `.t003label` file (the image is embedded, so
   it works on another machine; drop one on the window to open it, or `t003-print --file x.t003label`). File > Export
   image writes the exact 1-bit label as a PNG, at printed size or enlarged 4×.
@@ -108,16 +110,21 @@ printers.
 
 **Next**
 - [ ] Publish to PyPI, so `pip install t003-label-gui` works without the git URL (the wheel is already built and tested in CI)
+- [ ] New label (Ctrl+N), File > Open Recent, and the last label restored when the app starts
 - [ ] Batch-print from a CSV (`{column}` placeholders in the text and QR fields)
-- [ ] Undo/redo, then an album: recent and saved labels as a thumbnail gallery
+- [ ] Undo/redo (Edit menu), then an album: recent and saved labels as a thumbnail gallery
+- [ ] One idea for saving a design: presets (kept in the app) and `.t003label` files overlap, so merge them (e.g. Save as preset in the File menu, or a templates folder) or make the difference obvious
 - [ ] Stickers and stamps: a built-in set of our own pixel icons (fragile, this side up, warning, arrows, ...) to place on a label
 - [ ] Poster mode: split one large image across several stickers, with alignment marks
 
 **Later**
 - [ ] Native Linux ARM64 and Windows ARM64 builds (newer ARM Linux needs glibc 2.39; until then use the pip install)
 - [ ] More themes: Win95/98 grey, and user-defined colour themes
-- [ ] Zoomable preview with a ruler/grid overlay
+- [ ] Zoomable preview (View > Zoom, Ctrl+plus/minus/0) with a ruler/grid overlay
 - [ ] Draw tool: freehand doodling on the label
+- [ ] Accessibility pass: the image controls have screen-reader names; name the rest, try Orca and NVDA, and show a checkbox's state with a tick as well as colour
+- [ ] A keyboard-shortcuts window (Ctrl+?) and F1 help, once there are enough shortcuts to list
+- [ ] Move "Open presets folder" out of Help (it's a utility, so File or a Settings menu)
 - [ ] Webcam capture: take a photo and print it (needs Qt Multimedia, so a larger download)
 
 **Needs hardware or research first**

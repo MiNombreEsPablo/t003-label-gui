@@ -66,7 +66,7 @@ def main() -> None:
     window.content.text.setPlainText("NEON\nNIGHTS")
     window.text_panel.font_box.setCurrentText("Orbitron")
     window.text_panel.effect.setCurrentIndex(window.text_panel.effect.findData("neon"))
-    window.retro.border_box.setCurrentIndex(window.retro.border_box.findData("brackets"))
+    window.decoration.border_box.setCurrentIndex(window.decoration.border_box.findData("brackets"))
     for t in theme.THEMES.values():
         window.apply_theme(t.key)
         shoot(app, window, f"theme-{t.key}.png", tab=1)

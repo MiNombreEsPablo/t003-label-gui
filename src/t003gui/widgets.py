@@ -146,6 +146,11 @@ class SliderSpin(QWidget):
     def setSuffix(self, text: str) -> None:
         self.spin.setSuffix(text)
 
+    def set_name(self, name: str) -> None:
+        """The accessible name a screen reader announces (the row label next to it isn't attached to either part)."""
+        self.slider.setAccessibleName(name)
+        self.spin.setAccessibleName(f"{name} value")
+
     def setToolTip(self, text: str) -> None:
         for widget in (self, self.slider, self.spin):
             QWidget.setToolTip(widget, text)

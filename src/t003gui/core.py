@@ -104,15 +104,20 @@ def send(payload: bytes) -> list[str]:
     return [msg for bit, msg in STATUS_FLAGS.items() if status & bit]
 
 
-def export_png(spec: LabelSpec, path, scale: int = 1) -> None:
-    """Save the label as the exact 1-bit image that prints: just the sticker (no gap rows), optionally enlarged.
+def label_bitmap(spec: LabelSpec, scale: int = 1) -> Image.Image:
+    """The exact 1-bit image that prints: just the sticker (no gap rows), optionally enlarged.
 
     Enlarging is nearest-neighbour so every printed dot stays a crisp square.
     """
     bitmap = to_bitmap(render(spec)).crop((0, 0, W, SH))
     if scale > 1:
         bitmap = bitmap.resize((W * scale, SH * scale), Image.Resampling.NEAREST)
-    bitmap.save(path, format="PNG")
+    return bitmap
+
+
+def export_png(spec: LabelSpec, path, scale: int = 1) -> None:
+    """Save the label as a PNG (see `label_bitmap`)."""
+    label_bitmap(spec, scale).save(path, format="PNG")
 
 
 def printer_presence() -> str:

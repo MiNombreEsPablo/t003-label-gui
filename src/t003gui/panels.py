@@ -119,7 +119,9 @@ class ContentPanel(QWidget):
         self.qr.setPlaceholderText("QR code content (optional)")
         self.image = QLineEdit()
         self.image.setPlaceholderText("Image file")
-        self.image.setToolTip("An image overrides the text and QR code")
+        self.image.setToolTip("With the default layout the picture replaces the text and QR code;\n"
+                              "choose another layout on the Image tab to print them together.")
+        self.image.setAccessibleName("Image file")
         self.image.setClearButtonEnabled(True)  # the x that removes the picture again
         browse = QPushButton("Browse…")
         browse.clicked.connect(self.pick_image)
@@ -131,55 +133,26 @@ class ContentPanel(QWidget):
         image_row.addWidget(browse)
         image_row.addWidget(paste)
 
-        self.image_layout = _choice_box(core.IMAGE_LAYOUTS)
-        self.image_layout.setToolTip("How the picture shares the label with the text and QR code.\n"
-                                     "'Image only' prints just the picture and ignores the text.")
-        self.image_layout.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)  # don't widen the window
-        self.image_layout.setMinimumContentsLength(10)
-        self.image_size = QSpinBox()
-        self.image_size.setRange(20, 80)
-        self.image_size.setValue(40)
-        self.image_size.setSuffix(" %")
-        self.image_size.setToolTip("The picture's share of the label")
-        layout_row = QHBoxLayout()
-        layout_row.addWidget(self.image_layout, 1)
-        layout_row.addWidget(self.image_size)
-
         form = QFormLayout(self)
         form.addRow("Text", self.text)
         form.addRow("QR", self.qr)
         form.addRow("Image", image_row)
-        form.addRow("Layout", layout_row)
         _tidy(form)
 
-        self.image.textChanged.connect(self._sync_layout)
-        self.image_layout.currentIndexChanged.connect(self._sync_layout)
-        self._sync_layout()
-        for signal in (self.text.textChanged, self.qr.textChanged, self.image.textChanged,
-                       self.image_layout.currentIndexChanged, self.image_size.valueChanged):
+        for signal in (self.text.textChanged, self.qr.textChanged, self.image.textChanged):
             signal.connect(self.changed)
-
-    def _sync_layout(self) -> None:
-        """The layout only matters once there is an image, and only the side/band layouts have a size."""
-        has_image = bool(self.image.text().strip())
-        self.image_layout.setEnabled(has_image)
-        self.image_size.setEnabled(has_image and self.image_layout.currentData() in ("left", "right", "top", "bottom"))
 
     def read(self) -> dict:
         return {
             "text": self.text.toPlainText().strip(),
             "qr": self.qr.text().strip(),
             "image_path": self.image.text().strip(),
-            "image_layout": self.image_layout.currentData(),
-            "image_size": self.image_size.value(),
         }
 
     def write(self, spec: core.LabelSpec) -> None:
         self.text.setPlainText(spec.text)
         self.qr.setText(spec.qr)
         self.image.setText(spec.image_path)
-        self.image_layout.setCurrentIndex(max(0, self.image_layout.findData(spec.image_layout)))
-        self.image_size.setValue(min(80, max(20, spec.image_size)))
 
     def set_image(self, path: str) -> None:
         self.image.setText(path)
@@ -302,6 +275,21 @@ class ImagePanel(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.hint = QLabel("Choose an image first (Content tab).")
+        self.image_layout = _choice_box(core.IMAGE_LAYOUTS)
+        self.image_layout.setToolTip("How the picture shares the label with the text and QR code.\n"
+                                     "'Image only' prints just the picture and ignores the text.")
+        self.image_layout.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)  # don't widen the window
+        self.image_layout.setMinimumContentsLength(10)
+        self.image_layout.setAccessibleName("Layout")
+        self.image_size = QSpinBox()
+        self.image_size.setRange(20, 80)
+        self.image_size.setValue(40)
+        self.image_size.setSuffix(" %")
+        self.image_size.setToolTip("The picture's share of the label")
+        self.image_size.setAccessibleName("Picture size")
+        layout_row = QHBoxLayout()
+        layout_row.addWidget(self.image_layout, 1)
+        layout_row.addWidget(self.image_size)
         self.dither = _choice_box(core.DITHERS + ("threshold",))
         self.dither.setToolTip("Floyd–Steinberg is smooth and best for photos; ordered dithering gives the regular\n"
                                "crosshatch of 90s handheld cameras; a hard cutoff suits flat-colour art.")
@@ -319,19 +307,25 @@ class ImagePanel(QWidget):
         self.pixelate.setSpecialValueText("Off")
         self.pixelate.setSuffix(" dots")
         self.pixelate.setToolTip("Chunky blocks, dithered at the low resolution: 3 gives the look of a 90s handheld camera")
+        for control, name in ((self.cutoff, "Cutoff"), (self.brightness, "Brightness"), (self.contrast, "Contrast"),
+                              (self.gamma, "Gamma"), (self.pixelate, "Pixelate")):
+            control.set_name(name)  # the row labels aren't attached to the slider or the box
         self.mirror = QCheckBox("Mirror")
         self.flip = QCheckBox("Flip")
         self.invert = QCheckBox("Invert")
+        self.reset = QPushButton("Reset")
+        self.reset.setToolTip("Put every image setting back to its default")
+        self.reset.clicked.connect(self.reset_all)
         looks_row = QHBoxLayout()
         looks_row.setSpacing(16)
         for box in (self.mirror, self.flip, self.invert):
             looks_row.addWidget(box)
         looks_row.addStretch(1)
-        self.reset = QPushButton("Reset")
-        self.reset.clicked.connect(self.reset_all)
+        looks_row.addWidget(self.reset)
 
         form = self._form = QFormLayout(self)
         form.addRow(self.hint)
+        form.addRow("Layout", layout_row)
         form.addRow("Dither", self.dither)
         form.addRow("Cutoff", self.cutoff)
         form.addRow("Brightness", self.brightness)
@@ -339,12 +333,14 @@ class ImagePanel(QWidget):
         form.addRow("Gamma", self.gamma)
         form.addRow("Pixelate", self.pixelate)
         form.addRow("Options", looks_row)
-        form.addRow("", self.reset)
         _tidy(form)
 
+        self._active = False
         self.dither.currentIndexChanged.connect(self._sync_cutoff)
+        self.image_layout.currentIndexChanged.connect(self._sync_layout)
         self._sync_cutoff()
-        for signal in (self.dither.currentIndexChanged, self.cutoff.valueChanged, self.brightness.valueChanged,
+        for signal in (self.image_layout.currentIndexChanged, self.image_size.valueChanged,
+                       self.dither.currentIndexChanged, self.cutoff.valueChanged, self.brightness.valueChanged,
                        self.contrast.valueChanged, self.gamma.valueChanged, self.pixelate.valueChanged,
                        self.mirror.toggled, self.flip.toggled, self.invert.toggled):
             signal.connect(self.changed)
@@ -355,15 +351,23 @@ class ImagePanel(QWidget):
         self._form.setRowVisible(self.cutoff, hard)  # only shown when it applies, to keep the tab short
         self.cutoff.setEnabled(hard)
 
+    def _sync_layout(self) -> None:
+        """Only the side and band layouts have a size."""
+        self.image_size.setEnabled(self._active and self.image_layout.currentData() in ("left", "right", "top", "bottom"))
+
     def set_active(self, active: bool) -> None:
         """Dim the controls (and say why) while no image is chosen."""
+        self._active = active
         self.hint.setVisible(not active)
-        for widget in (self.dither, self.brightness, self.contrast, self.gamma, self.pixelate, self.mirror, self.flip,
-                       self.invert, self.reset):
+        for widget in (self.image_layout, self.dither, self.brightness, self.contrast, self.gamma, self.pixelate,
+                       self.mirror, self.flip, self.invert, self.reset):
             widget.setEnabled(active)
         self.cutoff.setEnabled(active and self.dither.currentData() == "threshold")
+        self._sync_layout()
 
     def reset_all(self) -> None:
+        self.image_layout.setCurrentIndex(self.image_layout.findData("only"))
+        self.image_size.setValue(40)
         self.dither.setCurrentIndex(self.dither.findData("floyd"))
         self.cutoff.setValue(160)
         self.brightness.setValue(0)
@@ -377,6 +381,8 @@ class ImagePanel(QWidget):
         mode = self.dither.currentData()
         hard = mode == "threshold"
         return {
+            "image_layout": self.image_layout.currentData(),
+            "image_size": self.image_size.value(),
             "dither": "floyd" if hard else mode,
             "threshold": self.cutoff.value() if hard else None,
             "brightness": self.brightness.value(),
@@ -390,6 +396,8 @@ class ImagePanel(QWidget):
 
     def write(self, spec: core.LabelSpec) -> None:
         mode = "threshold" if spec.threshold is not None else spec.dither
+        self.image_layout.setCurrentIndex(max(0, self.image_layout.findData(spec.image_layout)))
+        self.image_size.setValue(min(80, max(20, spec.image_size)))
         self.dither.setCurrentIndex(max(0, self.dither.findData(mode)))
         if spec.threshold is not None:
             self.cutoff.setValue(spec.threshold)
@@ -402,8 +410,11 @@ class ImagePanel(QWidget):
         self.invert.setChecked(spec.invert)
 
 
-class RetroPanel(QWidget):
-    title = "Retro"
+class DecorationPanel(QWidget):
+    """Border, background pattern and hazard bars. Named for what it holds, not for a style: text effects are just
+    as retro and live under Text, and stickers or stamps would belong here."""
+
+    title = "Decoration"
     changed = Signal()
 
     def __init__(self) -> None:

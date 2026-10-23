@@ -78,13 +78,13 @@ class MainWindow(QMainWindow):
         self.content = panels.ContentPanel()
         self.text_panel = panels.TextPanel()
         self.image_panel = panels.ImagePanel()
-        self.retro = panels.RetroPanel()
+        self.decoration = panels.DecorationPanel()
         self.output = panels.OutputPanel()
-        self.panels = (self.content, self.text_panel, self.image_panel, self.retro, self.output)
+        self.panels = (self.content, self.text_panel, self.image_panel, self.decoration, self.output)
         self.content.image.textChanged.connect(lambda text: self.image_panel.set_active(bool(text.strip())))
 
         tabs = QTabWidget()
-        for panel in (self.content, self.text_panel, self.image_panel, self.retro):
+        for panel in (self.content, self.text_panel, self.image_panel, self.decoration):
             tabs.addTab(panel, panel.title)
 
         self.print_button = QPushButton("Print")
@@ -137,10 +137,31 @@ class MainWindow(QMainWindow):
             action.triggered.connect(slot)
             file_menu.addAction(action)
         file_menu.addSeparator()
+        self.print_action = QAction("&Print label", self)
+        self.print_action.setShortcut(QKeySequence.Print)
+        self.print_action.triggered.connect(self.print_now)
+        file_menu.addAction(self.print_action)
+        file_menu.addSeparator()
         quit_action = QAction("&Quit", self)
         quit_action.setShortcut(QKeySequence.Quit)
         quit_action.triggered.connect(self.close)
         file_menu.addAction(quit_action)
+
+        edit_menu = self.menuBar().addMenu("&Edit")
+        paste_action = QAction("&Paste image", self)
+        paste_action.setShortcut(QKeySequence.Paste)  # in a text field Ctrl+V pastes text; see eventFilter for the image case
+        paste_action.triggered.connect(self.paste_image_from_clipboard)
+        self.clear_image_action = QAction("&Clear image", self)
+        self.clear_image_action.triggered.connect(lambda: self.content.set_image(""))
+        self.clear_image_action.setEnabled(False)
+        self.content.image.textChanged.connect(lambda text: self.clear_image_action.setEnabled(bool(text.strip())))
+        copy_action = QAction("Copy label as &image", self)
+        copy_action.setShortcut(QKeySequence("Ctrl+Shift+C"))  # plain Ctrl+C belongs to the text fields
+        copy_action.triggered.connect(self.copy_label_image)
+        for action in (paste_action, self.clear_image_action):
+            edit_menu.addAction(action)
+        edit_menu.addSeparator()
+        edit_menu.addAction(copy_action)
 
         theme_menu = self.menuBar().addMenu("&View").addMenu("&Theme")
         self.theme_actions: dict[str, QAction] = {}
@@ -162,7 +183,7 @@ class MainWindow(QMainWindow):
         help_menu.addSeparator()
         help_menu.addAction("Open &presets folder", lambda: self._open_path(self.presets.path.parent))
 
-        for panel in (self.content, self.text_panel, self.image_panel, self.retro):
+        for panel in (self.content, self.text_panel, self.image_panel, self.decoration):
             panel.changed.connect(self.refresh_preview)
         self.reload_presets()
         self.refresh_preview()
@@ -414,7 +435,7 @@ class MainWindow(QMainWindow):
         except Exception as e:  # bad image path etc. — show it instead of crashing
             self.status.setText(f"Preview error: {e}")
             return
-        self.status.setText("")
+        self.status.setText(self._layout_hint(spec))
         tint = self.active_theme.preview_tint if self.active_theme else None
         if tint:  # cosmetic: the theme colours the preview; the printed label stays black on white
             rgb = ImageOps.colorize(bitmap, black=tint[0], white=tint[1])
@@ -437,12 +458,40 @@ class MainWindow(QMainWindow):
         painter.end()
         self.preview.setPixmap(pix)
 
+    @staticmethod
+    def _layout_hint(spec: core.LabelSpec) -> str:
+        """The text and QR code are silently dropped by the default "Image only" layout: say so, and where to change it."""
+        if spec.image_path and spec.image_layout == "only" and (spec.text or spec.qr):
+            what = "text and QR code aren't" if spec.text and spec.qr else ("text isn't" if spec.text else "QR code isn't")
+            return f"The {what} printed: the layout is “Image only”. Choose another layout on the Image tab."
+        return ""
+
+    def paste_image_from_clipboard(self) -> None:
+        if self.content.paste_image():
+            self.status.setText("Pasted the image from the clipboard.")
+        else:
+            self.status.setText("There is no image on the clipboard.")
+
+    def copy_label_image(self) -> None:
+        spec = self.spec()
+        if not (spec.text or spec.qr or spec.image_path):
+            self.status.setText("Nothing to copy.")
+            return
+        try:
+            bitmap = core.label_bitmap(spec).convert("L")
+        except Exception as e:  # bad image path etc., as in the preview
+            self.status.setText(f"Couldn't copy the label: {e}")
+            return
+        QApplication.clipboard().setImage(QImage(bitmap.tobytes(), core.W, core.SH, core.W, QImage.Format_Grayscale8).copy())
+        self.status.setText("Copied the label to the clipboard.")
+
     def print_now(self) -> None:
         spec = self.spec()
         if not (spec.text or spec.qr or spec.image_path):
             self.status.setText("Nothing to print.")
             return
         self.print_button.setEnabled(False)
+        self.print_action.setEnabled(False)
         QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
             problems = core.print_label(spec)
@@ -454,6 +503,7 @@ class MainWindow(QMainWindow):
         finally:
             QApplication.restoreOverrideCursor()
             self.print_button.setEnabled(True)
+            self.print_action.setEnabled(True)
 
 
 def main() -> None:

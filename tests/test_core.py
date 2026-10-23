@@ -85,3 +85,12 @@ def test_version_is_single_sourced():
 
 def test_printer_presence_never_raises():
     assert isinstance(core.printer_presence(), str)
+
+
+def test_label_bitmap_is_the_sticker_only_and_export_uses_it(tmp_path):
+    spec = core.LabelSpec(text="Hi")
+    one, four = core.label_bitmap(spec), core.label_bitmap(spec, scale=4)
+    assert (one.size, one.mode) == ((core.W, core.SH), "1") and four.size == (core.W * 4, core.SH * 4)
+    out = tmp_path / "x.png"
+    core.export_png(spec, out)
+    assert Image.open(out).tobytes() == one.tobytes()
