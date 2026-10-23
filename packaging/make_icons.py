@@ -50,7 +50,8 @@ def arrows() -> None:
     """Small navy chevrons for combo/spin-box buttons in the Y2K themes (anti-aliased via 4x supersampling)."""
     from PIL import ImageDraw
 
-    for suffix, color in (("", (11, 42, 99, 255)), ("-plum", (90, 15, 61, 255)), ("-lcd", (0, 224, 0, 255))):  # Y2K Blue navy, Y2K Pink plum, Gunmetal LCD green
+    for suffix, color in (("", (11, 42, 99, 255)), ("-plum", (90, 15, 61, 255)), ("-lcd", (0, 224, 0, 255)),
+                         ("-dmg", (15, 56, 15, 255))):  # Y2K Blue navy, Y2K Pink plum, Gunmetal LCD green, Handheld dark olive
         for name, points in (("arrow-down", [(0, 0), (12, 0), (6, 7)]), ("arrow-up", [(0, 7), (12, 7), (6, 0)])):
             big = Image.new("RGBA", (48, 32), (0, 0, 0, 0))
             ImageDraw.Draw(big).polygon([(x * 4, y * 4 + 2) for x, y in points], fill=color)

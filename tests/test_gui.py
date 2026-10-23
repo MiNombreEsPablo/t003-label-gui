@@ -53,9 +53,9 @@ def test_font_picker_is_curated_by_default_and_keeps_your_font(window):
 
 
 def test_theme_choice_applies_and_clears_the_stylesheet(window, app):
-    for key in ("y2k-blue", "y2k-pink", "gunmetal"):
+    for key in ("y2k-blue", "y2k-pink", "gunmetal", "handheld"):
         window.apply_theme(key)
-        assert "qlineargradient" in window.styleSheet() and app.styleSheet() == ""
+        assert "QMainWindow" in window.styleSheet() and app.styleSheet() == ""
         assert window.banner.isVisibleTo(window) and window.theme_actions[key].isChecked()
     window.apply_theme("system")
     assert window.styleSheet() == "" and not window.banner.isVisibleTo(window)
@@ -254,6 +254,33 @@ def test_gamma_box_shows_tenths(window):
     box = window.image_panel.gamma
     box.setValue(16)
     assert box.text() == "1.6" and box.valueFromText("2.5") == 25 and box.valueFromText("junk") == 16
+
+
+def test_handheld_theme_tints_the_preview_but_not_the_print(window):
+    from t003gui import theme
+
+    assert theme.HANDHELD.preview_tint == ("#0f380f", "#9bbc0f")
+    window.content.text.setPlainText("")
+    window.apply_theme("handheld")
+    assert window.preview.pixmap().toImage().pixelColor(4, 4).name() == "#9bbc0f"  # paper
+    window.apply_theme("y2k-blue")
+    assert window.preview.pixmap().toImage().pixelColor(4, 4).name() == "#ffffff"
+    window.apply_theme("system")
+    assert window.preview.pixmap().toImage().pixelColor(4, 4).name() == "#ffffff"
+    # the printed bitmap never depends on the theme
+    before = core.to_bitmap(core.render(window.spec())).tobytes()
+    window.apply_theme("handheld")
+    assert core.to_bitmap(core.render(window.spec())).tobytes() == before
+
+
+def test_every_theme_is_complete_and_selectable(window):
+    from t003gui import theme
+
+    assert set(theme.THEMES) == {"y2k-blue", "y2k-pink", "gunmetal", "handheld"}
+    for t in theme.THEMES.values():
+        assert t.title and window.theme_actions[t.key].text() == t.title
+        assert "-" not in str(t.r_ctl) and t.font_pt >= 9  # no negative radii or tiny type
+
 
 def test_layout_controls_follow_the_image(window, tmp_path):
     content = window.content

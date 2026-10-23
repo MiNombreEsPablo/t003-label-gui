@@ -5,6 +5,7 @@ import re
 import sys
 from pathlib import Path
 
+from PIL import ImageOps
 from PySide6.QtCore import QEvent, QObject, QSettings, Qt, QUrl
 from PySide6.QtGui import (
     QAction,
@@ -183,6 +184,7 @@ class MainWindow(QMainWindow):
     def apply_theme(self, key: str) -> None:
         chosen = theme.THEMES.get(key)
         key = self.theme_key = chosen.key if chosen else theme.SYSTEM
+        self.active_theme = chosen
         # On the window, not the app: the system file dialog must stay unstyled
         self.setStyleSheet(theme.stylesheet(chosen) if chosen else "")
         self.banner.setVisible(chosen is not None)
@@ -190,6 +192,7 @@ class MainWindow(QMainWindow):
             self.banner.set_style(chosen.banner)
         self.theme_actions[key].setChecked(True)
         QSettings().setValue("theme", key)
+        self.refresh_preview()  # the preview takes the theme's tint
 
     def reload_presets(self, select: str | None = None) -> None:
         self.preset_box.clear()
@@ -391,8 +394,12 @@ class MainWindow(QMainWindow):
             self.status.setText(f"Preview error: {e}")
             return
         self.status.setText("")
-        data = bitmap.tobytes()
-        qimg = QImage(data, core.W, core.H, core.W, QImage.Format_Grayscale8).copy()
+        tint = self.active_theme.preview_tint if self.active_theme else None
+        if tint:  # cosmetic: the theme colours the preview; the printed label stays black on white
+            rgb = ImageOps.colorize(bitmap, black=tint[0], white=tint[1])
+            qimg = QImage(rgb.tobytes(), core.W, core.H, core.W * 3, QImage.Format_RGB888).copy()
+        else:
+            qimg = QImage(bitmap.tobytes(), core.W, core.H, core.W, QImage.Format_Grayscale8).copy()
         pix = QPixmap.fromImage(qimg).scaled(
             core.W * PREVIEW_SCALE, core.H * PREVIEW_SCALE, Qt.KeepAspectRatio, Qt.FastTransformation
         )

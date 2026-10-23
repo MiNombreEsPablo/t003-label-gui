@@ -23,7 +23,8 @@ Japanese (日本語).
 - **Save and share:** File > Save/Open composition keeps a whole label in one `.t003label` file (the image is embedded, so
   it works on another machine; drop one on the window to open it, or `t003-print --file x.t003label`). File > Export
   image writes the exact 1-bit label as a PNG, at printed size or enlarged 4×.
-- Themes (View > Theme): Y2K candy plastic in blue or pink, gunmetal with LCD-green text, or the plain platform look.
+- Themes (View > Theme): Y2K candy plastic in blue or pink, gunmetal with LCD-green text, a four-shade olive
+  "handheld" look (which also tints the preview; prints stay black on white), or the plain platform look.
 - Help menu: version, an About box (with a printer-found check) and a manual **Check for updates** that compares your
   version with the latest GitHub release. It only runs when you ask.
 - A CLI with the same options: `t003-print "NEON\nNIGHTS" --effect neon --frame brackets`.
@@ -73,7 +74,7 @@ printers.
 - [x] Image and text on one label: the picture beside, above, below or behind the text
 - [x] An Image panel: choice of dither (Floyd–Steinberg, ordered/Bayer, hard threshold), brightness, contrast and gamma
 - [x] Image looks: pixelate (chunky low-res), mirror, flip, invert
-- [ ] A four-shade green "handheld" theme
+- [x] A four-shade green "handheld" theme
 - [ ] Screenshots in this README
 
 **Next**

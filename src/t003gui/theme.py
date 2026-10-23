@@ -109,6 +109,12 @@ class Theme:
     r_item: int
     arrow: str  # asset suffix: arrow-down{suffix}.png
     banner: BannerStyle
+    font_pt: int = 10  # pixel fonts are only crisp at their design size
+    preview_tint: tuple[str, str] | None = None  # (ink, paper): colour the label preview (cosmetic; prints stay black on white)
+
+    @property
+    def screen_bg(self) -> str:
+        return self.preview_tint[1] if self.preview_tint else "#ffffff"
 
     def raised(self, width: int = 2) -> str:
         return f"border: {width}px solid {self.bevel_lo}; border-color: {self.bevel_hi} {self.bevel_lo} {self.bevel_lo} {self.bevel_hi};"
@@ -224,7 +230,37 @@ GUNMETAL = Theme(
     ),
 )
 
-THEMES: dict[str, Theme] = {t.key: t for t in (Y2K_BLUE, Y2K_PINK, GUNMETAL)}
+# A 90s handheld's four shades of olive green, nothing else: flat blocky controls, a pixel font, an inverted Print button.
+_D, _M, _L, _P = "#0f380f", "#306230", "#8bac0f", "#9bbc0f"  # darkest, dark, light, lightest (paper)
+HANDHELD = Theme(
+    key="handheld", title="Handheld", font='"Pixelify Sans", "DejaVu Sans Mono"', text=_D, link=_D, edge=_D,
+    bevel_hi=_P, bevel_lo=_D, inset_hi=_M, inset_lo=_P,
+    window_bg=_P, panel_bg=_L,
+    btn=_L, btn_hot=_P, btn_down="#7a990c", btn_off=_L, btn_hover_border="",
+    dis_text="#5c7f10", dis_border="#6b8a12",
+    default_bg=_D, default_bg_down=_M, default_text=_P,
+    default_border=f"border: 2px solid {_D}; border-color: {_M} {_D} {_D} {_M};",
+    default_hover=f"border-color: {_L} {_M} {_M} {_L};",
+    default_dis_text="#5c7f10", default_dis_border="#6b8a12",
+    input_bg=_P, input_text=_D, input_dis_bg=_L, focus_border=f"border-color: {_D};",
+    select_bg=_D, select_text=_P,
+    tab_unselected_text=_M, tab_selected_bg=_L,
+    led_on=_D, led_off=_P, led_on_border=_D, led_dis=_L, led_size=14, led_radius=0,
+    scroll_bg=_L, scroll_line=_M, scroll_handle=_P,
+    bezel_bg=_M, bezel_border=f"3px solid {_D}", screen_border=f"3px solid {_D}", status=_D,
+    tooltip_bg=_P, tooltip_text=_D, tooltip_border=_D,
+    menu_bg=_P, dialog_bg=_L,
+    r_ctl=0, r_btn=0, r_default=0, r_pane=0, r_tab=0, r_title=0, r_bezel=10, r_menu=0, r_item=0,
+    arrow="-dmg",
+    banner=BannerStyle(
+        stops=(_M, _D, _D), outline=_D, radius=3, gloss=False, bevel=_L,
+        font="Pixelify Sans", size=20, weight=QFont.Bold, spacing=1.0, color=_P, shadow=None,
+    ),
+    font_pt=11,
+    preview_tint=(_D, _P),
+)
+
+THEMES: dict[str, Theme] = {t.key: t for t in (Y2K_BLUE, Y2K_PINK, GUNMETAL, HANDHELD)}
 DEFAULT_THEME = Y2K_BLUE.key
 SYSTEM = "system"  # no stylesheet: whatever the desktop provides
 
@@ -233,7 +269,7 @@ def stylesheet(t: Theme = Y2K_BLUE) -> str:
     arrows = ASSETS.as_posix()
     down, up = f"{arrows}/arrow-down{t.arrow}.png", f"{arrows}/arrow-up{t.arrow}.png"
     return f"""
-* {{ font-family: {t.font}; font-size: 10pt; color: {t.text}; }}
+* {{ font-family: {t.font}; font-size: {t.font_pt}pt; color: {t.text}; }}
 QMainWindow {{ background: {t.window_bg}; }}
 QWidget#root {{ background: transparent; }}
 QLabel {{ background: transparent; }}
@@ -276,7 +312,7 @@ QLineEdit:disabled, QSpinBox:disabled, QComboBox:disabled {{ background: {t.inpu
 QComboBox {{ padding-right: 30px; combobox-popup: 0; }}
 QComboBox::drop-down {{
     subcontrol-origin: padding; subcontrol-position: top right; width: 26px;
-    border-left: 2px solid {t.edge}; border-top-right-radius: {t.r_ctl - 2}px; border-bottom-right-radius: {t.r_ctl - 2}px;
+    border-left: 2px solid {t.edge}; border-top-right-radius: {max(t.r_ctl - 2, 0)}px; border-bottom-right-radius: {max(t.r_ctl - 2, 0)}px;
     background: {t.btn};
 }}
 QComboBox::down-arrow {{ image: url({down}); width: 12px; height: 8px; }}
@@ -285,8 +321,8 @@ QSpinBox QLineEdit {{ border: none; background: transparent; padding: 0; }}
 QSpinBox::up-button, QSpinBox::down-button {{
     subcontrol-origin: padding; width: 22px; border-left: 2px solid {t.edge}; background: {t.btn};
 }}
-QSpinBox::up-button {{ subcontrol-position: top right; border-top-right-radius: {t.r_ctl - 2}px; border-bottom: 1px solid {t.edge}; }}
-QSpinBox::down-button {{ subcontrol-position: bottom right; border-bottom-right-radius: {t.r_ctl - 2}px; }}
+QSpinBox::up-button {{ subcontrol-position: top right; border-top-right-radius: {max(t.r_ctl - 2, 0)}px; border-bottom: 1px solid {t.edge}; }}
+QSpinBox::down-button {{ subcontrol-position: bottom right; border-bottom-right-radius: {max(t.r_ctl - 2, 0)}px; }}
 QSpinBox::up-button:pressed, QSpinBox::down-button:pressed {{ background: {t.btn_down}; }}
 QSpinBox::up-arrow {{ image: url({up}); width: 12px; height: 8px; }}
 QSpinBox::down-arrow {{ image: url({down}); width: 12px; height: 8px; }}
@@ -314,7 +350,7 @@ QScrollBar::add-line, QScrollBar::sub-line {{ height: 0; width: 0; }}
 QScrollBar::add-page, QScrollBar::sub-page {{ background: transparent; }}
 
 QFrame#bezel {{ border: {t.bezel_border}; border-radius: {t.r_bezel}px; background: {t.bezel_bg}; }}
-QLabel#screen {{ border: {t.screen_border}; border-radius: 6px; background: #ffffff; }}
+QLabel#screen {{ border: {t.screen_border}; border-radius: 6px; background: {t.screen_bg}; }}
 QLabel#status {{ color: {t.status}; font-weight: bold; }}
 
 QMenuBar {{ background: {t.btn}; border-bottom: 2px solid {t.edge}; }}
