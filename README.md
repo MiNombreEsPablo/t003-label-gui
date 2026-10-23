@@ -106,6 +106,7 @@ Ordered by priority, with no promised dates. Several ideas are inspired by 90s h
 printers.
 
 **Next**
+- [ ] Publish to PyPI, so `pip install t003-label-gui` works without the git URL (the wheel is already built and tested in CI)
 - [ ] Sliders (with a small value box) for brightness, contrast, gamma, cutoff and pixelate, plus a cache of the decoded
       photo so dragging stays smooth with phone-sized pictures
 - [ ] Batch-print from a CSV (`{column}` placeholders in the text and QR fields)
@@ -114,6 +115,7 @@ printers.
 - [ ] Poster mode: split one large image across several stickers, with alignment marks
 
 **Later**
+- [ ] Native Linux ARM64 and Windows ARM64 builds (newer ARM Linux needs glibc 2.39; until then use the pip install)
 - [ ] More themes: Win95/98 grey, and user-defined colour themes
 - [ ] Zoomable preview with a ruler/grid overlay
 - [ ] Draw tool: freehand doodling on the label
