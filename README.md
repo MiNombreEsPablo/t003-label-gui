@@ -6,6 +6,23 @@ Design and print stickers on the **ORGBRO T003** USB thermal label printer, with
 printer will burn. Text, QR codes and images, plus a pile of early-web and cyberpunk styling, and every font can print
 Japanese (日本語).
 
+<table>
+  <tr>
+    <td><img src="docs/screenshots/theme-y2k-blue.png" alt="Y2K Blue theme with a neon-effect label"></td>
+    <td><img src="docs/screenshots/theme-y2k-pink.png" alt="Y2K Pink theme"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/theme-gunmetal.png" alt="Gunmetal theme"></td>
+    <td><img src="docs/screenshots/theme-handheld.png" alt="Handheld theme, with the preview tinted olive green"></td>
+  </tr>
+</table>
+
+<p align="center"><img src="docs/screenshots/image-layout.png" width="720"
+alt="A dithered picture next to a caption, with the Image tab's dither, tone and looks controls"></p>
+
+<p align="center"><sub>The four themes (Y2K Blue, Y2K Pink, Gunmetal, Handheld), and a picture with a caption using ordered
+dithering. Regenerate with <code>python packaging/make_screenshots.py</code>.</sub></p>
+
 ## Features
 
 - **Live 1-bit preview** that is the same bitmap that gets printed (what you see is what you stick).
@@ -69,9 +86,6 @@ The T003 speaks TSPL over a plain USB printer interface. The app renders a 384×
 
 Ordered by priority, with no promised dates. Several ideas are inspired by 90s handheld cameras and their thermal
 printers.
-
-**Now**
-- [ ] Screenshots in this README
 
 **Next**
 - [ ] Batch-print from a CSV (`{column}` placeholders in the text and QR fields)
