@@ -109,6 +109,8 @@ class Theme:
     r_item: int
     arrow: str  # asset suffix: arrow-down{suffix}.png
     banner: BannerStyle
+    slider_fill: str = ""  # the filled part of a slider (default: the selection colour)
+    slider_handle: str = ""  # a slider's handle (default: the button look)
     tab_accent: str = ""  # colour of the selected/hovered tab's top edge (an XP-style cue), or none
     font_pt: int = 10  # pixel fonts are only crisp at their design size
     preview_tint: tuple[str, str] | None = None  # (ink, paper): colour the label preview (cosmetic; prints stay black on white)
@@ -224,7 +226,7 @@ GUNMETAL = Theme(
     tooltip_bg="#000000", tooltip_text="#00e000", tooltip_border="#7c819a",
     menu_bg="#2c2e3c", dialog_bg="#2f3242",
     r_ctl=2, r_btn=2, r_default=2, r_pane=3, r_tab=3, r_title=2, r_bezel=4, r_menu=0, r_item=0,
-    arrow="-lcd",
+    arrow="-lcd", slider_fill="#00a800",
     banner=BannerStyle(
         stops=("#7a7f96", "#4c5068", "#2f3243"), outline="#0d0e14", radius=3, gloss=False, bevel="#aab0c8",
         font="VT323", size=26, weight=QFont.Normal, spacing=2.0, color="#00e000", shadow="#003800",
@@ -257,7 +259,7 @@ HANDHELD = Theme(
         stops=(_M, _D, _D), outline=_D, radius=3, gloss=False, bevel=_L,
         font="Pixelify Sans", size=20, weight=QFont.Bold, spacing=1.0, color=_P, shadow=None,
     ),
-    font_pt=11,
+    font_pt=11, slider_fill=_M, slider_handle=_D,
     preview_tint=(_D, _P),
 )
 
@@ -327,6 +329,19 @@ QSpinBox::down-button {{ subcontrol-position: bottom right; border-bottom-right-
 QSpinBox::up-button:pressed, QSpinBox::down-button:pressed {{ background: {t.btn_down}; }}
 QSpinBox::up-arrow {{ image: url({up}); width: 12px; height: 8px; }}
 QSpinBox::down-arrow {{ image: url({down}); width: 12px; height: 8px; }}
+
+QSlider::groove:horizontal {{
+    height: 6px; margin: 0 8px; background: {t.input_bg}; {t.inset()} border-radius: {min(t.r_ctl, 5)}px;
+}}
+QSlider::sub-page:horizontal {{ margin: 0 8px; background: {t.slider_fill or t.select_bg}; border-radius: {min(t.r_ctl, 5)}px; }}
+QSlider::handle:horizontal {{
+    width: 14px; height: 14px; margin: -7px -8px; background: {t.slider_handle or t.btn}; {t.raised()} border-radius: {min(t.r_btn, 9)}px;
+}}
+QSlider::handle:horizontal:hover {{ background: {t.slider_handle or t.btn_hot}; }}
+QSlider::handle:horizontal:pressed {{ background: {t.slider_handle or t.btn_down}; }}
+QSlider::groove:horizontal:disabled {{ background: {t.input_dis_bg}; border-color: {t.dis_border}; }}
+QSlider::sub-page:horizontal:disabled {{ background: {t.dis_border}; }}
+QSlider::handle:horizontal:disabled {{ background: {t.btn_off}; border-color: {t.dis_border}; }}
 
 QCheckBox {{ spacing: 8px; background: transparent; }}
 QCheckBox::indicator {{

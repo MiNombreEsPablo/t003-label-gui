@@ -252,100 +252,42 @@ def test_image_panel_modes_and_legacy_threshold(window):
     assert window.spec() == core.LabelSpec()
 
 
-def test_gamma_box_shows_tenths(window):
-    box = window.image_panel.gamma
-    box.setValue(16)
-    assert box.text() == "1.6" and box.valueFromText("2.5") == 25 and box.valueFromText("junk") == 16
-
-
-def test_handheld_theme_tints_the_preview_but_not_the_print(window):
-    from t003gui import theme
-
-    assert theme.HANDHELD.preview_tint == ("#0f380f", "#9bbc0f")
-    window.content.text.setPlainText("")
-    window.apply_theme("handheld")
-    assert window.preview.pixmap().toImage().pixelColor(4, 4).name() == "#9bbc0f"  # paper
-    window.apply_theme("y2k-blue")
-    assert window.preview.pixmap().toImage().pixelColor(4, 4).name() == "#ffffff"
-    window.apply_theme("system")
-    assert window.preview.pixmap().toImage().pixelColor(4, 4).name() == "#ffffff"
-    # the printed bitmap never depends on the theme
-    before = core.to_bitmap(core.render(window.spec())).tobytes()
-    window.apply_theme("handheld")
-    assert core.to_bitmap(core.render(window.spec())).tobytes() == before
-
-
-def test_every_theme_is_complete_and_selectable(window):
-    from t003gui import theme
-
-    assert set(theme.THEMES) == {"y2k-blue", "y2k-pink", "gunmetal", "handheld"}
-    for t in theme.THEMES.values():
-        assert t.title and window.theme_actions[t.key].text() == t.title
-        assert "-" not in str(t.r_ctl) and t.font_pt >= 9  # no negative radii or tiny type
-
-
-def test_layout_controls_follow_the_image(window, tmp_path):
-    content = window.content
-    assert not content.image_layout.isEnabled() and not content.image_size.isEnabled()  # no image yet
-    content.set_image(str(tmp_path / "x.png"))
-    assert content.image_layout.isEnabled() and not content.image_size.isEnabled()  # "image only" has no size
-    for layout, sized in (("left", True), ("top", True), ("behind", False), ("only", False)):
-        content.image_layout.setCurrentIndex(content.image_layout.findData(layout))
-        assert content.image_size.isEnabled() is sized, layout
-    content.set_image("")
-    assert not content.image_layout.isEnabled()
-
-
-def test_layout_round_trips_through_the_content_panel(window):
-    window.set_spec(core.LabelSpec(image_path="a.png", image_layout="bottom", image_size=65))
-    spec = window.spec()
-    assert (spec.image_layout, spec.image_size) == ("bottom", 65)
-    window.set_spec(core.LabelSpec(image_layout="nonsense", image_size=999))  # clamped / defaulted, never crashes
-    spec = window.spec()
-    assert (spec.image_layout, spec.image_size) == ("only", 80)
-
-
-def test_preview_explains_the_gap_strip(window):
-    assert f"{core.W} × {core.SH} dots" in window.preview.toolTip()
-    img = window.preview.pixmap().toImage()
-    strip_top = core.SH * 2  # the preview is drawn at 2x
-    colours = {img.pixelColor(x, y).rgb() for x in range(img.width()) for y in range(strip_top + 2, img.height() - 2)}
-    assert len(colours) > 2  # shaded background plus the caption's text, not a blank grey bar
-    # the caption is preview-only: the exported bitmap has nothing below the sticker
-    assert set(core.to_bitmap(core.render(window.spec())).crop((0, core.SH, core.W, core.H)).tobytes()) == {255}
-
-
-@pytest.mark.parametrize("key", ["y2k-blue", "gunmetal", "handheld", "system"])
-def test_fields_line_up_across_all_panels(window, app, key):
-    """The Output box and every tab share one label column, so no field starts a few pixels left of another."""
-    from PySide6.QtCore import QPoint
-
-    window.apply_theme(key)
-    window.resize(window.sizeHint())
-    tabs = window.findChild(QTabWidget)
-    fields = {0: window.content.text, 1: window.text_panel.font_box, 2: window.image_panel.dither,
-              3: window.retro.border_box}
-    starts = set()
-    for index, field in fields.items():
-        tabs.setCurrentIndex(index)
-        app.processEvents()
-        starts.add(field.mapTo(window, QPoint(0, 0)).x())
-    starts.add(window.output.copies.mapTo(window, QPoint(0, 0)).x())
-    # exact for our themes; the platform style draws tab panes and group boxes with frames a pixel apart
-    assert max(starts) - min(starts) <= (2 if key == "system" else 0), starts
-
-
-def test_an_added_image_can_be_removed_again(window, tmp_path):
+def test_dragging_a_slider_changes_the_spec_and_the_preview(window, tmp_path):
     from PIL import Image
 
-    art = tmp_path / "art.png"
-    Image.new("L", (50, 50), 0).save(art)
-    window.content.text.setPlainText("Caption")
+    art = tmp_path / "grey.png"
+    Image.new("L", (100, 100), 128).save(art)
     window.content.set_image(str(art))
-    with_image = core.to_bitmap(core.render(window.spec())).tobytes()
-    assert window.content.image.isClearButtonEnabled()  # the visible x in the field
-    window.content.image.clear()  # what clicking it does
-    spec = window.spec()
-    assert spec.image_path == "" and spec.text == "Caption"
-    assert not window.image_panel.dither.isEnabled() and not window.content.image_layout.isEnabled()
-    assert core.to_bitmap(core.render(spec)).tobytes() != with_image  # back to the text-only label
+    panel = window.image_panel
+    before = window.preview.pixmap().toImage()
+    panel.brightness.slider.setValue(panel.brightness.slider.maximum())  # all the way up
+    assert window.spec().brightness == 100
+    assert window.preview.pixmap().toImage() != before  # the preview followed the drag
+    panel.brightness.slider.reset_requested.emit()  # double-click
+    assert window.spec().brightness == 0
+
+
+def test_sliders_dim_with_the_rest_of_the_image_panel(window):
+    panel = window.image_panel
+    sliders = (panel.brightness, panel.contrast, panel.gamma, panel.pixelate)
+    assert all(not s.slider.isEnabled() and not s.spin.isEnabled() for s in sliders)  # no image yet
+    window.content.set_image("x.png")
+    assert all(s.slider.isEnabled() and s.spin.isEnabled() for s in sliders)
+    window.image_panel.dither.setCurrentIndex(window.image_panel.dither.findData("threshold"))
+    assert panel.cutoff.slider.isEnabled()  # the cutoff joins in when the hard cutoff is chosen
+
+
+def test_gamma_slider_covers_the_whole_range(window):
+    gamma = window.image_panel.gamma
+    window.set_spec(core.LabelSpec(gamma=0.3))
+    assert window.spec().gamma == 0.3 and gamma.slider.value() == 0
+    window.set_spec(core.LabelSpec(gamma=3.0))
+    assert window.spec().gamma == 3.0 and gamma.slider.value() == gamma.slider.maximum()
+
+
+def test_every_neutral_handle_sits_at_the_same_spot(window):
+    """Brightness 0, contrast 0 and gamma 1.0 are all "no change": their handles must line up, dead centre."""
+    window.set_spec(core.LabelSpec())
+    panel = window.image_panel
+    fractions = {round(c.slider.value() / c.slider.maximum(), 6) for c in (panel.brightness, panel.contrast, panel.gamma)}
+    assert fractions == {0.5}

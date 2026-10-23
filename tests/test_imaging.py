@@ -169,3 +169,33 @@ def test_cli_looks(tmp_path):
     cli.main(["--image", src, "--pixelate", "3", "--mirror", "--flip", "--invert", "--threshold", "100", "--preview", str(out)])
     spec = core.LabelSpec(image_path=src, pixelate=3, mirror=True, flip=True, invert=True, threshold=100)
     assert Image.open(out).tobytes() == core.to_bitmap(core.render(spec)).tobytes()
+
+
+def test_decoded_photo_is_cached_but_an_edited_file_is_read_again(tmp_path):
+    path = tmp_path / "photo.png"
+    Image.new("L", (40, 40), 0).save(path)
+    imaging._decode.cache_clear()
+    first = imaging.load_gray(str(path))
+    assert imaging.load_gray(str(path)) is first and imaging._decode.cache_info().hits >= 1  # no second decode
+
+    Image.new("L", (40, 40), 255).save(path)  # same path, new content (and a new modification time)
+    import os
+    stat = os.stat(path)
+    os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns + 5_000_000_000))
+    again = imaging.load_gray(str(path))
+    assert again is not first and again.getpixel((5, 5)) == 255
+
+
+def test_processing_never_modifies_the_cached_picture(tmp_path):
+    path = _save(tmp_path, _gradient())
+    before = imaging.load_gray(path).tobytes()
+    for kw in ({"invert": True}, {"mirror": True, "flip": True}, {"threshold": 100}, {"pixelate": 4}, {"gamma": 2.0}):
+        imaging.process(core.LabelSpec(image_path=path, **kw))
+    assert imaging.load_gray(path).tobytes() == before
+
+
+def test_a_missing_file_still_raises_not_a_cached_ghost(tmp_path):
+    import pytest as _pytest
+
+    with _pytest.raises(FileNotFoundError):
+        imaging.load_gray(str(tmp_path / "nope.png"))

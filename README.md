@@ -35,8 +35,9 @@ dithering. Regenerate with <code>python packaging/make_screenshots.py</code>.</s
   cyber panel, HUD brackets, ruler ticks. **Bars:** under-construction hazard stripes.
 - **QR codes, images** (drag and drop or paste), copies, darkness, saved **presets**. **Image and text together:** put the
   picture left, right, above, below or behind the text (and QR code), with a size control. **Image tab:** Floyd–Steinberg,
-  ordered (Bayer) crosshatch or hard-cutoff dithering, brightness, contrast and gamma, and looks: pixelate (chunky
-  handheld-camera dots), mirror, flip and invert. Transparent PNGs print on white and phone photos keep their orientation.
+  ordered (Bayer) crosshatch or hard-cutoff dithering; sliders with exact-value boxes for brightness, contrast, gamma and
+  the cutoff (double-click a slider to reset it); pixelate for chunky handheld-camera dots; mirror, flip and invert.
+  Transparent PNGs print on white and phone photos keep their orientation.
 - **Save and share:** File > Save/Open composition keeps a whole label in one `.t003label` file (the image is embedded, so
   it works on another machine; drop one on the window to open it, or `t003-print --file x.t003label`). File > Export
   image writes the exact 1-bit label as a PNG, at printed size or enlarged 4×.
@@ -107,8 +108,6 @@ printers.
 
 **Next**
 - [ ] Publish to PyPI, so `pip install t003-label-gui` works without the git URL (the wheel is already built and tested in CI)
-- [ ] Sliders (with a small value box) for brightness, contrast, gamma, cutoff and pixelate, plus a cache of the decoded
-      photo so dragging stays smooth with phone-sized pictures
 - [ ] Batch-print from a CSV (`{column}` placeholders in the text and QR fields)
 - [ ] Undo/redo, then an album: recent and saved labels as a thumbnail gallery
 - [ ] Stickers and stamps: a built-in set of our own pixel icons (fragile, this side up, warning, arrows, ...) to place on a label

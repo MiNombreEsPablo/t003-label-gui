@@ -7,6 +7,7 @@ pure black/white here, which `to_bitmap` then passes through untouched.
 from __future__ import annotations
 
 import functools
+import os
 
 from PIL import Image, ImageChops, ImageEnhance, ImageOps
 
@@ -14,7 +15,18 @@ from .spec import SH, W, LabelSpec
 
 
 def load_gray(path: str) -> Image.Image:
-    """Open an image as 8-bit gray: upright per its EXIF orientation, transparent areas white (not black)."""
+    """Open an image as 8-bit gray: upright per its EXIF orientation, transparent areas white (not black).
+
+    Decoding is the slow part for a phone photo (about 70 ms of an 85 ms preview), and the preview re-renders on
+    every slider step, so the result is cached per file (path, modification time and size, so an edited file is read
+    again). The returned image is shared: never modify it in place.
+    """
+    stat = os.stat(path)  # raises FileNotFoundError for a missing file, exactly as opening it would
+    return _decode(path, stat.st_mtime_ns, stat.st_size)
+
+
+@functools.lru_cache(maxsize=2)  # two pictures at most: a 48 MP photo is about 48 MB once decoded
+def _decode(path: str, mtime_ns: int, size: int) -> Image.Image:
     img = ImageOps.exif_transpose(Image.open(path))
     if img.mode in ("RGBA", "LA", "PA") or (img.mode == "P" and "transparency" in img.info):
         rgba = img.convert("RGBA")

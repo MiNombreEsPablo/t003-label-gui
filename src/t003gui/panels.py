@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont, QImage, QStandardItem, QStandardItemModel, QValidator
+from PySide6.QtGui import QFont, QImage, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
 from . import core
 from . import fonts as bundled_fonts
 from .spec import IMAGE_SUFFIXES
+from .widgets import SliderSpin, TenthsSpinBox, log_mapping
 
 LABELS = {
     "3d": "3D WordArt", "grid": "Graph paper", "dots": "Polka dots", "bevel": "Win95 bevel",
@@ -292,26 +293,6 @@ class TextPanel(QWidget):
         self.font_box.blockSignals(False)
 
 
-class _TenthsSpinBox(QSpinBox):
-    """An integer spin box shown in tenths (gamma 1.0 is stored as 10); still a QSpinBox, so the theme styles it."""
-
-    def textFromValue(self, value: int) -> str:
-        return f"{value / 10:.1f}"
-
-    def valueFromText(self, text: str) -> int:
-        try:
-            return round(float(text) * 10)
-        except ValueError:
-            return self.value()
-
-    def validate(self, text: str, pos: int):
-        try:
-            float(text)
-        except ValueError:
-            return (QValidator.Intermediate if text in ("", ".") else QValidator.Invalid), text, pos
-        return QValidator.Acceptable, text, pos
-
-
 class ImagePanel(QWidget):
     """How a picture becomes dots: dither, tone and looks. Only matters when an image is chosen."""
 
@@ -324,19 +305,17 @@ class ImagePanel(QWidget):
         self.dither = _choice_box(core.DITHERS + ("threshold",))
         self.dither.setToolTip("Floyd–Steinberg is smooth and best for photos; ordered dithering gives the regular\n"
                                "crosshatch of 90s handheld cameras; a hard cutoff suits flat-colour art.")
-        self.cutoff = QSpinBox()
-        self.cutoff.setRange(0, 255)
+        self.cutoff = SliderSpin(0, 255, default=160)
         self.cutoff.setValue(160)
-        self.brightness = QSpinBox()
-        self.brightness.setRange(-100, 100)
-        self.contrast = QSpinBox()
-        self.contrast.setRange(-100, 100)
-        self.gamma = _TenthsSpinBox()
-        self.gamma.setRange(3, 30)
+        self.cutoff.setToolTip("Pixels lighter than this print white, darker print black")
+        self.brightness = SliderSpin(-100, 100, default=0)
+        self.contrast = SliderSpin(-100, 100, default=0)
+        for tone in (self.brightness, self.contrast):
+            tone.setToolTip("Drag, type a number, or double-click the slider to reset it")
+        self.gamma = SliderSpin(3, 30, default=10, spin=TenthsSpinBox(), mapping=log_mapping(3, 30, neutral=10))  # tenths
         self.gamma.setValue(10)
-        self.gamma.setToolTip("Above 1.0 lightens the mid-tones, below 1.0 darkens them")
-        self.pixelate = QSpinBox()
-        self.pixelate.setRange(0, 32)
+        self.gamma.setToolTip("Above 1.0 lightens the mid-tones, below 1.0 darkens them. Double-click to reset.")
+        self.pixelate = SliderSpin(0, 32, default=0)
         self.pixelate.setSpecialValueText("Off")
         self.pixelate.setSuffix(" dots")
         self.pixelate.setToolTip("Chunky blocks, dithered at the low resolution: 3 gives the look of a 90s handheld camera")
