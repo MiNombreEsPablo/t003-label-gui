@@ -19,7 +19,7 @@ python packaging/build.py                     # PyInstaller build for the curren
 
 - **Python 3.9+.** No 3.10-only syntax in `src` (`from __future__ import annotations` everywhere; no `match`, no `zip(strict=)`, no `tomllib` in code or tests). CI runs 3.9-3.14.
 - **Qt is optional.** `core`, `render`, `imaging`, `composition`, `presets`, `cli` never import PySide6; `pip install .` (no extra) is a working CLI. `t003-gui` goes through `launcher.py`, which prints what to install if PySide6 is missing (and re-raises any *other* ImportError). Tests that need Qt `importorskip("PySide6")`; `tests/test_packaging.py` runs the CLI with PySide6 blocked. Don't import Qt from a Qt-free module.
-- **Lower bounds are tested**: CI's `minimum-versions` job installs PySide6 6.5.3, Pillow 9.1.0, pyusb 1.2.1, qrcode 7.4, fontTools 4.30. Raise a bound in `pyproject.toml` only together with that job. `QFormLayout.setRowVisible` is why Qt >= 6.4.
+- **Lower bounds are tested**: CI's `minimum-versions` job installs PySide6 6.5.3, Pillow 9.1.0, pyusb 1.2.1, libusb-package 1.0.30, qrcode 7.4, fontTools 4.30. (libusb-package < 1.0.30 looks fine on a dev machine, which has a system libusb, but pyusb rejects it on a clean one: only CI caught it.) Raise a bound in `pyproject.toml` only together with that job. `QFormLayout.setRowVisible` is why Qt >= 6.4.
 - **A wheel needs every data file in `package-data`** (fonts, licences, `assets/*`); an editable install hides a missing one. `test_package_data_covers_every_asset_and_font` and CI's `package` job (build wheel, install it clean, run `--selftest`) guard this.
 - `libusb-package` is only required where it has wheels (Windows, macOS, Linux x86-64/arm64); elsewhere `core._backend()` falls back to the system libusb.
 

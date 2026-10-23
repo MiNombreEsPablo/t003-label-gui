@@ -14,8 +14,9 @@ dependencies = [
     "qrcode>=7.4",
     "fonttools>=4.30",
     # Bundles libusb for Windows, macOS and Linux x86-64/arm64. Elsewhere pip would try to build it from source, which
-    # fails; there the code falls back to the system libusb (apt/dnf/pkg install libusb).
-    "libusb-package>=1.0.26; platform_system == 'Windows' or platform_system == 'Darwin' or (platform_system == 'Linux' and (platform_machine == 'x86_64' or platform_machine == 'aarch64' or platform_machine == 'AMD64'))",
+    # fails; there the code falls back to the system libusb (apt/dnf/pkg install libusb). Not older than 1.0.30:
+    # every 1.0.26.x library is rejected by pyusb on a machine with no system libusb (found with a CI probe).
+    "libusb-package>=1.0.30; platform_system == 'Windows' or platform_system == 'Darwin' or (platform_system == 'Linux' and (platform_machine == 'x86_64' or platform_machine == 'aarch64' or platform_machine == 'AMD64'))",
 ]
 
 [project.optional-dependencies]
