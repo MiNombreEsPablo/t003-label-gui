@@ -63,20 +63,31 @@ The T003 speaks TSPL over a plain USB printer interface. The app renders a 384×
 
 ## Roadmap
 
-Rough ideas, in no particular order and with no promised dates.
+Ordered by priority, with no promised dates. Several ideas are inspired by 90s handheld cameras and their thermal
+printers.
 
-**GUI**
-- [ ] More themes (Win95/98 grey) and user-defined colour themes
-- [ ] Undo/redo and a recent-labels history
-- [ ] Batch-print from a CSV
+**Now** (the next release)
+- [ ] An Image panel: choice of dither (Floyd–Steinberg, ordered/Bayer, hard threshold), brightness, contrast and gamma
+- [ ] Image looks: pixelate (chunky low-res), mirror, flip, invert
+- [ ] A four-shade green "handheld" theme
+- [ ] Screenshots in this README
+
+**Next**
+- [ ] Batch-print from a CSV (`{column}` placeholders in the text and QR fields)
+- [ ] Undo/redo, then an album: recent and saved labels as a thumbnail gallery
+- [ ] Stickers and stamps: a built-in set of our own pixel icons (fragile, this side up, warning, arrows, ...) to place on a label
+- [ ] Poster mode: split one large image across several stickers, with alignment marks
+
+**Later**
+- [ ] More themes: Win95/98 grey, and user-defined colour themes
 - [ ] Zoomable preview with a ruler/grid overlay
+- [ ] Draw tool: freehand doodling on the label
+- [ ] Webcam capture: take a photo and print it (needs Qt Multimedia, so a larger download)
 
-**Connectivity**
-- [ ] Bluetooth printing (USB only for now)
-- [ ] Windows printing through the spooler, so no Zadig/WinUSB driver is needed
-
-**Platforms**
-- [ ] Hardware testing on Windows and macOS (CI builds them, but they are untested with a printer)
+**Needs hardware or research first**
+- [ ] Hardware testing on Windows and macOS (CI builds them, but they are untested with a printer). Testers wanted.
+- [ ] Windows printing through the spooler, so no Zadig/WinUSB driver is needed (needs a Windows machine to test)
+- [ ] Bluetooth printing (USB only for now; first check whether the T003 has Bluetooth at all)
 
 ## Building releases
 
