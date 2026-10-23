@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from . import __version__, core
+from . import __version__, composition, core
 from .presets import PresetStore
 
 EXAMPLES = r"""
@@ -48,10 +48,18 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--copies", type=int, help="number of copies (default 1)")
     p.add_argument("--density", type=int, help="darkness 0-15 (default 7)")
     p.add_argument("--preset", help="start from a preset saved in the GUI; other flags override it")
+    p.add_argument("--file", metavar="FILE", help="start from a saved composition (.t003label); other flags override it")
     p.add_argument("--preview", metavar="PNG", help="write the rendered label to PNG instead of printing")
     args = p.parse_args(argv)
 
     spec = core.LabelSpec()
+    if args.file and args.preset:
+        p.error("use either --file or --preset, not both")
+    if args.file:
+        try:
+            spec = composition.load(args.file)
+        except (OSError, ValueError) as e:
+            p.error(f"can't open {args.file}: {e}")
     if args.preset:
         spec = PresetStore().get(args.preset)
         if spec is None:
@@ -69,7 +77,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.bars:
         spec.bars = True
     if not (spec.text or spec.qr or spec.image_path):
-        p.error("give some text, --qr, --image or --preset")
+        p.error("give some text, --qr, --image, --preset or --file")
 
     try:
         if args.preview:

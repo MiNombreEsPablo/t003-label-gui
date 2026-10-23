@@ -30,8 +30,7 @@ from PySide6.QtWidgets import (
 
 from . import core
 from . import fonts as bundled_fonts
-
-IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"}
+from .spec import IMAGE_SUFFIXES
 
 LABELS = {
     "3d": "3D WordArt", "grid": "Graph paper", "dots": "Polka dots", "bevel": "Win95 bevel",

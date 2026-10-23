@@ -16,7 +16,10 @@ Japanese (日本語).
 - **Backgrounds:** checker, dots, stripes, dithered gradient, stars, graph paper, scanlines, circuit board, hex grid,
   synthwave sun, matrix rain, halftone. **Borders:** solid, double, dotted, checker, Win95 bevel, marquee lights,
   cyber panel, HUD brackets, ruler ticks. **Bars:** under-construction hazard stripes.
-- **QR codes, images** (dithered or hard threshold, drag and drop), copies, darkness, saved **presets**.
+- **QR codes, images** (dithered or hard threshold, drag and drop or paste), copies, darkness, saved **presets**.
+- **Save and share:** File > Save/Open composition keeps a whole label in one `.t003label` file (the image is embedded, so
+  it works on another machine; drop one on the window to open it, or `t003-print --file x.t003label`). File > Export
+  image writes the exact 1-bit label as a PNG, at printed size or enlarged 4×.
 - Themes (View > Theme): Y2K candy plastic in blue or pink, gunmetal with LCD-green text, or the plain platform look.
 - A CLI with the same options: `t003-print "NEON\nNIGHTS" --effect neon --frame brackets`.
 
@@ -64,7 +67,6 @@ Rough ideas, in no particular order and with no promised dates.
 - [ ] More themes (Win95/98 grey) and user-defined colour themes
 - [ ] Undo/redo and a recent-labels history
 - [ ] Print several copies and batch-print from a CSV
-- [ ] Preset import/export
 - [ ] Zoomable preview with a ruler/grid overlay
 
 **Connectivity**

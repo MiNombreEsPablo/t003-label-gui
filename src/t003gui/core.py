@@ -9,6 +9,7 @@ import time
 
 import usb.core
 import usb.util
+from PIL import Image
 
 from .render import PrinterError, font_path, list_font_families, render, to_bitmap  # noqa: F401
 from .spec import (  # noqa: F401
@@ -18,6 +19,7 @@ from .spec import (  # noqa: F401
     DEFAULT_FONT,
     EFFECTS,
     H,
+    IMAGE_SUFFIXES,
     MARGIN,
     SH,
     VALIGNMENTS,
@@ -76,6 +78,17 @@ def send(payload: bytes) -> list[str]:
     finally:
         usb.util.dispose_resources(dev)
     return [msg for bit, msg in STATUS_FLAGS.items() if status & bit]
+
+
+def export_png(spec: LabelSpec, path, scale: int = 1) -> None:
+    """Save the label as the exact 1-bit image that prints: just the sticker (no gap rows), optionally enlarged.
+
+    Enlarging is nearest-neighbour so every printed dot stays a crisp square.
+    """
+    bitmap = to_bitmap(render(spec)).crop((0, 0, W, SH))
+    if scale > 1:
+        bitmap = bitmap.resize((W * scale, SH * scale), Image.Resampling.NEAREST)
+    bitmap.save(path, format="PNG")
 
 
 def printer_presence() -> str:

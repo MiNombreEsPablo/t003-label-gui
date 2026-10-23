@@ -156,3 +156,70 @@ def test_help_menu_and_about_text(window):
     html = about.about_html("found", 23)
     assert __version__ in html and "found" in html and about.REPO_URL in html
     assert about.RELEASES_URL.startswith(about.REPO_URL) and about.ISSUES_URL.startswith(about.REPO_URL)
+
+
+def test_file_menu_actions_exist(window):
+    titles = [a.text() for top in window.menuBar().actions() if top.menu() for a in top.menu().actions()]
+    for wanted in ("Open composition", "Save composition", "Export image"):
+        assert any(wanted in t for t in titles), wanted
+
+
+def test_save_then_open_a_composition(window, monkeypatch, tmp_path):
+    from PySide6.QtWidgets import QFileDialog
+
+    path = str(tmp_path / "mine")  # the suffix is added for the user
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *a, **k: (path, ""))
+    window.content.text.setPlainText("keep me")
+    window.text_panel.effect.setCurrentIndex(window.text_panel.effect.findData("outline"))
+    window.save_composition()
+    assert (tmp_path / "mine.t003label").exists() and "Saved" in window.status.text()
+
+    window.content.text.setPlainText("changed")
+    window.text_panel.effect.setCurrentIndex(0)
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **k: (path + ".t003label", ""))
+    window.open_composition()
+    assert window.spec().text == "keep me" and window.spec().effect == "outline"
+
+
+def test_opening_a_bad_composition_warns_and_changes_nothing(window, monkeypatch, tmp_path):
+    from PySide6.QtWidgets import QFileDialog, QMessageBox
+
+    bad = tmp_path / "bad.t003label"
+    bad.write_text("nope")
+    warned = []
+    monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: warned.append(a[2]))
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **k: (str(bad), ""))
+    window.content.text.setPlainText("untouched")
+    window.open_composition()
+    assert warned and "bad.t003label" in warned[0] and window.spec().text == "untouched"
+
+
+def test_export_image_uses_the_chosen_scale(window, monkeypatch, tmp_path):
+    from PIL import Image
+    from PySide6.QtWidgets import QFileDialog
+
+    window.content.text.setPlainText("Hi")
+    big = [f for f, scale in window.EXPORT_FORMATS.items() if scale == 4][0]
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *a, **k: (str(tmp_path / "out"), big))
+    window.export_image()
+    assert Image.open(tmp_path / "out.png").size == (core.W * 4, core.SH * 4)
+
+    window.content.text.setPlainText("")  # nothing to export
+    (tmp_path / "none.png").unlink(missing_ok=True)
+    window.export_image()
+    assert "Nothing to export" in window.status.text()
+
+
+def test_dropping_a_composition_file_opens_it(window, tmp_path):
+    from PySide6.QtCore import QMimeData, QPointF, Qt, QUrl
+    from PySide6.QtGui import QDropEvent
+
+    from t003gui import composition
+
+    path = tmp_path / ("dropped" + composition.SUFFIX)
+    composition.save(path, core.LabelSpec(text="from a drop"))
+    mime = QMimeData()
+    mime.setUrls([QUrl.fromLocalFile(str(path))])
+    event = QDropEvent(QPointF(5, 5), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier)
+    window.dropEvent(event)
+    assert window.spec().text == "from a drop" and "Opened" in window.status.text()

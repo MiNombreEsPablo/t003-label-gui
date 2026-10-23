@@ -9,6 +9,7 @@ from dataclasses import dataclass
 
 W, H = 384, 240  # printable dots; H is the label pitch
 SH = 224  # sticker height in dots
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"}
 MARGIN = 8
 
 DEFAULT_FONT = "DejaVu Sans"

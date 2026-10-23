@@ -1,7 +1,9 @@
 """Qt GUI: edit a label, see the exact 1-bit preview, print it."""
 from __future__ import annotations
 
+import re
 import sys
+from pathlib import Path
 
 from PySide6.QtCore import QEvent, QObject, QSettings, Qt, QUrl
 from PySide6.QtGui import (
@@ -22,6 +24,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QFormLayout,
     QHBoxLayout,
+    QFileDialog,
     QInputDialog,
     QLabel,
     QMainWindow,
@@ -32,7 +35,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from . import __version__, about, core, panels, theme, updates
+from . import __version__, about, composition, core, panels, theme, updates
 from . import fonts as bundled_fonts
 from .presets import PresetStore
 
@@ -115,6 +118,22 @@ class MainWindow(QMainWindow):
         container.setObjectName("root")
         container.setLayout(root)
         self.setCentralWidget(container)
+
+        file_menu = self.menuBar().addMenu("&File")
+        for text, slot, shortcut in (
+            ("&Open composition…", self.open_composition, QKeySequence.Open),
+            ("&Save composition…", self.save_composition, QKeySequence.Save),
+            ("&Export image…", self.export_image, QKeySequence("Ctrl+E")),
+        ):
+            action = QAction(text, self)
+            action.setShortcut(shortcut)
+            action.triggered.connect(slot)
+            file_menu.addAction(action)
+        file_menu.addSeparator()
+        quit_action = QAction("&Quit", self)
+        quit_action.setShortcut(QKeySequence.Quit)
+        quit_action.triggered.connect(self.close)
+        file_menu.addAction(quit_action)
 
         theme_menu = self.menuBar().addMenu("&View").addMenu("&Theme")
         self.theme_actions: dict[str, QAction] = {}
@@ -205,11 +224,23 @@ class MainWindow(QMainWindow):
             self.presets.delete(name)
             self.reload_presets()
 
+    @staticmethod
+    def _dropped_composition(mime) -> str | None:
+        for url in mime.urls():
+            if url.isLocalFile() and url.toLocalFile().lower().endswith(composition.SUFFIX):
+                return url.toLocalFile()
+        return None
+
     def dragEnterEvent(self, event) -> None:
-        if panels.has_image(event.mimeData()):
+        if panels.has_image(event.mimeData()) or self._dropped_composition(event.mimeData()):
             event.acceptProposedAction()
 
     def dropEvent(self, event) -> None:
+        dropped = self._dropped_composition(event.mimeData())
+        if dropped:
+            self._open_composition_file(dropped)
+            event.acceptProposedAction()
+            return
         path = panels.image_from_mime(event.mimeData())
         if path:
             self.content.set_image(path)
@@ -278,6 +309,77 @@ class MainWindow(QMainWindow):
         box.exec()
         if box.clickedButton() is licences:
             self._open_path(bundled_fonts.FONT_DIR / "LICENSES")
+
+    # --- files: compositions and exported images (system dialogs: unparented, so the theme doesn't reach them)
+
+    def _start_dir(self) -> str:
+        return QSettings().value("lastDir", "", type=str)
+
+    def _remember_dir(self, path: str) -> None:
+        QSettings().setValue("lastDir", str(Path(path).parent))
+
+    def _suggested_name(self, suffix: str) -> str:
+        first_line = (self.content.text.toPlainText().strip().splitlines() or [""])[0]
+        stem = re.sub(r"[^\w -]+", "", first_line).strip()[:40] or "label"
+        return str(Path(self._start_dir()) / (stem + suffix))
+
+    def save_composition(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(
+            None, "Save composition", self._suggested_name(composition.SUFFIX),
+            f"T003 label (*{composition.SUFFIX})")
+        if not path:
+            return
+        if not path.lower().endswith(composition.SUFFIX):
+            path += composition.SUFFIX
+        try:
+            composition.save(path, self.spec())
+        except OSError as e:
+            QMessageBox.warning(self, "Save composition", f"Couldn't save the file: {e}")
+            return
+        self._remember_dir(path)
+        self.status.setText(f"Saved {Path(path).name}.")
+
+    def open_composition(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            None, "Open composition", self._start_dir(), f"T003 label (*{composition.SUFFIX})")
+        if path:
+            self._open_composition_file(path)
+
+    def _open_composition_file(self, path: str) -> None:
+        try:
+            spec = composition.load(path)
+        except (OSError, ValueError) as e:
+            QMessageBox.warning(self, "Open composition", f"Couldn't open {Path(path).name}: {e}")
+            return
+        self._remember_dir(path)
+        self.preset_box.setCurrentIndex(0)
+        self.delete_preset_button.setEnabled(False)
+        self.set_spec(spec)
+        self.status.setText(f"Opened {Path(path).name}.")
+
+    EXPORT_FORMATS = {
+        f"PNG image, printed size ({core.W}×{core.SH}) (*.png)": 1,
+        f"PNG image, enlarged 4× ({core.W * 4}×{core.SH * 4}) (*.png)": 4,
+    }
+
+    def export_image(self) -> None:
+        spec = self.spec()
+        if not (spec.text or spec.qr or spec.image_path):
+            self.status.setText("Nothing to export.")
+            return
+        path, chosen = QFileDialog.getSaveFileName(
+            None, "Export image", self._suggested_name(".png"), ";;".join(self.EXPORT_FORMATS))
+        if not path:
+            return
+        if not path.lower().endswith(".png"):
+            path += ".png"
+        try:
+            core.export_png(spec, path, self.EXPORT_FORMATS.get(chosen, 1))
+        except Exception as e:  # bad image path etc., as in the preview
+            QMessageBox.warning(self, "Export image", f"Couldn't export the image: {e}")
+            return
+        self._remember_dir(path)
+        self.status.setText(f"Exported {Path(path).name}.")
 
     def refresh_preview(self) -> None:
         spec = self.spec()
