@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import asdict, fields
+from dataclasses import asdict
 from pathlib import Path
 
 from .core import LabelSpec
@@ -20,7 +20,7 @@ class PresetStore:
 
     def _read(self) -> dict[str, dict]:
         try:
-            data = json.loads(self.path.read_text())
+            data = json.loads(self.path.read_text(encoding="utf-8"))
         except (FileNotFoundError, json.JSONDecodeError):
             return {}
         return data if isinstance(data, dict) else {}
@@ -28,7 +28,7 @@ class PresetStore:
     def _write(self, data: dict[str, dict]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(data, indent=2, sort_keys=True))
+        tmp.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
         tmp.replace(self.path)
 
     def names(self) -> list[str]:
@@ -38,8 +38,7 @@ class PresetStore:
         raw = self._read().get(name)
         if raw is None:
             return None
-        known = {f.name for f in fields(LabelSpec)}
-        return LabelSpec(**{k: v for k, v in raw.items() if k in known})
+        return LabelSpec.from_dict(raw) if isinstance(raw, dict) else None
 
     def save(self, name: str, spec: LabelSpec) -> None:
         data = self._read()

@@ -5,7 +5,7 @@ Geometry: 58 mm paper, 384 printable dots wide (203 dpi). The label pitch is 240
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 
 W, H = 384, 240  # printable dots; H is the label pitch
 SH = 224  # sticker height in dots
@@ -56,3 +56,26 @@ class LabelSpec:
     border_style: str = "solid"
     background: str = "none"
     bars: bool = False  # hazard-stripe "under construction" bars top and bottom
+
+    @classmethod
+    def from_dict(cls, raw: dict) -> "LabelSpec":
+        """Build a spec from stored JSON (presets, composition files): unknown keys are ignored, and a value of the
+        wrong type falls back to the field's default, so a hand-edited file cannot crash rendering later."""
+        defaults, values = cls(), {}
+        for f in fields(cls):
+            if f.name not in raw:
+                continue
+            value, default = raw[f.name], getattr(defaults, f.name)
+            if default is None:  # threshold: an int or None
+                ok = value is None or (isinstance(value, int) and not isinstance(value, bool))
+            elif isinstance(default, bool):
+                ok = isinstance(value, bool)
+            elif isinstance(default, float):
+                ok = isinstance(value, (int, float)) and not isinstance(value, bool)
+            elif isinstance(default, int):
+                ok = isinstance(value, int) and not isinstance(value, bool)
+            else:
+                ok = isinstance(value, str)
+            if ok:
+                values[f.name] = value
+        return cls(**values)

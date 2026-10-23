@@ -9,7 +9,7 @@ import subprocess
 
 import qrcode
 from fontTools.ttLib import TTFont
-from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps, UnidentifiedImageError
 
 from . import fonts as bundled_fonts
 from . import imaging
@@ -529,10 +529,25 @@ def _hazard_bar(img: Image.Image, y0: int) -> None:
     img.paste(band, (0, y0))
 
 
+def _picture(spec: LabelSpec, *args, **kwargs) -> Image.Image:
+    """`imaging.process` with failures turned into messages that say what to do about them."""
+    try:
+        return imaging.process(spec, *args, **kwargs)
+    except FileNotFoundError:
+        raise PrinterError(f"The image file is missing: {spec.image_path}") from None
+    except UnidentifiedImageError:
+        raise PrinterError(f"Couldn't read {spec.image_path}: it isn't a picture file this app can open.") from None
+    except OSError as e:  # e.g. permission denied
+        raise PrinterError(f"Couldn't read the image {spec.image_path}: {e.strerror or e}") from e
+
+
 def _qr_image(data: str, side: int) -> Image.Image:
     qr = qrcode.QRCode(border=0, box_size=1, error_correction=qrcode.constants.ERROR_CORRECT_M)
     qr.add_data(data)
-    qr.make(fit=True)
+    try:
+        qr.make(fit=True)
+    except (ValueError, qrcode.exceptions.DataOverflowError):
+        raise PrinterError("That text is too long for a QR code; shorten it.") from None
     matrix = qr.get_matrix()
     scale = max(1, side // len(matrix))
     img = Image.new("L", (len(matrix) * scale,) * 2, 255)
@@ -557,13 +572,13 @@ def render(spec: LabelSpec) -> Image.Image:
 
     layout = _pick(spec.image_layout, IMAGE_LAYOUTS, "only") if spec.image_path else ""
     if layout == "only":
-        src = imaging.process(spec)
+        src = _picture(spec)
         img.paste(src, ((W - src.width) // 2, (SH - src.height) // 2))
         return img
 
     background = _pick(spec.background, BACKGROUNDS, "none")
     if layout == "behind":  # the picture is the backdrop; text over it gets the same halo as over a pattern
-        img.paste(imaging.process(spec, (W, SH), cover=True), (0, 0))
+        img.paste(_picture(spec, (W, SH), cover=True), (0, 0))
     elif background != "none":
         img.paste(_background(background), (0, 0))
     backdrop = background != "none" or layout == "behind"
@@ -591,7 +606,7 @@ def render(spec: LabelSpec) -> Image.Image:
             size = int((ay1 - ay0) * share)
             region = (ax0, ay0, ax1, ay0 + size) if layout == "top" else (ax0, ay1 - size, ax1, ay1)
             ay0, ay1 = (ay0 + size + MARGIN, ay1) if layout == "top" else (ay0, ay1 - size - MARGIN)
-        src = imaging.process(spec, (region[2] - region[0], region[3] - region[1]))
+        src = _picture(spec, (region[2] - region[0], region[3] - region[1]))
         img.paste(src, (region[0] + (region[2] - region[0] - src.width) // 2,
                         region[1] + (region[3] - region[1] - src.height) // 2))
     text_w = ax1 - ax0

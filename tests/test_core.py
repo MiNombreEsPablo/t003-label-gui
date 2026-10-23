@@ -94,3 +94,8 @@ def test_label_bitmap_is_the_sticker_only_and_export_uses_it(tmp_path):
     out = tmp_path / "x.png"
     core.export_png(spec, out)
     assert Image.open(out).tobytes() == one.tobytes()
+
+
+def test_density_and_copies_are_clamped_in_the_payload():
+    payload = core.tspl(core.LabelSpec(text="x", density=99, copies=0))
+    assert b"DENSITY 15" in payload and payload.endswith(b"PRINT 1,1\r\n")

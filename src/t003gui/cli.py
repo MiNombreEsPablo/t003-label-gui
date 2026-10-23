@@ -102,7 +102,7 @@ def main(argv: list[str] | None = None) -> None:
             return
         for problem in core.print_label(spec):
             print(f"printer: {problem}", file=sys.stderr)
-    except (core.PrinterError, OSError) as e:
+    except (core.PrinterError, OSError, ValueError) as e:  # ValueError: e.g. a QR code too big to encode
         sys.exit(f"error: {e}")
 
 

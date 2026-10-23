@@ -38,3 +38,9 @@ def test_cli_preview_with_preset_override(tmp_path, monkeypatch):
 def test_cli_requires_content():
     with pytest.raises(SystemExit):
         cli.main([])
+
+
+def test_cli_reports_an_oversized_qr_instead_of_a_traceback(tmp_path):
+    with pytest.raises(SystemExit) as e:
+        cli.main(["x", "--qr", "x" * 5000, "--preview", str(tmp_path / "o.png")])
+    assert "error:" in str(e.value)

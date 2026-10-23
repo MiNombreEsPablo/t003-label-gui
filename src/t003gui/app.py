@@ -495,7 +495,7 @@ class MainWindow(QMainWindow):
         QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
             problems = core.print_label(spec)
-        except core.PrinterError as e:
+        except Exception as e:  # PrinterError, or a bad image path / oversized QR raised while rendering
             QMessageBox.critical(self, "Print failed", str(e))
             self.status.setText(str(e))
         else:

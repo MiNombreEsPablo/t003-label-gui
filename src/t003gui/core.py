@@ -38,10 +38,10 @@ STATUS_FLAGS = {0x01: "head open", 0x02: "paper jam", 0x04: "out of paper", 0x08
 def tspl(spec: LabelSpec) -> bytes:
     data = to_bitmap(render(spec)).tobytes()  # 1 = white, 0 = black, same as TSPL BITMAP mode 0
     head = (
-        f"SIZE 72 mm,30 mm\r\nGAP 2 mm,0 mm\r\nDIRECTION 1,0\r\nDENSITY {spec.density}\r\nCLS\r\n"
+        f"SIZE 72 mm,30 mm\r\nGAP 2 mm,0 mm\r\nDIRECTION 1,0\r\nDENSITY {min(15, max(0, spec.density))}\r\nCLS\r\n"
         f"BITMAP 0,0,{W // 8},{H},0,"
     ).encode()
-    return head + data + f"\r\nPRINT {spec.copies},1\r\n".encode()
+    return head + data + f"\r\nPRINT {min(99, max(1, spec.copies))},1\r\n".encode()
 
 
 def _backend():

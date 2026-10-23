@@ -92,3 +92,10 @@ def test_cli_loads_a_composition_and_flags_override_it(tmp_path):
         cli.main(["--file", str(tmp_path / ("missing" + composition.SUFFIX))])
     with pytest.raises(SystemExit):
         cli.main(["--file", str(saved), "--preset", "x"])
+
+
+def test_wrong_typed_fields_fall_back_to_their_defaults():
+    text = json.dumps({"format": composition.FORMAT, "version": 1,
+                       "spec": {"text": "hi", "copies": "two", "bold": 1, "gamma": 2, "threshold": None}})
+    spec = composition.loads(text)
+    assert (spec.text, spec.copies, spec.bold, spec.gamma, spec.threshold) == ("hi", 1, True, 2, None)

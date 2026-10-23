@@ -512,3 +512,15 @@ def test_a_hidden_text_is_explained_not_silent(window, tmp_path):
     window.content.text.setPlainText("")
     window.content.qr.setText("")
     assert window.status.text() == ""  # a picture on its own: nothing hidden either
+
+
+def test_a_render_error_while_printing_is_reported_not_raised(window, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+
+    shown = []
+    monkeypatch.setattr(QMessageBox, "critical", lambda *a, **k: shown.append(a[2]))
+    window.content.text.setPlainText("Hello")
+    monkeypatch.setattr(core, "print_label", lambda spec: (_ for _ in ()).throw(FileNotFoundError("gone.png")))
+    window.print_now()
+    assert shown and "gone.png" in shown[0]
+    assert window.print_button.isEnabled()

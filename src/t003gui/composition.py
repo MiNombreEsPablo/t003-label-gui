@@ -12,7 +12,7 @@ import hashlib
 import json
 import re
 import tempfile
-from dataclasses import asdict, fields
+from dataclasses import asdict
 from pathlib import Path
 
 from .spec import IMAGE_SUFFIXES, LabelSpec
@@ -42,8 +42,7 @@ def loads(text: str, image_dir: Path | None = None) -> LabelSpec:
     version = data.get("version")
     if not isinstance(version, int) or version > VERSION:
         raise ValueError("this file was made by a newer version of T003 Label Studio")
-    known = {f.name for f in fields(LabelSpec)}
-    spec = LabelSpec(**{k: v for k, v in data["spec"].items() if k in known})
+    spec = LabelSpec.from_dict(data["spec"])
     image = data.get("image")
     if isinstance(image, dict):
         try:
@@ -60,7 +59,7 @@ def _store_image(name: str, blob: bytes, folder: Path | None) -> Path:
     suffix = Path(name).suffix.lower()
     stem = re.sub(r"[^A-Za-z0-9._-]+", "_", Path(name).stem)[:40] or "image"
     # The content hash in the name keeps it unique and stable, and nothing from the file picks the directory.
-    path = folder / f"{hashlib.sha1(blob).hexdigest()[:12]}-{stem}{suffix if suffix in IMAGE_SUFFIXES else '.png'}"
+    path = folder / f"{hashlib.sha256(blob).hexdigest()[:12]}-{stem}{suffix if suffix in IMAGE_SUFFIXES else '.png'}"
     if not path.exists():
         path.write_bytes(blob)
     return path

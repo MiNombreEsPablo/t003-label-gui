@@ -133,3 +133,15 @@ def test_text_binarisation_keeps_the_ink():
     spec = core.LabelSpec(text="Shelf 3 Resistors", font="DejaVu Sans", bold=True, size=24)
     ink = core.to_bitmap(core.render(spec)).convert("L").tobytes().count(0)
     assert ink > 1500
+
+
+def test_unprintable_content_gives_a_readable_error(tmp_path):
+    bad = tmp_path / "bad.png"
+    bad.write_text("not an image")
+    for spec, text in (
+        (core.LabelSpec(qr="x" * 5000), "too long"),
+        (core.LabelSpec(image_path=str(tmp_path / "gone.png")), "missing"),
+        (core.LabelSpec(image_path=str(bad)), "isn't a picture file"),
+    ):
+        with pytest.raises(core.PrinterError, match=text):
+            core.render(spec)
