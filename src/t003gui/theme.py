@@ -109,6 +109,7 @@ class Theme:
     r_item: int
     arrow: str  # asset suffix: arrow-down{suffix}.png
     banner: BannerStyle
+    tab_accent: str = ""  # colour of the selected/hovered tab's top edge (an XP-style cue), or none
     font_pt: int = 10  # pixel fonts are only crisp at their design size
     preview_tint: tuple[str, str] | None = None  # (ink, paper): colour the label preview (cosmetic; prints stay black on white)
 
@@ -144,7 +145,7 @@ Y2K_BLUE = Theme(
     tab_unselected_text="#3a6aa8", tab_selected_bg="#ffffff",
     led_on="qradialgradient(cx:0.35, cy:0.3, radius:0.9, fx:0.35, fy:0.3, stop:0 #eaffd0, stop:0.45 #52e04a, stop:1 #14852a)",
     led_off="qradialgradient(cx:0.35, cy:0.3, radius:0.9, fx:0.35, fy:0.3, stop:0 #ffffff, stop:1 #bcd3ea)",
-    led_on_border="#14852a", led_dis="#e4e9f0", led_size=16, led_radius=10,
+    led_on_border="#14852a", led_dis="#e4e9f0", led_size=16, led_radius=4,
     scroll_bg="#e4f3ff", scroll_line="#9cc7ee",
     scroll_handle="qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #ffffff, stop:0.5 #a9d6fb, stop:1 #d9f0ff)",
     bezel_bg="qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffffff, stop:0.45 #dfe7f2, stop:0.55 #b9c6d8, stop:1 #8d9db3)",
@@ -152,7 +153,7 @@ Y2K_BLUE = Theme(
     tooltip_bg="#fff6a8", tooltip_text="#0b2a63", tooltip_border="#c9a400",
     menu_bg="#ffffff", dialog_bg="#eaf7ff",
     r_ctl=9, r_btn=13, r_default=16, r_pane=12, r_tab=12, r_title=10, r_bezel=18, r_menu=8, r_item=6,
-    arrow="",
+    arrow="", tab_accent="#ffa31a",
     banner=BannerStyle(
         stops=("#7fe3ff", "#1ea0f0", "#0b57d0"), outline="#0b3a8c", radius=22, gloss=True, bevel=None,
         font="Orbitron", size=15, weight=QFont.Black, spacing=1.5, color="#ffffff", shadow="#062a6b",
@@ -185,7 +186,7 @@ Y2K_PINK = replace(
     scroll_handle="qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #ffffff, stop:0.5 #ffb3dc, stop:1 #ffe3f2)",
     bezel_bg="qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #fff3fa, stop:0.45 #ffc9e6, stop:0.55 #ff9fd2, stop:1 #d4579f)",
     bezel_border="3px solid #b03a80", screen_border="3px solid #6b1f4d", status="#1b6a3a",
-    tooltip_text="#5a0f3d", menu_bg="#ffffff", dialog_bg="#fff0f8", arrow="-plum",
+    tooltip_text="#5a0f3d", menu_bg="#ffffff", dialog_bg="#fff0f8", arrow="-plum", tab_accent="#8f45f2",
     banner=BannerStyle(
         stops=("#ffb3de", "#ff4fa8", "#c2187a"), outline="#8a1259", radius=22, gloss=True, bevel=None,
         font="Orbitron", size=15, weight=QFont.Black, spacing=1.5, color="#ffffff", shadow="#6d0e48",
@@ -215,7 +216,7 @@ GUNMETAL = Theme(
     tab_unselected_text="#8e94ac", tab_selected_bg="#3a3d4e",
     led_on="qradialgradient(cx:0.4, cy:0.35, radius:0.8, fx:0.4, fy:0.35, stop:0 #d8ffd8, stop:0.5 #2cf02c, stop:1 #0a7a0a)",
     led_off="qradialgradient(cx:0.4, cy:0.35, radius:0.8, fx:0.4, fy:0.35, stop:0 #2f3a2f, stop:1 #101810)",
-    led_on_border="#06400a", led_dis="#22252f", led_size=14, led_radius=7,
+    led_on_border="#06400a", led_dis="#22252f", led_size=14, led_radius=3,
     scroll_bg="#14151d", scroll_line="#0d0e14",
     scroll_handle=_vgrad("#8d92aa", "#565a70"),
     bezel_bg=_vgrad("#2a2c39", "#1b1c26"),
@@ -361,7 +362,10 @@ QMenu::item {{ padding: 5px 22px; border-radius: {t.r_item}px; }}
 QMenu::item:selected {{ background: {t.select_bg}; color: {t.select_text}; }}
 QToolTip {{ background: {t.tooltip_bg}; color: {t.tooltip_text}; border: 2px solid {t.tooltip_border}; padding: 3px; }}
 QMessageBox, QInputDialog {{ background: {t.dialog_bg}; }}
-"""
+""" + (
+        f"QTabBar::tab:selected, QTabBar::tab:hover:!selected {{ border-top-color: {t.tab_accent}; }}\n"
+        if t.tab_accent else ""
+    )
 
 
 class Banner(QWidget):

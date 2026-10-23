@@ -301,3 +301,33 @@ def test_layout_round_trips_through_the_content_panel(window):
     window.set_spec(core.LabelSpec(image_layout="nonsense", image_size=999))  # clamped / defaulted, never crashes
     spec = window.spec()
     assert (spec.image_layout, spec.image_size) == ("only", 80)
+
+
+def test_preview_explains_the_gap_strip(window):
+    assert f"{core.W} × {core.SH} dots" in window.preview.toolTip()
+    img = window.preview.pixmap().toImage()
+    strip_top = core.SH * 2  # the preview is drawn at 2x
+    colours = {img.pixelColor(x, y).rgb() for x in range(img.width()) for y in range(strip_top + 2, img.height() - 2)}
+    assert len(colours) > 2  # shaded background plus the caption's text, not a blank grey bar
+    # the caption is preview-only: the exported bitmap has nothing below the sticker
+    assert set(core.to_bitmap(core.render(window.spec())).crop((0, core.SH, core.W, core.H)).tobytes()) == {255}
+
+
+@pytest.mark.parametrize("key", ["y2k-blue", "gunmetal", "handheld", "system"])
+def test_fields_line_up_across_all_panels(window, app, key):
+    """The Output box and every tab share one label column, so no field starts a few pixels left of another."""
+    from PySide6.QtCore import QPoint
+
+    window.apply_theme(key)
+    window.resize(window.sizeHint())
+    tabs = window.findChild(QTabWidget)
+    fields = {0: window.content.text, 1: window.text_panel.font_box, 2: window.image_panel.dither,
+              3: window.retro.border_box}
+    starts = set()
+    for index, field in fields.items():
+        tabs.setCurrentIndex(index)
+        app.processEvents()
+        starts.add(field.mapTo(window, QPoint(0, 0)).x())
+    starts.add(window.output.copies.mapTo(window, QPoint(0, 0)).x())
+    # exact for our themes; the platform style draws tab panes and group boxes with frames a pixel apart
+    assert max(starts) - min(starts) <= (2 if key == "system" else 0), starts

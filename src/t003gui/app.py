@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from PIL import ImageOps
-from PySide6.QtCore import QEvent, QObject, QSettings, Qt, QUrl
+from PySide6.QtCore import QEvent, QObject, QRect, QSettings, Qt, QUrl
 from PySide6.QtGui import (
     QAction,
     QActionGroup,
@@ -108,6 +108,10 @@ class MainWindow(QMainWindow):
         self.preview = QLabel()
         self.preview.setObjectName("screen")
         self.preview.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        self.preview.setToolTip(
+            f"{core.W} × {core.SH} dots (about 48 × 28 mm), exactly what prints.\n"
+            f"The strip below is the gap between stickers; nothing there is printed."
+        )
         bezel = QFrame()  # a chrome monitor bezel under the Y2K themes, invisible otherwise
         bezel.setObjectName("bezel")
         bezel_layout = QVBoxLayout(bezel)
@@ -192,6 +196,7 @@ class MainWindow(QMainWindow):
             self.banner.set_style(chosen.banner)
         self.theme_actions[key].setChecked(True)
         QSettings().setValue("theme", key)
+        self._align_label_columns()  # fonts differ per theme, so the shared label width is measured again
         self.refresh_preview()  # the preview takes the theme's tint
 
     def reload_presets(self, select: str | None = None) -> None:
@@ -258,6 +263,22 @@ class MainWindow(QMainWindow):
             if mime and not mime.hasText() and (mime.hasImage() or mime.hasUrls()) and self.content.paste_image():
                 return True
         return super().eventFilter(obj, event)
+
+    def _align_label_columns(self) -> None:
+        """One label column width across every panel, so the fields line up between tabs and the Output box."""
+        labels = []
+        for panel in self.panels:
+            form = panel.layout()
+            for row in range(form.rowCount()):
+                item = form.itemAt(row, QFormLayout.LabelRole)
+                if item and item.widget():
+                    labels.append(item.widget())
+        for label in labels:
+            label.setMinimumWidth(0)
+            label.ensurePolished()
+        width = max(label.sizeHint().width() for label in labels)
+        for label in labels:
+            label.setMinimumWidth(width)
 
     @staticmethod
     def _open_url(url: str) -> None:
@@ -405,9 +426,14 @@ class MainWindow(QMainWindow):
         )
         # Shade the gap below the sticker so it's obvious nothing there gets printed.
         painter = QPainter(pix)
-        painter.fillRect(0, core.SH * PREVIEW_SCALE, pix.width(), pix.height(), QColor(0, 0, 0, 40))
+        gap = QRect(0, core.SH * PREVIEW_SCALE, pix.width(), pix.height() - core.SH * PREVIEW_SCALE)
+        painter.fillRect(gap, QColor(0, 0, 0, 40))
         painter.setPen(QColor(120, 120, 120))
         painter.drawRect(0, 0, pix.width() - 1, core.SH * PREVIEW_SCALE - 1)
+        font = painter.font()
+        font.setPointSize(8)
+        painter.setFont(font)
+        painter.drawText(gap, Qt.AlignCenter, "gap between stickers, not printed")  # preview only: exports and prints never see it
         painter.end()
         self.preview.setPixmap(pix)
 

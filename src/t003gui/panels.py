@@ -358,7 +358,7 @@ class ImagePanel(QWidget):
         form.addRow("Contrast", self.contrast)
         form.addRow("Gamma", self.gamma)
         form.addRow("Pixelate", self.pixelate)
-        form.addRow("Looks", looks_row)
+        form.addRow("Options", looks_row)
         form.addRow("", self.reset)
         _tidy(form)
 
