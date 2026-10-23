@@ -35,21 +35,21 @@ def test_spec_round_trips_every_control(window):
 
 def test_choice_boxes_match_the_core_lists(window):
     values = lambda box: [box.itemData(i) for i in range(box.count())]
-    assert values(window.effect) == list(core.EFFECTS)
-    assert values(window.background) == list(core.BACKGROUNDS)
-    assert values(window.border_box) == [None, *core.BORDER_STYLES]
+    assert values(window.text_panel.effect) == list(core.EFFECTS)
+    assert values(window.retro.background) == list(core.BACKGROUNDS)
+    assert values(window.retro.border_box) == [None, *core.BORDER_STYLES]
 
 
 def test_font_picker_is_curated_by_default_and_keeps_your_font(window):
-    model = window.font_box.model()
+    model = window.text_panel.font_box.model()
     rows = [model.item(i).text() for i in range(model.rowCount())]
     assert all(f.family in rows for f in fonts.BUNDLED)
     assert not model.item(0).isEnabled()  # category header
     window.set_spec(core.LabelSpec(text="x", font="Some Installed Font"))
-    window.all_fonts.setChecked(True)
-    assert window.font_box.currentText() == "Some Installed Font"
-    window.all_fonts.setChecked(False)
-    assert window.font_box.currentText() == "Some Installed Font"
+    window.text_panel.all_fonts.setChecked(True)
+    assert window.text_panel.font_box.currentText() == "Some Installed Font"
+    window.text_panel.all_fonts.setChecked(False)
+    assert window.text_panel.font_box.currentText() == "Some Installed Font"
 
 
 def test_theme_choice_applies_and_clears_the_stylesheet(window, app):
@@ -100,8 +100,24 @@ def test_dropping_only_accepts_images(window):
         keep.append(mime)
         return QDropEvent(QPointF(5, 5), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier)
 
-    assert window._dropped_image(drop("/etc/hostname")) is None
-    assert window._dropped_image(drop("/tmp/x.PNG")) == "/tmp/x.PNG"
+    from t003gui import panels
+
+    assert not panels.has_image(drop("/etc/hostname").mimeData())
+    assert panels.has_image(drop("/tmp/x.PNG").mimeData())
+    assert panels.image_from_mime(drop("/tmp/x.PNG").mimeData()) == "/tmp/x.PNG"
+
+
+def test_each_panel_round_trips_its_own_slice_of_the_spec(window):
+    from dataclasses import fields
+
+    spec = core.LabelSpec(text="hi", qr="q", threshold=99, copies=3, density=9, font="Orbitron", bold=False,
+                          italic=True, size=40, align="left", valign="top", effect="shadow", border=True,
+                          border_style="double", background="grid", bars=True)
+    window.set_spec(spec)
+    assert window.spec() == spec
+    seen = [set(p.read()) for p in window.panels]
+    assert set().union(*seen) == {f.name for f in fields(core.LabelSpec)}
+    assert sum(len(s) for s in seen) == len(set().union(*seen))  # no field is owned by two panels
 
 
 def test_pasting_a_clipboard_image_sets_the_image_path(window, app):
@@ -112,10 +128,10 @@ def test_pasting_a_clipboard_image_sets_the_image_path(window, app):
     img = QImage(20, 10, QImage.Format_RGB32)
     img.fill(QColor("black"))
     app.clipboard().setImage(img)
-    assert window.paste_image()
-    assert Path(window.image.text()).exists()
+    assert window.content.paste_image()
+    assert Path(window.content.image.text()).exists()
     app.clipboard().clear()
-    assert not window.paste_image()
+    assert not window.content.paste_image()
 
 
 def test_tabs_exist(window):

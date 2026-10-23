@@ -2,63 +2,41 @@
 from __future__ import annotations
 
 import sys
-import tempfile
-import time
-
-from pathlib import Path
 
 from PySide6.QtCore import QEvent, QObject, QSettings, Qt
 from PySide6.QtGui import (
     QAction,
     QActionGroup,
     QColor,
-    QFont,
     QFontDatabase,
     QIcon,
     QImage,
     QKeySequence,
     QPainter,
     QPixmap,
-    QStandardItem,
-    QStandardItemModel,
 )
 from PySide6.QtWidgets import (
     QApplication,
-    QCheckBox,
     QComboBox,
-    QCompleter,
-    QFileDialog,
     QFrame,
-    QGroupBox,
     QFormLayout,
     QHBoxLayout,
     QInputDialog,
     QLabel,
-    QLineEdit,
     QMainWindow,
     QMessageBox,
-    QPlainTextEdit,
     QPushButton,
-    QSpinBox,
     QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
-from . import core, theme
+from . import core, panels, theme
 from . import fonts as bundled_fonts
 from .presets import PresetStore
 
 PREVIEW_SCALE = 2
-IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"}
 NO_PRESET = "— presets —"
-
-
-LABELS = {
-    "3d": "3D WordArt", "grid": "Graph paper", "dots": "Polka dots", "bevel": "Win95 bevel",
-    "hexgrid": "Hex grid", "matrix": "Matrix rain", "circuit": "Circuit board", "chamfer": "Cyber panel",
-    "brackets": "HUD brackets", "ticks": "Ruler ticks", "neon": "Neon glow",
-}
 
 
 def _register_bundled_fonts() -> None:
@@ -66,27 +44,6 @@ def _register_bundled_fonts() -> None:
     for font in bundled_fonts.BUNDLED:
         for filename in font.files.values():
             QFontDatabase.addApplicationFont(str(bundled_fonts.FONT_DIR / filename))
-
-
-def _font_box() -> QComboBox:
-    """Editable, so any installed family can be typed even when the list shows only the curated set."""
-    box = QComboBox()
-    box.setEditable(True)
-    box.setInsertPolicy(QComboBox.NoInsert)
-    box.setMaxVisibleItems(24)
-    return box
-
-
-def _choice_box(values, default=None, none_label=None) -> QComboBox:
-    """Combo whose item data is the spec value; none_label adds a leading item with data None."""
-    box = QComboBox()
-    if none_label:
-        box.addItem(none_label, None)
-    for v in values:
-        box.addItem(LABELS.get(v, v.capitalize()), v)
-    if default:
-        box.setCurrentIndex(box.findData(default))
-    return box
 
 
 class MainWindow(QMainWindow):
@@ -111,108 +68,17 @@ class MainWindow(QMainWindow):
         preset_form = QFormLayout()
         preset_form.addRow("Preset", preset_row)
 
-        # Content tab
-        self.text = QPlainTextEdit()
-        self.text.setPlaceholderText("Label text (Enter for a new line)")
-        self.text.setFixedHeight(90)
-        self.qr = QLineEdit()
-        self.qr.setPlaceholderText("QR code content (optional)")
-        self.image = QLineEdit()
-        self.image.setPlaceholderText("Image file")
-        self.image.setToolTip("An image overrides the text and QR code")
-        browse = QPushButton("Browse…")
-        browse.clicked.connect(self.pick_image)
-        image_row = QHBoxLayout()
-        image_row.addWidget(self.image)
-        image_row.addWidget(browse)
-        paste = QPushButton("Paste")
-        paste.setToolTip("Paste an image from the clipboard (Ctrl+V)")
-        paste.clicked.connect(self.paste_image)
-        image_row.addWidget(paste)
-        self.hard_threshold = QCheckBox("Hard black/white cutoff (flat-colour art)")
-        self.threshold = QSpinBox()
-        self.threshold.setRange(0, 255)
-        self.threshold.setValue(160)
-        self.threshold.setEnabled(False)
-        self.hard_threshold.toggled.connect(self.threshold.setEnabled)
+        preset_form.setHorizontalSpacing(14)
 
-        content = QFormLayout()
-        content.addRow("Text", self.text)
-        content.addRow("QR", self.qr)
-        content.addRow("Image", image_row)
-        content.addRow("", self.hard_threshold)
-        content.addRow("Cutoff", self.threshold)
-
-        # Text tab
-        self.font_box = _font_box()
-        self.all_fonts = QCheckBox("Show all installed fonts")
-        self.all_fonts.setToolTip("Off: the curated set that ships with the app. On: every installed family.")
-        self.all_fonts.toggled.connect(self.populate_fonts)
-        self.all_fonts.setVisible(bool(core.list_font_families()))  # needs fontconfig (Linux)
-        self.bold = QCheckBox("Bold")
-        self.bold.setChecked(True)
-        self.italic = QCheckBox("Italic")
-        style_row = QHBoxLayout()
-        style_row.addWidget(self.bold)
-        style_row.addSpacing(12)
-        style_row.addWidget(self.italic)
-        style_row.addStretch(1)
-        self.size_spin = QSpinBox()
-        self.size_spin.setRange(0, 120)
-        self.size_spin.setSpecialValueText("Auto (fit)")
-        self.size_spin.setToolTip("Largest text size in dots; Auto picks the biggest that fits")
-        self.align = _choice_box(core.ALIGNMENTS, default="center")
-        self.valign = _choice_box(core.VALIGNMENTS, default="middle")
-        self.effect = _choice_box(core.EFFECTS)
-
-        text_tab = QFormLayout()
-        text_tab.addRow("Font", self.font_box)
-        text_tab.addRow("Style", style_row)
-        text_tab.addRow("", self.all_fonts)
-        text_tab.addRow("Size", self.size_spin)
-        text_tab.addRow("Align", self.align)
-        text_tab.addRow("Vertical", self.valign)
-        text_tab.addRow("Effect", self.effect)
-
-        # Retro tab
-        self.border_box = _choice_box(core.BORDER_STYLES, none_label="None")
-        self.background = _choice_box(core.BACKGROUNDS)
-        self.bars = QCheckBox("Under-construction bars")
-
-        retro = QFormLayout()
-        retro.addRow("Border", self.border_box)
-        retro.addRow("Background", self.background)
-        retro.addRow("", self.bars)
+        self.content = panels.ContentPanel()
+        self.text_panel = panels.TextPanel()
+        self.retro = panels.RetroPanel()
+        self.output = panels.OutputPanel()
+        self.panels = (self.content, self.text_panel, self.retro, self.output)
 
         tabs = QTabWidget()
-        for title, layout in (("Content", content), ("Text", text_tab), ("Retro", retro)):
-            page = QWidget()
-            page.setLayout(layout)
-            tabs.addTab(page, title)
-
-        self.copies = QSpinBox()
-        self.copies.setRange(1, 99)
-        self.density = QSpinBox()
-        self.density.setRange(0, 15)
-        self.density.setValue(7)
-        output = QFormLayout()
-        output.addRow("Copies", self.copies)
-        output.addRow("Darkness", self.density)
-
-        for spin in (self.threshold, self.size_spin, self.copies, self.density):
-            spin.lineEdit().setTextMargins(6, 0, 0, 0)  # QSS padding doesn't reach the inner editor
-        for form in (content, text_tab, retro, output):
-            form.setHorizontalSpacing(14)
-            form.setVerticalSpacing(8)
-            form.setContentsMargins(12, 12, 12, 12)
-            for row in range(form.rowCount()):  # one label column, so fields line up across tabs and the panel below
-                label = form.itemAt(row, QFormLayout.LabelRole)
-                if label and label.widget():
-                    label.widget().setMinimumWidth(66)
-        preset_form.setHorizontalSpacing(14)
-        output.setContentsMargins(12, 18, 12, 12)  # room for the caption sitting on the frame's top edge
-        output_panel = QGroupBox("Output")
-        output_panel.setLayout(output)
+        for panel in (self.content, self.text_panel, self.retro):
+            tabs.addTab(panel, panel.title)
 
         self.print_button = QPushButton("Print")
         self.print_button.setDefault(True)
@@ -227,7 +93,7 @@ class MainWindow(QMainWindow):
         controls.addWidget(self.banner)
         controls.addLayout(preset_form)
         controls.addWidget(tabs)
-        controls.addWidget(output_panel)
+        controls.addWidget(self.output)
         controls.addWidget(self.print_button)
         controls.addWidget(self.status)
         controls.addStretch()
@@ -260,51 +126,20 @@ class MainWindow(QMainWindow):
             self.theme_actions[key] = action
         self.apply_theme(self._saved_theme())
 
-        for signal in (
-            self.text.textChanged,
-            self.qr.textChanged,
-            self.image.textChanged,
-            self.hard_threshold.toggled,
-            self.threshold.valueChanged,
-            self.font_box.currentIndexChanged,
-            self.font_box.lineEdit().editingFinished,
-            self.bold.toggled,
-            self.italic.toggled,
-            self.size_spin.valueChanged,
-            self.align.currentIndexChanged,
-            self.valign.currentIndexChanged,
-            self.effect.currentIndexChanged,
-            self.border_box.currentIndexChanged,
-            self.background.currentIndexChanged,
-            self.bars.toggled,
-        ):
-            signal.connect(self.refresh_preview)
-        self.populate_fonts(False)
-        self.font_box.setCurrentText(core.DEFAULT_FONT)
+        for panel in (self.content, self.text_panel, self.retro):
+            panel.changed.connect(self.refresh_preview)
         self.reload_presets()
         self.refresh_preview()
 
     def spec(self) -> core.LabelSpec:
-        border_style = self.border_box.currentData()
-        return core.LabelSpec(
-            text=self.text.toPlainText().strip(),
-            qr=self.qr.text().strip(),
-            image_path=self.image.text().strip(),
-            threshold=self.threshold.value() if self.hard_threshold.isChecked() else None,
-            copies=self.copies.value(),
-            density=self.density.value(),
-            font=self.font_box.currentText().strip() or core.DEFAULT_FONT,
-            bold=self.bold.isChecked(),
-            italic=self.italic.isChecked(),
-            size=self.size_spin.value(),
-            align=self.align.currentData(),
-            valign=self.valign.currentData(),
-            effect=self.effect.currentData(),
-            border=border_style is not None,
-            border_style=border_style or "solid",
-            background=self.background.currentData(),
-            bars=self.bars.isChecked(),
-        )
+        fields: dict = {}
+        for panel in self.panels:
+            fields.update(panel.read())
+        return core.LabelSpec(**fields)
+
+    def set_spec(self, spec: core.LabelSpec) -> None:
+        for panel in self.panels:
+            panel.write(spec)
 
     @staticmethod
     def _saved_theme() -> str:
@@ -324,57 +159,6 @@ class MainWindow(QMainWindow):
             self.banner.set_style(chosen.banner)
         self.theme_actions[key].setChecked(True)
         QSettings().setValue("theme", key)
-
-    def populate_fonts(self, show_all: bool = False) -> None:
-        """Curated, grouped list by default; every installed family on request. The current font is kept."""
-        current = self.font_box.currentText() or core.DEFAULT_FONT
-        model = QStandardItemModel(self.font_box)
-
-        def add(family: str, tip: str = "") -> None:
-            item = QStandardItem(family)
-            item.setFont(QFont(family))
-            item.setToolTip(tip)
-            model.appendRow(item)
-
-        if show_all:
-            for family in core.list_font_families():
-                add(family)
-        else:
-            own_japanese = {f.family for f in bundled_fonts.BUNDLED if f.ja}
-            for category, names in bundled_fonts.categories():
-                header = QStandardItem(f"— {category} —")
-                header.setEnabled(False)
-                model.appendRow(header)
-                for name in names:
-                    add(name, "Has its own Japanese glyphs" if name in own_japanese
-                        else f"Japanese text borrows {bundled_fonts.FALLBACK_JA.family}")
-        self.font_box.blockSignals(True)
-        self.font_box.setModel(model)
-        completer = QCompleter(model, self.font_box)
-        completer.setCaseSensitivity(Qt.CaseInsensitive)
-        completer.setFilterMode(Qt.MatchContains)
-        self.font_box.setCompleter(completer)
-        self.font_box.setCurrentText(current)
-        self.font_box.blockSignals(False)
-
-    def set_spec(self, spec: core.LabelSpec) -> None:
-        self.text.setPlainText(spec.text)
-        self.qr.setText(spec.qr)
-        self.image.setText(spec.image_path)
-        self.hard_threshold.setChecked(spec.threshold is not None)
-        if spec.threshold is not None:
-            self.threshold.setValue(spec.threshold)
-        self.copies.setValue(spec.copies)
-        self.density.setValue(spec.density)
-        self.font_box.setCurrentText(spec.font)
-        self.bold.setChecked(spec.bold)
-        self.italic.setChecked(spec.italic)
-        self.size_spin.setValue(spec.size)
-        for box, value in ((self.align, spec.align), (self.valign, spec.valign), (self.effect, spec.effect),
-                           (self.background, spec.background)):
-            box.setCurrentIndex(max(0, box.findData(value)))
-        self.border_box.setCurrentIndex(max(0, self.border_box.findData(spec.border_style)) if spec.border else 0)
-        self.bars.setChecked(spec.bars)
 
     def reload_presets(self, select: str | None = None) -> None:
         self.preset_box.clear()
@@ -411,60 +195,23 @@ class MainWindow(QMainWindow):
             self.presets.delete(name)
             self.reload_presets()
 
-    @staticmethod
-    def _dropped_image(event) -> str | None:
-        for url in event.mimeData().urls():
-            if url.isLocalFile() and Path(url.toLocalFile()).suffix.lower() in IMAGE_SUFFIXES:
-                return url.toLocalFile()
-        return None
-
-    def _image_from_mime(self, mime) -> str | None:
-        """Path of an image in `mime`: a dropped file, else raw pixels saved to a temp PNG."""
-        if mime is None:
-            return None
-        for url in mime.urls():
-            if url.isLocalFile() and Path(url.toLocalFile()).suffix.lower() in IMAGE_SUFFIXES:
-                return url.toLocalFile()
-        if mime.hasImage():
-            image = QImage(mime.imageData())
-            if not image.isNull():
-                folder = Path(tempfile.gettempdir()) / "t003-label-gui"
-                folder.mkdir(exist_ok=True)
-                path = folder / f"pasted-{time.time_ns()}.png"
-                if image.save(str(path)):
-                    return str(path)
-        return None
-
     def dragEnterEvent(self, event) -> None:
-        mime = event.mimeData()
-        if self._dropped_image(event) or mime.hasImage():
+        if panels.has_image(event.mimeData()):
             event.acceptProposedAction()
 
     def dropEvent(self, event) -> None:
-        path = self._image_from_mime(event.mimeData())
+        path = panels.image_from_mime(event.mimeData())
         if path:
-            self.image.setText(path)
+            self.content.set_image(path)
             event.acceptProposedAction()
-
-    def paste_image(self) -> bool:
-        path = self._image_from_mime(QApplication.clipboard().mimeData())
-        if path:
-            self.image.setText(path)
-        return bool(path)
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         # Ctrl+V pastes a clipboard image, but only when there is no text to paste into a field.
         if event.type() == QEvent.KeyPress and event.matches(QKeySequence.Paste) and self.isActiveWindow():
             mime = QApplication.clipboard().mimeData()
-            if mime and not mime.hasText() and (mime.hasImage() or mime.hasUrls()) and self.paste_image():
+            if mime and not mime.hasText() and (mime.hasImage() or mime.hasUrls()) and self.content.paste_image():
                 return True
         return super().eventFilter(obj, event)
-
-    def pick_image(self) -> None:
-        # No parent: a dialog parented to this window would inherit the Y2K stylesheet
-        path, _ = QFileDialog.getOpenFileName(None, "Choose image", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp)")
-        if path:
-            self.image.setText(path)
 
     def refresh_preview(self) -> None:
         spec = self.spec()
