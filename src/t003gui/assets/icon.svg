@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7fe3ff"/><stop offset="0.55" stop-color="#1ea0f0"/><stop offset="1" stop-color="#0b4fc4"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/><stop offset="1" stop-color="#ffffff" stop-opacity="0.05"/>
+    </linearGradient>
+    <linearGradient id="chrome" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="0.45" stop-color="#dfe7f2"/>
+      <stop offset="0.55" stop-color="#b9c6d8"/><stop offset="1" stop-color="#8d9db3"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e6eefb"/>
+    </linearGradient>
+    <linearGradient id="fold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#b8c8e6"/>
+    </linearGradient>
+    <radialGradient id="led" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#eaffd0"/><stop offset="0.5" stop-color="#52e04a"/><stop offset="1" stop-color="#14852a"/>
+    </radialGradient>
+    <clipPath id="tileClip"><rect x="24" y="24" width="464" height="464" rx="108"/></clipPath>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9"/></filter>
+  </defs>
+
+  <!-- candy tile with a soft drop shadow -->
+  <rect x="32" y="40" width="464" height="464" rx="108" fill="#06285f" opacity="0.35" filter="url(#soft)"/>
+  <rect x="24" y="24" width="464" height="464" rx="108" fill="url(#tile)"/>
+  <ellipse cx="256" cy="40" rx="350" ry="200" fill="url(#gloss)" clip-path="url(#tileClip)"/>
+  <rect x="26" y="26" width="460" height="460" rx="106" fill="none" stroke="#ffffff" stroke-opacity="0.65" stroke-width="3"/>
+
+  <!-- printer body (behind the sticker) -->
+  <rect x="86" y="236" width="340" height="178" rx="46" fill="#06285f" opacity="0.35" transform="translate(0 10)" filter="url(#soft)"/>
+  <rect x="86" y="236" width="340" height="178" rx="46" fill="url(#chrome)" stroke="#5f7089" stroke-width="3"/>
+  <rect x="112" y="250" width="288" height="26" rx="13" fill="#27344d"/>
+
+  <!-- sticker coming out of the slot, with a peeled corner -->
+  <path d="M168 92 L306 92 L362 148 L362 262 L150 262 L150 110 Q150 92 168 92 Z" fill="url(#paper)" stroke="#8ea3c6" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M306 92 L306 148 L362 148 Z" fill="url(#fold)" stroke="#8ea3c6" stroke-width="3" stroke-linejoin="round"/>
+  <rect x="176" y="120" width="104" height="14" rx="7" fill="#1ea0f0"/>
+  <rect x="176" y="146" width="84" height="10" rx="5" fill="#b4c3de"/>
+  <!-- tiny QR-ish block -->
+  <g fill="#0b2a63">
+    <rect x="176" y="176" width="26" height="26"/><rect x="206" y="176" width="14" height="14"/><rect x="224" y="176" width="26" height="26"/>
+    <rect x="176" y="206" width="14" height="14"/><rect x="194" y="194" width="14" height="14"/><rect x="212" y="206" width="14" height="14"/>
+    <rect x="236" y="212" width="14" height="14"/><rect x="176" y="224" width="26" height="26"/><rect x="212" y="230" width="14" height="20"/>
+  </g>
+  <rect x="270" y="176" width="70" height="10" rx="5" fill="#b4c3de"/>
+  <rect x="270" y="196" width="52" height="10" rx="5" fill="#b4c3de"/>
+
+  <!-- slot lip over the sticker -->
+  <rect x="112" y="262" width="288" height="14" rx="7" fill="#27344d"/>
+  <rect x="104" y="274" width="304" height="8" rx="4" fill="#ffffff" opacity="0.55"/>
+
+  <!-- front panel: gloss, LED, button -->
+  <rect x="104" y="296" width="304" height="100" rx="30" fill="#ffffff" opacity="0.18"/>
+  <circle cx="148" cy="346" r="17" fill="url(#led)" stroke="#0f5a22" stroke-width="2"/>
+  <circle cx="142" cy="339" r="5" fill="#ffffff" opacity="0.8"/>
+  <rect x="196" y="334" width="160" height="24" rx="12" fill="#9fb0c8" stroke="#6a7c96" stroke-width="2"/>
+  <rect x="204" y="338" width="144" height="7" rx="3.5" fill="#ffffff" opacity="0.8"/>
+
+  <!-- sparkle -->
+  <path d="M404 96 L414 124 L442 134 L414 144 L404 172 L394 144 L366 134 L394 124 Z" fill="#fff6a8" stroke="#ffffff" stroke-width="2" opacity="0.95"/>
+</svg>

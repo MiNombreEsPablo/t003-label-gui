@@ -4,6 +4,7 @@ from __future__ import annotations
 import functools
 import math
 import random
+import shutil
 import subprocess
 
 import qrcode
@@ -13,7 +14,8 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps
 from . import fonts as bundled_fonts
 from .spec import ALIGNMENTS, BACKGROUNDS, BORDER_STYLES, EFFECTS, H, MARGIN, SH, VALIGNMENTS, W, LabelSpec
 
-FALLBACK_FONT_PATHS = ("/usr/share/fonts/TTF/DejaVuSans-Bold.ttf", "DejaVuSans-Bold.ttf")
+FALLBACK_FONT_PATHS = (str(bundled_fonts.FONT_DIR / "DejaVuSans-Bold.ttf"),)
+HAS_FONTCONFIG = shutil.which("fc-match") is not None  # Linux; Windows/macOS use only the bundled fonts
 ITALIC_SHEAR = 0.25
 BAR_H = 14
 MAX_FONT_SIZE = 120
@@ -38,6 +40,8 @@ def font_path(family: str, bold: bool, italic: bool = False) -> tuple[str, bool]
     bundled = bundled_fonts.bundled_font(family)
     if bundled:
         return bundled.pick(bold, italic)
+    if not HAS_FONTCONFIG:
+        return bundled_fonts.bundled_font("DejaVu Sans").pick(bold, italic)
     style = ("bold" if bold else "regular") + (":italic" if italic else "")
     try:
         out = subprocess.run(
@@ -45,14 +49,18 @@ def font_path(family: str, bold: bool, italic: bool = False) -> tuple[str, bool]
             capture_output=True, text=True, timeout=5, check=True,
         ).stdout.strip()
         path, _, slant = out.partition("|")
-        return (path, slant.isdigit() and int(slant) > 0) if path else (FALLBACK_FONT_PATHS[0], False)
+        if path:
+            return path, slant.isdigit() and int(slant) > 0
     except (OSError, subprocess.SubprocessError):
-        return FALLBACK_FONT_PATHS[0], False
+        pass
+    return bundled_fonts.bundled_font("DejaVu Sans").pick(bold, italic)
 
 
 @functools.cache
 def list_font_families() -> list[str]:
     """Installed font families that cover English, as fontconfig names them (what font_path resolves against)."""
+    if not HAS_FONTCONFIG:
+        return []
     try:
         out = subprocess.run(
             ["fc-list", ":lang=en", "family"], capture_output=True, text=True, timeout=15, check=True

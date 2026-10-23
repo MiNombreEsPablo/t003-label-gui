@@ -5,14 +5,26 @@ import sys
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QFont, QFontDatabase, QImage, QPainter, QPixmap, QStandardItem, QStandardItemModel
+from PySide6.QtCore import QSettings, Qt
+from PySide6.QtGui import (
+    QAction,
+    QColor,
+    QFont,
+    QFontDatabase,
+    QIcon,
+    QImage,
+    QPainter,
+    QPixmap,
+    QStandardItem,
+    QStandardItemModel,
+)
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
     QCompleter,
     QFileDialog,
+    QFrame,
     QFormLayout,
     QHBoxLayout,
     QInputDialog,
@@ -28,7 +40,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from . import core
+from . import core, theme
 from . import fonts as bundled_fonts
 from .presets import PresetStore
 
@@ -75,7 +87,7 @@ def _choice_box(values, default=None, none_label=None) -> QComboBox:
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("T003 Label Printer")
+        self.setWindowTitle("T003 Label Studio")
         self.setAcceptDrops(True)
         _register_bundled_fonts()
         self.presets = PresetStore()
@@ -125,6 +137,7 @@ class MainWindow(QMainWindow):
         self.all_fonts = QCheckBox("Show all installed fonts")
         self.all_fonts.setToolTip("Off: the curated set that ships with the app. On: every installed family.")
         self.all_fonts.toggled.connect(self.populate_fonts)
+        self.all_fonts.setVisible(bool(core.list_font_families()))  # needs fontconfig (Linux)
         self.bold = QCheckBox("Bold")
         self.bold.setChecked(True)
         self.italic = QCheckBox("Italic")
@@ -132,10 +145,10 @@ class MainWindow(QMainWindow):
         font_row.addWidget(self.font_box, 1)
         font_row.addWidget(self.bold)
         font_row.addWidget(self.italic)
-        self.size = QSpinBox()
-        self.size.setRange(0, 120)
-        self.size.setSpecialValueText("Auto (fit)")
-        self.size.setToolTip("Largest text size in dots; Auto picks the biggest that fits")
+        self.size_spin = QSpinBox()
+        self.size_spin.setRange(0, 120)
+        self.size_spin.setSpecialValueText("Auto (fit)")
+        self.size_spin.setToolTip("Largest text size in dots; Auto picks the biggest that fits")
         self.align = _choice_box(core.ALIGNMENTS, default="center")
         self.valign = _choice_box(core.VALIGNMENTS, default="middle")
         self.effect = _choice_box(core.EFFECTS)
@@ -143,7 +156,7 @@ class MainWindow(QMainWindow):
         text_tab = QFormLayout()
         text_tab.addRow("Font", font_row)
         text_tab.addRow("", self.all_fonts)
-        text_tab.addRow("Size", self.size)
+        text_tab.addRow("Size", self.size_spin)
         text_tab.addRow("Align", self.align)
         text_tab.addRow("Vertical", self.valign)
         text_tab.addRow("Effect", self.effect)
@@ -177,9 +190,12 @@ class MainWindow(QMainWindow):
         self.print_button.setDefault(True)
         self.print_button.clicked.connect(self.print_now)
         self.status = QLabel("")
+        self.status.setObjectName("status")
         self.status.setWordWrap(True)
 
+        self.banner = theme.Banner()
         controls = QVBoxLayout()
+        controls.addWidget(self.banner)
         controls.addLayout(preset_form)
         controls.addWidget(tabs)
         controls.addLayout(output)
@@ -188,14 +204,27 @@ class MainWindow(QMainWindow):
         controls.addStretch()
 
         self.preview = QLabel()
+        self.preview.setObjectName("screen")
         self.preview.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        bezel = QFrame()  # a chrome monitor bezel under the Y2K theme, invisible otherwise
+        bezel.setObjectName("bezel")
+        bezel_layout = QVBoxLayout(bezel)
+        bezel_layout.setContentsMargins(14, 14, 14, 14)
+        bezel_layout.addWidget(self.preview, 0, Qt.AlignTop)
 
         root = QHBoxLayout()
         root.addLayout(controls, 1)
-        root.addWidget(self.preview, 0)
+        root.addWidget(bezel, 0, Qt.AlignTop)
         container = QWidget()
+        container.setObjectName("root")
         container.setLayout(root)
         self.setCentralWidget(container)
+
+        self.y2k_action = QAction("Y2K theme", self, checkable=True)
+        self.y2k_action.toggled.connect(self.apply_theme)
+        self.menuBar().addMenu("&View").addAction(self.y2k_action)
+        self.y2k_action.setChecked(QSettings().value("y2k", True, type=bool))
+        self.apply_theme(self.y2k_action.isChecked())
 
         for signal in (
             self.text.textChanged,
@@ -207,7 +236,7 @@ class MainWindow(QMainWindow):
             self.font_box.lineEdit().editingFinished,
             self.bold.toggled,
             self.italic.toggled,
-            self.size.valueChanged,
+            self.size_spin.valueChanged,
             self.align.currentIndexChanged,
             self.valign.currentIndexChanged,
             self.effect.currentIndexChanged,
@@ -233,7 +262,7 @@ class MainWindow(QMainWindow):
             font=self.font_box.currentText().strip() or core.DEFAULT_FONT,
             bold=self.bold.isChecked(),
             italic=self.italic.isChecked(),
-            size=self.size.value(),
+            size=self.size_spin.value(),
             align=self.align.currentData(),
             valign=self.valign.currentData(),
             effect=self.effect.currentData(),
@@ -242,6 +271,11 @@ class MainWindow(QMainWindow):
             background=self.background.currentData(),
             bars=self.bars.isChecked(),
         )
+
+    def apply_theme(self, y2k: bool) -> None:
+        QApplication.instance().setStyleSheet(theme.stylesheet() if y2k else "")
+        self.banner.setVisible(y2k)
+        QSettings().setValue("y2k", y2k)
 
     def populate_fonts(self, show_all: bool = False) -> None:
         """Curated, grouped list by default; every installed family on request. The current font is kept."""
@@ -287,7 +321,7 @@ class MainWindow(QMainWindow):
         self.font_box.setCurrentText(spec.font)
         self.bold.setChecked(spec.bold)
         self.italic.setChecked(spec.italic)
-        self.size.setValue(spec.size)
+        self.size_spin.setValue(spec.size)
         for box, value in ((self.align, spec.align), (self.valign, spec.valign), (self.effect, spec.effect),
                            (self.background, spec.background)):
             box.setCurrentIndex(max(0, box.findData(value)))
@@ -392,7 +426,15 @@ class MainWindow(QMainWindow):
 
 
 def main() -> None:
+    if "--selftest" in sys.argv:
+        from .selftest import run
+
+        sys.exit(run())
     app = QApplication(sys.argv)
+    app.setApplicationName("T003 Label Studio")
+    app.setOrganizationName("t003-label-gui")
+    app.setDesktopFileName("t003-label-gui")  # lets Wayland/KDE match the window to the launcher and its icon
+    app.setWindowIcon(QIcon(str(theme.ASSETS / "icon-256.png")))
     window = MainWindow()
     window.show()
     sys.exit(app.exec())

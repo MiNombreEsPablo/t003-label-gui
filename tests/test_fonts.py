@@ -6,17 +6,13 @@ from t003gui import core, fonts, render
 JA_SAMPLE = "日本語 ひらがな カタカナ ｱｲｳ"
 
 
-def _slug(family):
-    return family.lower().replace(" ", "-")
-
-
 @pytest.mark.parametrize("font", fonts.BUNDLED, ids=lambda f: f.family)
 def test_bundled_font_files_load_and_are_licensed(font):
     for filename in font.files.values():
         path = fonts.FONT_DIR / filename
         assert path.exists(), path
         ImageFont.truetype(str(path), 20)  # parses
-    assert (fonts.FONT_DIR / "LICENSES" / f"LICENSE.{_slug(font.family)}").exists()
+    assert (fonts.FONT_DIR / "LICENSES" / font.license_file).exists()
 
 
 @pytest.mark.parametrize("font", fonts.BUNDLED, ids=lambda f: f.family)
@@ -84,5 +80,21 @@ def test_unknown_character_does_not_crash():
 
 
 def test_categories_cover_every_bundled_font_once():
-    listed = [name for _, names in fonts.categories() for name in names if name not in fonts.SYSTEM_CLEAN]
+    listed = [name for _, names in fonts.categories() for name in names]
     assert sorted(listed) == sorted(f.family for f in fonts.BUNDLED)
+
+
+def test_nothing_depends_on_system_fonts(monkeypatch):
+    # Windows/macOS have no fontconfig: resolution must come from the bundled files alone
+    monkeypatch.setattr(render, "HAS_FONTCONFIG", False)
+    render.font_path.cache_clear()
+    render.list_font_families.cache_clear()
+    try:
+        path, _ = core.font_path("Some Font Nobody Has", True)
+        assert path.startswith(str(fonts.FONT_DIR))
+        assert core.list_font_families() == []
+        img = core.render(core.LabelSpec(text="Hello 日本", font="Some Font Nobody Has"))
+        assert img.point(lambda v: 255 - v).getbbox() is not None
+    finally:  # don't leak the fontconfig-less results into other tests
+        render.font_path.cache_clear()
+        render.list_font_families.cache_clear()

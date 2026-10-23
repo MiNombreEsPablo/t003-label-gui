@@ -39,14 +39,28 @@ def tspl(spec: LabelSpec) -> bytes:
     return head + data + f"\r\nPRINT {spec.copies},1\r\n".encode()
 
 
+def _backend():
+    """libusb from the libusb-package wheel (the only way Windows/macOS get one); None = pyusb's own search."""
+    try:
+        import libusb_package
+        from usb.backend import libusb1
+
+        return libusb1.get_backend(find_library=libusb_package.find_library)
+    except Exception:  # missing wheel or load failure: fall back to a system libusb
+        return None
+
+
 def send(payload: bytes) -> list[str]:
     """Write a TSPL payload; returns printer problems reported afterwards (empty if fine)."""
-    dev = usb.core.find(idVendor=VID, idProduct=PID)
+    dev = usb.core.find(idVendor=VID, idProduct=PID, backend=_backend())
     if dev is None:
         raise PrinterError("T003 not found on USB (is it on and plugged in?)")
     try:
-        if dev.is_kernel_driver_active(0):
-            dev.detach_kernel_driver(0)
+        try:
+            if dev.is_kernel_driver_active(0):
+                dev.detach_kernel_driver(0)
+        except (NotImplementedError, usb.core.USBError):  # Windows/macOS backends have no kernel-driver calls
+            pass
         usb.util.claim_interface(dev, 0)
         for i in range(0, len(payload), 4096):
             dev.write(EP_OUT, payload[i : i + 4096], timeout=5000)

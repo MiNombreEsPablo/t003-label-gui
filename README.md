@@ -1,17 +1,68 @@
-# t003-label-gui
+<p align="center"><img src="packaging/icons/t003-label-gui-128.png" alt="T003 Label Studio icon" width="96"></p>
 
-A small desktop app for printing text, QR codes and images to the ORGBRO T003 thermal label printer (48 × 28 mm stickers) over USB, with a live preview of exactly what will be printed.
+# T003 Label Studio
 
-```bash
-python -m venv --system-site-packages .venv
-.venv/bin/pip install -e '.[dev]'
-.venv/bin/t003-gui
+Design and print stickers on the **ORGBRO T003** USB thermal label printer, with a live preview of exactly what the
+printer will burn. Text, QR codes and images, plus a pile of early-web and cyberpunk styling, and every font can print
+Japanese (日本語).
+
+## Features
+
+- **Live 1-bit preview** that is the same bitmap that gets printed (what you see is what you stick).
+- **Text:** 23 bundled open-licence fonts in five groups (Cyber, Pixel, Early web, Display, Clean), bold/italic, size,
+  left/centre/right and top/middle/bottom alignment. Latin-only fonts borrow kana and kanji from Zen Kaku Gothic New;
+  DotGothic16, Yusei Magic, Dela Gothic One and Stick have their own Japanese.
+- **Effects:** dithered shadow, outline, 3D WordArt, glitch, neon glow, scanline text.
+- **Backgrounds:** checker, dots, stripes, dithered gradient, stars, graph paper, scanlines, circuit board, hex grid,
+  synthwave sun, matrix rain, halftone. **Borders:** solid, double, dotted, checker, Win95 bevel, marquee lights,
+  cyber panel, HUD brackets, ruler ticks. **Bars:** under-construction hazard stripes.
+- **QR codes, images** (dithered or hard threshold, drag and drop), copies, darkness, saved **presets**.
+- A Y2K candy-plastic theme (View menu) or the plain platform look.
+- A CLI with the same options: `t003-print "NEON\nNIGHTS" --effect neon --frame brackets`.
+
+## Install
+
+Downloads are on the [Releases](../../releases) page. Every build runs a self-test (fonts, licences, icons, a Japanese
+render, libusb) in CI before it is published.
+
+| OS | Get | Notes |
+|---|---|---|
+| **Linux** | `T003-Label-Studio-*-x86_64.AppImage` | `chmod +x` and run. Needs `libxcb-cursor0` (Qt 6 on X11). Install the udev rule below so you can use the printer without root. |
+| **Windows** | `…-windows-x64.zip` | Unzip and run `T003 Label Studio.exe`. libusb needs the printer bound to the **WinUSB** driver (e.g. with [Zadig](https://zadig.akeo.ie/)), which stops Windows' own printing to that device. |
+| **macOS** | `…-macos-arm64.zip` | Apple silicon only. The app is unsigned: right-click → Open the first time. |
+
+> **Tested on:** Linux with real hardware. The Windows and macOS builds are produced and self-tested by CI but
+> printing from them has not been tried on a physical machine; reports welcome.
+
+**Linux udev rule** (lets your user open the printer):
+```
+sudo cp packaging/70-t003-label-printer.rules /etc/udev/rules.d/
+sudo udevadm control --reload   # then replug the printer
 ```
 
-Also installed: `t003-print` (CLI with the same options, `--preview out.png` to render without printing, `--preset NAME` to use a preset saved in the GUI). Run `packaging/install.sh` to add a KDE menu entry and a `~/.local/bin/print-label` shortcut for the CLI.
+## From source
 
-Early-web styling: text effects (dithered shadow, outline, 3D WordArt), border styles (double, dotted, checker, Win95 bevel, marquee lights), background patterns (checker, dots, stripes, dithered gradient, stars, graph paper) and under-construction hazard bars (`--effect`, `--frame`, `--background`, `--bars`). Cyberpunk / retro-futurism set: text effects `glitch`, `neon`, `scanlines`; backgrounds `scanlines`, `circuit`, `hexgrid`, `synthwave`, `matrix`, `halftone`; frames `chamfer`, `brackets`, `ticks`. The app ships 21 curated open-licence fonts (Cyber, Pixel, Early web, Display, Clean) so labels look the same everywhere, and every font can print Japanese: the Latin-only ones borrow kana and kanji from Zen Kaku Gothic New, and DotGothic16, Yusei Magic, Dela Gothic One and Stick have their own. "Show all installed fonts" in the Text tab switches the picker to every installed family that covers English (searchable, previewed in its own typeface) and handles variable fonts, so a full Google Fonts install (`ttf-google-fonts-git`: Orbitron, Audiowide, Press Start 2P, Share Tech Mono…) works. For authentic early-web fonts install `ttf-ms-fonts` (Comic Sans, Impact, Arial Black…) and `ttf-press-start-2p` from the AUR.
+```bash
+python -m venv .venv && .venv/bin/pip install -e '.[dev]'
+.venv/bin/t003-gui          # the app
+.venv/bin/t003-print --help # the CLI
+.venv/bin/pytest            # tests, no printer needed
+packaging/install.sh        # KDE/GNOME launcher, icons and a print-label shortcut
+```
 
-Text can use any installed font (family + bold toggle, resolved via fontconfig) and left/centre/right alignment (`--font`, `--bold/--no-bold`, `--align` on the CLI). Drop an image file onto the window to load it. Presets are saved to `~/.config/t003-label-gui/presets.json`.
+## How it works
 
-The printer speaks TSPL; this talks to it directly via libusb (pyusb), so no CUPS or kernel printer driver is needed. Your user needs access to the USB device (on Arch/CachyOS, being in the `lp` group is enough).
+The T003 speaks TSPL over a plain USB printer interface. The app renders a 384×224 dot label (58 mm paper, 203 dpi,
+28 mm stickers), sends it as a TSPL bitmap with pyusb/libusb, and needs no CUPS or kernel driver. See
+[AGENTS.md](AGENTS.md) for the hardware facts and the code layout.
+
+## Building releases
+
+`python packaging/build.py` builds for the OS it runs on (PyInstaller does not cross-compile).
+`.github/workflows/release.yml` builds Linux, Windows and macOS on tag push (`git tag v0.1.0 && git push --tags`),
+self-tests each, and attaches them to a GitHub release with checksums.
+
+## Licence
+
+MIT for the code (see [LICENSE](LICENSE)). The bundled fonts keep their own licences, mostly the SIL Open Font
+License; all texts are in `src/t003gui/fonts/LICENSES/`.
