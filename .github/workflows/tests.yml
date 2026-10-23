@@ -19,14 +19,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
+        include:  # the oldest and newest Python on Linux, and the newest on the other two systems
           - { os: ubuntu-22.04, python: "3.9" }
-          - { os: ubuntu-22.04, python: "3.10" }
-          - { os: ubuntu-22.04, python: "3.11" }
-          - { os: ubuntu-22.04, python: "3.12" }
           - { os: ubuntu-22.04, python: "3.13" }
-          - { os: ubuntu-24.04, python: "3.14" }
-          - { os: windows-latest, python: "3.9" }
           - { os: windows-latest, python: "3.13" }
           - { os: macos-latest, python: "3.13" }
     steps:

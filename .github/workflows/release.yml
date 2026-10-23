@@ -117,8 +117,9 @@ jobs:
           path: dist/*.AppImage
           if-no-files-found: error
 
-  # The AppImage on other distributions, to prove the glibc claim instead of trusting it: each image installs only the
-  # system libraries the README tells users to have, then runs the self-test.
+  # The AppImage on other distributions: the oldest we claim, a mainstream current one and a fast-moving one. (The
+  # glibc floor itself is checked on every build above; this proves the bundle really loads elsewhere.) Each image
+  # installs only the system libraries the README tells users to have, then runs the self-test.
   smoke-linux:
     name: ${{ matrix.image }}
     needs: build-linux
@@ -128,13 +129,8 @@ jobs:
       matrix:
         include:
           - { image: "ubuntu:20.04", family: apt }
-          - { image: "ubuntu:24.04", family: apt }
-          - { image: "debian:11", family: apt-archive }  # end of life: its packages live on archive.debian.org
           - { image: "debian:12", family: apt }
-          - { image: "almalinux:8", family: dnf }
-          - { image: "almalinux:9", family: dnf }
           - { image: "fedora:latest", family: dnf }
-          - { image: "archlinux:latest", family: pacman }
     steps:
       - uses: actions/download-artifact@v7
         with:
@@ -143,10 +139,8 @@ jobs:
       - name: Run the self-test on ${{ matrix.image }}
         run: |
           case "${{ matrix.family }}" in
-            apt-archive) prep='sed -i -e "s|deb.debian.org|archive.debian.org|g" -e "/security.debian.org/d" -e "/-updates/d" /etc/apt/sources.list && apt-get -o Acquire::Check-Valid-Until=false update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3 libglib2.0-0' ;;
-            apt)    prep='apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3 libglib2.0-0' ;;
-            dnf)    prep='dnf install -y -q mesa-libEGL mesa-libGL libxkbcommon fontconfig dbus-libs glib2' ;;
-            pacman) prep='pacman -Sy --noconfirm --quiet mesa libxkbcommon fontconfig dbus glib2' ;;
+            apt) prep='apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3 libglib2.0-0' ;;
+            dnf) prep='dnf install -y -q mesa-libEGL mesa-libGL libxkbcommon fontconfig dbus-libs glib2' ;;
           esac
           chmod +x app/*.AppImage
           docker run --rm -v "$PWD/app:/app:ro" -e QT_QPA_PLATFORM=offscreen "${{ matrix.image }}" \

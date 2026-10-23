@@ -72,10 +72,11 @@ Not covered by a download? See the pip install below: it works on anything with 
 Linux on ARM (Raspberry Pi), older macOS and Python-capable systems we don't build for.
 
 > **What is tested.** Printing: Linux with real hardware only. Every release build runs its self-test in CI, and the
-> Linux AppImage is self-tested in Ubuntu 20.04 and 24.04, Debian 11 and 12, AlmaLinux 8 and 9, Fedora and Arch
-> containers. The macOS minimum (12) and the Linux minimum (glibc 2.28) are measured on each build, and the build
-> fails if a dependency raises them. Printing from Windows and macOS hasn't been tried on a physical machine, and
-> Windows on ARM should work through x64 emulation but is untested; reports welcome.
+> Linux AppImage is also self-tested in Ubuntu 20.04, Debian 12 and Fedora containers. The macOS minimum (12) and the
+> Linux minimum (glibc 2.28) are measured on each build, and the build fails if a dependency raises them, so the
+> systems named in the table are what the measurements say, not a list of everything tried. Printing from Windows
+> and macOS hasn't been tried on a physical machine, and Windows on ARM should work through x64 emulation but is
+> untested; reports welcome.
 
 **Linux udev rule** (lets your user open the printer):
 ```
