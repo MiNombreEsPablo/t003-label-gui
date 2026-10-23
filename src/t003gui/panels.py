@@ -119,6 +119,7 @@ class ContentPanel(QWidget):
         self.image = QLineEdit()
         self.image.setPlaceholderText("Image file")
         self.image.setToolTip("An image overrides the text and QR code")
+        self.image.setClearButtonEnabled(True)  # the x that removes the picture again
         browse = QPushButton("Browse…")
         browse.clicked.connect(self.pick_image)
         paste = QPushButton("Paste")

@@ -331,3 +331,19 @@ def test_fields_line_up_across_all_panels(window, app, key):
     starts.add(window.output.copies.mapTo(window, QPoint(0, 0)).x())
     # exact for our themes; the platform style draws tab panes and group boxes with frames a pixel apart
     assert max(starts) - min(starts) <= (2 if key == "system" else 0), starts
+
+
+def test_an_added_image_can_be_removed_again(window, tmp_path):
+    from PIL import Image
+
+    art = tmp_path / "art.png"
+    Image.new("L", (50, 50), 0).save(art)
+    window.content.text.setPlainText("Caption")
+    window.content.set_image(str(art))
+    with_image = core.to_bitmap(core.render(window.spec())).tobytes()
+    assert window.content.image.isClearButtonEnabled()  # the visible x in the field
+    window.content.image.clear()  # what clicking it does
+    spec = window.spec()
+    assert spec.image_path == "" and spec.text == "Caption"
+    assert not window.image_panel.dither.isEnabled() and not window.content.image_layout.isEnabled()
+    assert core.to_bitmap(core.render(spec)).tobytes() != with_image  # back to the text-only label
