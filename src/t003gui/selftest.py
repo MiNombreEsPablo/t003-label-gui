@@ -38,7 +38,7 @@ def run() -> int:
         problems.append("TSPL payload is malformed")
     backend = core._backend()
     if backend is None:
-        problems.append("no libusb backend found (libusb-package missing from the build?)")
+        problems.append("no libusb backend found: " + (core.backend_problem() or "pyusb found no libusb"))
     printer = core.printer_presence() if backend is not None else "not checked"  # informational: CI has no printer
 
     if problems:

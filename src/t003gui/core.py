@@ -54,6 +54,23 @@ def _backend():
         return None
 
 
+def backend_problem() -> str:
+    """Why `_backend()` found nothing, for diagnostics (the self-test and bug reports)."""
+    try:
+        import libusb_package
+    except ImportError as e:
+        return f"libusb-package is not installed ({e})"
+    try:
+        from usb.backend import libusb1
+
+        found = libusb_package.find_library("usb-1.0")
+        if libusb1.get_backend(find_library=libusb_package.find_library) is None:
+            return f"libusb-package found {found!r} but pyusb could not load it"
+        return ""
+    except Exception as e:
+        return f"{type(e).__name__}: {e}"
+
+
 def send(payload: bytes) -> list[str]:
     """Write a TSPL payload; returns printer problems reported afterwards (empty if fine)."""
     dev = usb.core.find(idVendor=VID, idProduct=PID, backend=_backend())
