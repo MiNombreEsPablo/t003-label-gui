@@ -110,9 +110,10 @@ def test_dropping_only_accepts_images(window):
 def test_each_panel_round_trips_its_own_slice_of_the_spec(window):
     from dataclasses import fields
 
-    spec = core.LabelSpec(text="hi", qr="q", threshold=99, copies=3, density=9, font="Orbitron", bold=False,
+    spec = core.LabelSpec(text="hi", qr="q", copies=3, density=9, font="Orbitron", bold=False,
                           italic=True, size=40, align="left", valign="top", effect="shadow", border=True,
-                          border_style="double", background="grid", bars=True)
+                          border_style="double", background="grid", bars=True, dither="bayer8", brightness=-10,
+                          contrast=25, gamma=1.8, pixelate=3, mirror=True, flip=True, invert=True)
     window.set_spec(spec)
     assert window.spec() == spec
     seen = [set(p.read()) for p in window.panels]
@@ -136,7 +137,7 @@ def test_pasting_a_clipboard_image_sets_the_image_path(window, app):
 
 def test_tabs_exist(window):
     tabs = window.findChild(QTabWidget)
-    assert [tabs.tabText(i) for i in range(tabs.count())] == ["Content", "Text", "Retro"]
+    assert [tabs.tabText(i) for i in range(tabs.count())] == ["Content", "Text", "Image", "Retro"]
 
 
 def test_widget_attributes_do_not_shadow_qt_methods(window):
@@ -223,3 +224,53 @@ def test_dropping_a_composition_file_opens_it(window, tmp_path):
     event = QDropEvent(QPointF(5, 5), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier)
     window.dropEvent(event)
     assert window.spec().text == "from a drop" and "Opened" in window.status.text()
+
+
+def test_image_panel_is_inactive_until_an_image_is_chosen(window, tmp_path):
+    panel = window.image_panel
+    assert not panel.dither.isEnabled() and not panel.hint.isHidden()
+    window.content.set_image(str(tmp_path / "x.png"))
+    assert panel.dither.isEnabled() and panel.hint.isHidden()
+    window.content.set_image("")
+    assert not panel.dither.isEnabled()
+
+
+def test_image_panel_modes_and_legacy_threshold(window):
+    panel = window.image_panel
+    for mode in ("floyd", "bayer4", "bayer8"):
+        window.set_spec(core.LabelSpec(dither=mode, brightness=-20, contrast=35, gamma=1.6))
+        spec = window.spec()
+        assert (spec.dither, spec.threshold, spec.brightness, spec.contrast, spec.gamma) == (mode, None, -20, 35, 1.6)
+    window.set_spec(core.LabelSpec(threshold=77))  # older presets/files: just a cutoff
+    assert panel.dither.currentData() == "threshold" and window.spec().threshold == 77
+    window.set_spec(core.LabelSpec(dither="no-such-mode"))
+    assert panel.dither.currentData() == "floyd"
+    window.set_spec(core.LabelSpec(brightness=5, pixelate=4, mirror=True, flip=True, invert=True, dither="bayer8"))
+    panel.reset_all()
+    assert window.spec() == core.LabelSpec()
+
+
+def test_gamma_box_shows_tenths(window):
+    box = window.image_panel.gamma
+    box.setValue(16)
+    assert box.text() == "1.6" and box.valueFromText("2.5") == 25 and box.valueFromText("junk") == 16
+
+def test_layout_controls_follow_the_image(window, tmp_path):
+    content = window.content
+    assert not content.image_layout.isEnabled() and not content.image_size.isEnabled()  # no image yet
+    content.set_image(str(tmp_path / "x.png"))
+    assert content.image_layout.isEnabled() and not content.image_size.isEnabled()  # "image only" has no size
+    for layout, sized in (("left", True), ("top", True), ("behind", False), ("only", False)):
+        content.image_layout.setCurrentIndex(content.image_layout.findData(layout))
+        assert content.image_size.isEnabled() is sized, layout
+    content.set_image("")
+    assert not content.image_layout.isEnabled()
+
+
+def test_layout_round_trips_through_the_content_panel(window):
+    window.set_spec(core.LabelSpec(image_path="a.png", image_layout="bottom", image_size=65))
+    spec = window.spec()
+    assert (spec.image_layout, spec.image_size) == ("bottom", 65)
+    window.set_spec(core.LabelSpec(image_layout="nonsense", image_size=999))  # clamped / defaulted, never crashes
+    spec = window.spec()
+    assert (spec.image_layout, spec.image_size) == ("only", 80)

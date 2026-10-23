@@ -12,7 +12,20 @@ from fontTools.ttLib import TTFont
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps
 
 from . import fonts as bundled_fonts
-from .spec import ALIGNMENTS, BACKGROUNDS, BORDER_STYLES, EFFECTS, H, MARGIN, SH, VALIGNMENTS, W, LabelSpec
+from . import imaging
+from .spec import (
+    ALIGNMENTS,
+    BACKGROUNDS,
+    BORDER_STYLES,
+    EFFECTS,
+    H,
+    IMAGE_LAYOUTS,
+    MARGIN,
+    SH,
+    VALIGNMENTS,
+    W,
+    LabelSpec,
+)
 
 FALLBACK_FONT_PATHS = (str(bundled_fonts.FONT_DIR / "DejaVuSans-Bold.ttf"),)
 HAS_FONTCONFIG = shutil.which("fc-match") is not None  # Linux; Windows/macOS use only the bundled fonts
@@ -536,16 +549,18 @@ def render(spec: LabelSpec) -> Image.Image:
     """Grayscale W x H canvas; everything is drawn inside the top SH rows."""
     img = Image.new("L", (W, H), 255)
 
-    if spec.image_path:
-        src = ImageOps.contain(Image.open(spec.image_path).convert("L"), (W, SH))
-        if spec.threshold is not None:
-            src = src.point(lambda v: 255 if v >= spec.threshold else 0)
+    layout = _pick(spec.image_layout, IMAGE_LAYOUTS, "only") if spec.image_path else ""
+    if layout == "only":
+        src = imaging.process(spec)
         img.paste(src, ((W - src.width) // 2, (SH - src.height) // 2))
         return img
 
     background = _pick(spec.background, BACKGROUNDS, "none")
-    if background != "none":
+    if layout == "behind":  # the picture is the backdrop; text over it gets the same halo as over a pattern
+        img.paste(imaging.process(spec, (W, SH), cover=True), (0, 0))
+    elif background != "none":
         img.paste(_background(background), (0, 0))
+    backdrop = background != "none" or layout == "behind"
     draw = ImageDraw.Draw(img)
 
     top, bottom = 0, SH  # frame: what's left after the hazard bars
@@ -560,6 +575,19 @@ def render(spec: LabelSpec) -> Image.Image:
         margin = max(MARGIN, BORDER_INSET[style] + 4)
 
     ax0, ax1, ay0, ay1 = margin, W - margin, top + margin, bottom - margin
+    if layout in ("left", "right", "top", "bottom"):  # carve the picture's share out; QR and text use what is left
+        share = min(80, max(20, spec.image_size)) / 100
+        if layout in ("left", "right"):
+            size = int((ax1 - ax0) * share)
+            region = (ax0, ay0, ax0 + size, ay1) if layout == "left" else (ax1 - size, ay0, ax1, ay1)
+            ax0, ax1 = (ax0 + size + MARGIN, ax1) if layout == "left" else (ax0, ax1 - size - MARGIN)
+        else:
+            size = int((ay1 - ay0) * share)
+            region = (ax0, ay0, ax1, ay0 + size) if layout == "top" else (ax0, ay1 - size, ax1, ay1)
+            ay0, ay1 = (ay0 + size + MARGIN, ay1) if layout == "top" else (ay0, ay1 - size - MARGIN)
+        src = imaging.process(spec, (region[2] - region[0], region[3] - region[1]))
+        img.paste(src, (region[0] + (region[2] - region[0] - src.width) // 2,
+                        region[1] + (region[3] - region[1] - src.height) // 2))
     text_w = ax1 - ax0
     if spec.qr:
         qimg = _qr_image(spec.qr, ay1 - ay0)
@@ -577,7 +605,7 @@ def render(spec: LabelSpec) -> Image.Image:
         shear = ITALIC_SHEAR if spec.italic and not native_slant else 0
         max_size = min(MAX_FONT_SIZE, spec.size) if spec.size > 0 else MAX_FONT_SIZE
         value, alpha = _fit_text_layer(
-            spec.text.replace("\\n", "\n"), path, spec.bold, shear, align, effect, background != "none",
+            spec.text.replace("\\n", "\n"), path, spec.bold, shear, align, effect, backdrop,
             text_w, ay1 - ay0, max_size,
         )
         x = ax0 + {"left": 0, "center": (text_w - value.width) // 2, "right": text_w - value.width}[align]

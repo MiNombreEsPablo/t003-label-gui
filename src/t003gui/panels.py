@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont, QImage, QStandardItem, QStandardItemModel
+from PySide6.QtGui import QFont, QImage, QStandardItem, QStandardItemModel, QValidator
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
+    QLabel,
     QLineEdit,
     QPlainTextEdit,
     QPushButton,
@@ -36,6 +37,10 @@ LABELS = {
     "3d": "3D WordArt", "grid": "Graph paper", "dots": "Polka dots", "bevel": "Win95 bevel",
     "hexgrid": "Hex grid", "matrix": "Matrix rain", "circuit": "Circuit board", "chamfer": "Cyber panel",
     "brackets": "HUD brackets", "ticks": "Ruler ticks", "neon": "Neon glow",
+    "floyd": "Floyd–Steinberg (smooth)", "bayer4": "Ordered 4×4 (crosshatch)", "bayer8": "Ordered 8×8 (finer)",
+    "threshold": "Hard cutoff (flat art)",
+    "only": "Image only", "left": "Left of text", "right": "Right of text",
+    "top": "Above text", "bottom": "Below text", "behind": "Behind text",
 }
 
 
@@ -123,40 +128,56 @@ class ContentPanel(QWidget):
         image_row.addWidget(self.image)
         image_row.addWidget(browse)
         image_row.addWidget(paste)
-        self.hard_threshold = QCheckBox("Hard black/white cutoff (flat-colour art)")
-        self.threshold = QSpinBox()
-        self.threshold.setRange(0, 255)
-        self.threshold.setValue(160)
-        self.threshold.setEnabled(False)
-        self.hard_threshold.toggled.connect(self.threshold.setEnabled)
+
+        self.image_layout = _choice_box(core.IMAGE_LAYOUTS)
+        self.image_layout.setToolTip("How the picture shares the label with the text and QR code.\n"
+                                     "'Image only' prints just the picture and ignores the text.")
+        self.image_layout.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)  # don't widen the window
+        self.image_layout.setMinimumContentsLength(10)
+        self.image_size = QSpinBox()
+        self.image_size.setRange(20, 80)
+        self.image_size.setValue(40)
+        self.image_size.setSuffix(" %")
+        self.image_size.setToolTip("The picture's share of the label")
+        layout_row = QHBoxLayout()
+        layout_row.addWidget(self.image_layout, 1)
+        layout_row.addWidget(self.image_size)
 
         form = QFormLayout(self)
         form.addRow("Text", self.text)
         form.addRow("QR", self.qr)
         form.addRow("Image", image_row)
-        form.addRow("", self.hard_threshold)
-        form.addRow("Cutoff", self.threshold)
+        form.addRow("Layout", layout_row)
         _tidy(form)
 
+        self.image.textChanged.connect(self._sync_layout)
+        self.image_layout.currentIndexChanged.connect(self._sync_layout)
+        self._sync_layout()
         for signal in (self.text.textChanged, self.qr.textChanged, self.image.textChanged,
-                       self.hard_threshold.toggled, self.threshold.valueChanged):
+                       self.image_layout.currentIndexChanged, self.image_size.valueChanged):
             signal.connect(self.changed)
+
+    def _sync_layout(self) -> None:
+        """The layout only matters once there is an image, and only the side/band layouts have a size."""
+        has_image = bool(self.image.text().strip())
+        self.image_layout.setEnabled(has_image)
+        self.image_size.setEnabled(has_image and self.image_layout.currentData() in ("left", "right", "top", "bottom"))
 
     def read(self) -> dict:
         return {
             "text": self.text.toPlainText().strip(),
             "qr": self.qr.text().strip(),
             "image_path": self.image.text().strip(),
-            "threshold": self.threshold.value() if self.hard_threshold.isChecked() else None,
+            "image_layout": self.image_layout.currentData(),
+            "image_size": self.image_size.value(),
         }
 
     def write(self, spec: core.LabelSpec) -> None:
         self.text.setPlainText(spec.text)
         self.qr.setText(spec.qr)
         self.image.setText(spec.image_path)
-        self.hard_threshold.setChecked(spec.threshold is not None)
-        if spec.threshold is not None:
-            self.threshold.setValue(spec.threshold)
+        self.image_layout.setCurrentIndex(max(0, self.image_layout.findData(spec.image_layout)))
+        self.image_size.setValue(min(80, max(20, spec.image_size)))
 
     def set_image(self, path: str) -> None:
         self.image.setText(path)
@@ -268,6 +289,137 @@ class TextPanel(QWidget):
         self.font_box.setCompleter(completer)
         self.font_box.setCurrentText(current)
         self.font_box.blockSignals(False)
+
+
+class _TenthsSpinBox(QSpinBox):
+    """An integer spin box shown in tenths (gamma 1.0 is stored as 10); still a QSpinBox, so the theme styles it."""
+
+    def textFromValue(self, value: int) -> str:
+        return f"{value / 10:.1f}"
+
+    def valueFromText(self, text: str) -> int:
+        try:
+            return round(float(text) * 10)
+        except ValueError:
+            return self.value()
+
+    def validate(self, text: str, pos: int):
+        try:
+            float(text)
+        except ValueError:
+            return (QValidator.Intermediate if text in ("", ".") else QValidator.Invalid), text, pos
+        return QValidator.Acceptable, text, pos
+
+
+class ImagePanel(QWidget):
+    """How a picture becomes dots: dither, tone and looks. Only matters when an image is chosen."""
+
+    title = "Image"
+    changed = Signal()
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.hint = QLabel("Choose an image first (Content tab).")
+        self.dither = _choice_box(core.DITHERS + ("threshold",))
+        self.dither.setToolTip("Floyd–Steinberg is smooth and best for photos; ordered dithering gives the regular\n"
+                               "crosshatch of 90s handheld cameras; a hard cutoff suits flat-colour art.")
+        self.cutoff = QSpinBox()
+        self.cutoff.setRange(0, 255)
+        self.cutoff.setValue(160)
+        self.brightness = QSpinBox()
+        self.brightness.setRange(-100, 100)
+        self.contrast = QSpinBox()
+        self.contrast.setRange(-100, 100)
+        self.gamma = _TenthsSpinBox()
+        self.gamma.setRange(3, 30)
+        self.gamma.setValue(10)
+        self.gamma.setToolTip("Above 1.0 lightens the mid-tones, below 1.0 darkens them")
+        self.pixelate = QSpinBox()
+        self.pixelate.setRange(0, 32)
+        self.pixelate.setSpecialValueText("Off")
+        self.pixelate.setSuffix(" dots")
+        self.pixelate.setToolTip("Chunky blocks, dithered at the low resolution: 3 gives the look of a 90s handheld camera")
+        self.mirror = QCheckBox("Mirror")
+        self.flip = QCheckBox("Flip")
+        self.invert = QCheckBox("Invert")
+        looks_row = QHBoxLayout()
+        looks_row.setSpacing(16)
+        for box in (self.mirror, self.flip, self.invert):
+            looks_row.addWidget(box)
+        looks_row.addStretch(1)
+        self.reset = QPushButton("Reset")
+        self.reset.clicked.connect(self.reset_all)
+
+        form = self._form = QFormLayout(self)
+        form.addRow(self.hint)
+        form.addRow("Dither", self.dither)
+        form.addRow("Cutoff", self.cutoff)
+        form.addRow("Brightness", self.brightness)
+        form.addRow("Contrast", self.contrast)
+        form.addRow("Gamma", self.gamma)
+        form.addRow("Pixelate", self.pixelate)
+        form.addRow("Looks", looks_row)
+        form.addRow("", self.reset)
+        _tidy(form)
+
+        self.dither.currentIndexChanged.connect(self._sync_cutoff)
+        self._sync_cutoff()
+        for signal in (self.dither.currentIndexChanged, self.cutoff.valueChanged, self.brightness.valueChanged,
+                       self.contrast.valueChanged, self.gamma.valueChanged, self.pixelate.valueChanged,
+                       self.mirror.toggled, self.flip.toggled, self.invert.toggled):
+            signal.connect(self.changed)
+        self.set_active(False)
+
+    def _sync_cutoff(self) -> None:
+        hard = self.dither.currentData() == "threshold"
+        self._form.setRowVisible(self.cutoff, hard)  # only shown when it applies, to keep the tab short
+        self.cutoff.setEnabled(hard)
+
+    def set_active(self, active: bool) -> None:
+        """Dim the controls (and say why) while no image is chosen."""
+        self.hint.setVisible(not active)
+        for widget in (self.dither, self.brightness, self.contrast, self.gamma, self.pixelate, self.mirror, self.flip,
+                       self.invert, self.reset):
+            widget.setEnabled(active)
+        self.cutoff.setEnabled(active and self.dither.currentData() == "threshold")
+
+    def reset_all(self) -> None:
+        self.dither.setCurrentIndex(self.dither.findData("floyd"))
+        self.cutoff.setValue(160)
+        self.brightness.setValue(0)
+        self.contrast.setValue(0)
+        self.gamma.setValue(10)
+        self.pixelate.setValue(0)
+        for box in (self.mirror, self.flip, self.invert):
+            box.setChecked(False)
+
+    def read(self) -> dict:
+        mode = self.dither.currentData()
+        hard = mode == "threshold"
+        return {
+            "dither": "floyd" if hard else mode,
+            "threshold": self.cutoff.value() if hard else None,
+            "brightness": self.brightness.value(),
+            "contrast": self.contrast.value(),
+            "gamma": self.gamma.value() / 10,
+            "pixelate": self.pixelate.value(),
+            "mirror": self.mirror.isChecked(),
+            "flip": self.flip.isChecked(),
+            "invert": self.invert.isChecked(),
+        }
+
+    def write(self, spec: core.LabelSpec) -> None:
+        mode = "threshold" if spec.threshold is not None else spec.dither
+        self.dither.setCurrentIndex(max(0, self.dither.findData(mode)))
+        if spec.threshold is not None:
+            self.cutoff.setValue(spec.threshold)
+        self.brightness.setValue(spec.brightness)
+        self.contrast.setValue(spec.contrast)
+        self.gamma.setValue(round(spec.gamma * 10))
+        self.pixelate.setValue(spec.pixelate)
+        self.mirror.setChecked(spec.mirror)
+        self.flip.setChecked(spec.flip)
+        self.invert.setChecked(spec.invert)
 
 
 class RetroPanel(QWidget):

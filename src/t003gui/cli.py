@@ -17,6 +17,9 @@ examples:
   print-label "Hi" --background stars --effect shadow --italic
   print-label "Wi-Fi" --qr "WIFI:S:x;;"        text left, QR right
   print-label --image art.png --threshold 160  hard cutoff, good for flat colours
+  print-label --image photo.jpg --dither bayer4 --contrast 20   crosshatch dither, a bit more punch
+  print-label "Mug" --image mug.png --layout left      photo with a caption
+  print-label --image photo.jpg --pixelate 3 --dither bayer4    chunky handheld-camera look
   print-label --preset shelf --copies 3        saved GUI preset
   print-label "x" --preview out.png            render to PNG, don't print
 """
@@ -34,6 +37,17 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--qr", help="QR code content")
     p.add_argument("--image", help="image file to print")
     p.add_argument("--threshold", type=int, help="image: hard black/white cutoff 0-255 instead of dithering")
+    p.add_argument("--layout", dest="image_layout", choices=core.IMAGE_LAYOUTS,
+                   help="image with text/QR: only (default, image replaces them), left, right, top, bottom, behind")
+    p.add_argument("--image-size", type=int, help="image: its share of the label for left/right/top/bottom, 20-80 (default 40)")
+    p.add_argument("--dither", choices=core.DITHERS, help="image: how gray becomes dots (default floyd)")
+    p.add_argument("--brightness", type=int, help="image: -100..100")
+    p.add_argument("--contrast", type=int, help="image: -100..100")
+    p.add_argument("--gamma", type=float, help="image: above 1 lightens the mid-tones (default 1.0)")
+    p.add_argument("--pixelate", type=int, help="image: chunky blocks of this many dots (3 = handheld-camera look)")
+    p.add_argument("--mirror", action="store_true", help="image: flip left-right")
+    p.add_argument("--flip", action="store_true", help="image: flip top-bottom")
+    p.add_argument("--invert", action="store_true", help="image: negative")
     p.add_argument("--font", help="font family, e.g. 'Noto Sans Mono' (default DejaVu Sans)")
     p.add_argument("--bold", action=argparse.BooleanOptionalAction, default=None, help="bold text (default on)")
     p.add_argument("--align", choices=core.ALIGNMENTS, help="text alignment (default center)")
@@ -64,8 +78,8 @@ def main(argv: list[str] | None = None) -> None:
         spec = PresetStore().get(args.preset)
         if spec is None:
             p.error(f"no preset named {args.preset!r}")
-    for field in ("text", "qr", "threshold", "copies", "density", "font", "bold", "italic", "size", "align", "valign",
-                  "effect", "background"):
+    for field in ("text", "qr", "threshold", "image_layout", "image_size", "dither", "brightness", "contrast", "gamma", "pixelate", "copies",
+                  "density", "font", "bold", "italic", "size", "align", "valign", "effect", "background"):
         if getattr(args, field) is not None:
             setattr(spec, field, getattr(args, field))
     if args.image:
@@ -76,6 +90,9 @@ def main(argv: list[str] | None = None) -> None:
         spec.border_style = args.frame
     if args.bars:
         spec.bars = True
+    for flag in ("mirror", "flip", "invert"):
+        if getattr(args, flag):
+            setattr(spec, flag, True)
     if not (spec.text or spec.qr or spec.image_path):
         p.error("give some text, --qr, --image, --preset or --file")
 

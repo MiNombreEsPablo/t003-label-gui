@@ -16,7 +16,10 @@ Japanese (日本語).
 - **Backgrounds:** checker, dots, stripes, dithered gradient, stars, graph paper, scanlines, circuit board, hex grid,
   synthwave sun, matrix rain, halftone. **Borders:** solid, double, dotted, checker, Win95 bevel, marquee lights,
   cyber panel, HUD brackets, ruler ticks. **Bars:** under-construction hazard stripes.
-- **QR codes, images** (dithered or hard threshold, drag and drop or paste), copies, darkness, saved **presets**.
+- **QR codes, images** (drag and drop or paste), copies, darkness, saved **presets**. **Image and text together:** put the
+  picture left, right, above, below or behind the text (and QR code), with a size control. **Image tab:** Floyd–Steinberg,
+  ordered (Bayer) crosshatch or hard-cutoff dithering, brightness, contrast and gamma, and looks: pixelate (chunky
+  handheld-camera dots), mirror, flip and invert. Transparent PNGs print on white and phone photos keep their orientation.
 - **Save and share:** File > Save/Open composition keeps a whole label in one `.t003label` file (the image is embedded, so
   it works on another machine; drop one on the window to open it, or `t003-print --file x.t003label`). File > Export
   image writes the exact 1-bit label as a PNG, at printed size or enlarged 4×.
@@ -67,8 +70,9 @@ Ordered by priority, with no promised dates. Several ideas are inspired by 90s h
 printers.
 
 **Now** (the next release)
-- [ ] An Image panel: choice of dither (Floyd–Steinberg, ordered/Bayer, hard threshold), brightness, contrast and gamma
-- [ ] Image looks: pixelate (chunky low-res), mirror, flip, invert
+- [x] Image and text on one label: the picture beside, above, below or behind the text
+- [x] An Image panel: choice of dither (Floyd–Steinberg, ordered/Bayer, hard threshold), brightness, contrast and gamma
+- [x] Image looks: pixelate (chunky low-res), mirror, flip, invert
 - [ ] A four-shade green "handheld" theme
 - [ ] Screenshots in this README
 

@@ -271,7 +271,7 @@ QLineEdit, QPlainTextEdit, QSpinBox, QComboBox {{
     selection-background-color: {t.select_bg}; selection-color: {t.select_text};
 }}
 QLineEdit:focus, QPlainTextEdit:focus, QSpinBox:focus, QComboBox:focus {{ {t.focus_border} }}
-QLineEdit:disabled, QSpinBox:disabled {{ background: {t.input_dis_bg}; color: {t.dis_text}; border-color: {t.dis_border}; }}
+QLineEdit:disabled, QSpinBox:disabled, QComboBox:disabled {{ background: {t.input_dis_bg}; color: {t.dis_text}; border-color: {t.dis_border}; }}
 
 QComboBox {{ padding-right: 30px; combobox-popup: 0; }}
 QComboBox::drop-down {{

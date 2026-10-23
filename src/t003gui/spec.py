@@ -20,6 +20,8 @@ BACKGROUNDS = (
     "none", "checker", "dots", "stripes", "gradient", "stars", "grid",
     "scanlines", "circuit", "hexgrid", "synthwave", "matrix", "halftone",
 )
+IMAGE_LAYOUTS = ("only", "left", "right", "top", "bottom", "behind")  # image + text arrangement
+DITHERS = ("floyd", "bayer4", "bayer8")  # images; a hard cutoff is `threshold`
 BORDER_STYLES = ("solid", "double", "dotted", "checker", "bevel", "marquee", "chamfer", "brackets", "ticks")
 
 
@@ -28,7 +30,17 @@ class LabelSpec:
     text: str = ""
     qr: str = ""
     image_path: str = ""
+    image_layout: str = "only"  # "only" ignores text/QR; the rest share the label with them
+    image_size: int = 40  # left/right/top/bottom: the image's share of the usable area, 20-80 %
     threshold: int | None = None  # images: hard cutoff instead of dithering
+    dither: str = "floyd"  # images: how gray becomes dots
+    brightness: int = 0  # images: -100..100
+    contrast: int = 0  # images: -100..100
+    gamma: float = 1.0  # images: > 1 lightens the mid-tones
+    pixelate: int = 0  # images: chunky blocks of this many dots (0 = off)
+    mirror: bool = False  # images: left-right
+    flip: bool = False  # images: top-bottom
+    invert: bool = False  # images: negative
     copies: int = 1
     density: int = 7
     # text

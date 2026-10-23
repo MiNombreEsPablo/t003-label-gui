@@ -76,12 +76,14 @@ class MainWindow(QMainWindow):
 
         self.content = panels.ContentPanel()
         self.text_panel = panels.TextPanel()
+        self.image_panel = panels.ImagePanel()
         self.retro = panels.RetroPanel()
         self.output = panels.OutputPanel()
-        self.panels = (self.content, self.text_panel, self.retro, self.output)
+        self.panels = (self.content, self.text_panel, self.image_panel, self.retro, self.output)
+        self.content.image.textChanged.connect(lambda text: self.image_panel.set_active(bool(text.strip())))
 
         tabs = QTabWidget()
-        for panel in (self.content, self.text_panel, self.retro):
+        for panel in (self.content, self.text_panel, self.image_panel, self.retro):
             tabs.addTab(panel, panel.title)
 
         self.print_button = QPushButton("Print")
@@ -155,7 +157,7 @@ class MainWindow(QMainWindow):
         help_menu.addSeparator()
         help_menu.addAction("Open &presets folder", lambda: self._open_path(self.presets.path.parent))
 
-        for panel in (self.content, self.text_panel, self.retro):
+        for panel in (self.content, self.text_panel, self.image_panel, self.retro):
             panel.changed.connect(self.refresh_preview)
         self.reload_presets()
         self.refresh_preview()
