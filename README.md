@@ -124,13 +124,12 @@ work to build and to keep working).
 - [ ] `useful` `big` Batch-print from a CSV (`{column}` placeholders in the text and QR fields)
 - [ ] `useful` `big` Undo/redo (Edit menu), then an album: recent and saved labels as a thumbnail gallery
 - [ ] `polish` One idea for saving a design: presets (kept in the app) and `.t003label` files overlap, so merge them (e.g. Save as preset in the File menu, or a templates folder) or make the difference obvious
-- [ ] `fun` Stickers and stamps: a built-in set of our own pixel icons (fragile, this side up, warning, arrows, ...) to place on a label
+- [ ] `fun` More stickers (the Doodle tab has 12 so far), and a sticker that can be moved or resized after it is placed
 - [ ] `fun` Poster mode: split one large image across several stickers, with alignment marks
 
 **Later**
 - [ ] `fun` More themes: Win95/98 grey, and user-defined colour themes
 - [ ] `useful` Zoomable preview (View > Zoom, Ctrl+plus/minus/0) with a ruler/grid overlay
-- [ ] `fun` `big` Draw tool: freehand doodling on the label
 - [ ] `fun` `big` Webcam capture: take a photo and print it (needs Qt Multimedia, so a larger download)
 - [ ] `polish` Accessibility pass: the image controls have screen-reader names; name the rest, try Orca and NVDA, and show a checkbox's state with a tick as well as colour
 - [ ] `polish` A keyboard-shortcuts window (Ctrl+?) and F1 help, once there are enough shortcuts to list

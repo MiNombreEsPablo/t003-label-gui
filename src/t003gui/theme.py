@@ -286,7 +286,7 @@ QGroupBox::title {{
     {t.raised()} border-radius: {t.r_title}px; background: {t.btn}; font-weight: bold;
 }}
 QTabBar::tab {{
-    padding: 5px 16px; margin-right: 3px; font-weight: bold; {t.raised()} border-bottom: none;
+    padding: 5px 11px; margin-right: 2px; font-weight: bold; {t.raised()} border-bottom: none;
     border-top-left-radius: {t.r_tab}px; border-top-right-radius: {t.r_tab}px; background: {t.btn};
 }}
 QTabBar::tab:!selected {{ margin-top: 3px; color: {t.tab_unselected_text}; background: {t.btn_off}; }}

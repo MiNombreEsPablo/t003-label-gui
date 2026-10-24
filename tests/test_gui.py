@@ -1,4 +1,5 @@
 import pytest
+from PIL import Image
 
 pytest.importorskip("PySide6")  # the window is the optional [gui] extra
 from PySide6.QtWidgets import QApplication, QTabWidget
@@ -139,7 +140,7 @@ def test_pasting_a_clipboard_image_sets_the_image_path(window, app):
 
 def test_tabs_exist(window):
     tabs = window.findChild(QTabWidget)
-    assert [tabs.tabText(i) for i in range(tabs.count())] == ["Content", "Text", "Image", "Decoration"]
+    assert [tabs.tabText(i) for i in range(tabs.count())] == ["Content", "Text", "Image", "Decoration", "Doodle"]
 
 
 def test_widget_attributes_do_not_shadow_qt_methods(window):
@@ -524,3 +525,157 @@ def test_a_render_error_while_printing_is_reported_not_raised(window, monkeypatc
     window.print_now()
     assert shown and "gone.png" in shown[0]
     assert window.print_button.isEnabled()
+
+
+def test_drawing_on_the_doodle_pad_changes_the_label_and_undo_removes_it(window, app):
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtTest import QTest
+
+    window.tabs.setCurrentWidget(window.doodle)
+    pad = window.doodle.canvas
+    assert window.spec().doodle == "" and not window.doodle.clear.isEnabled()
+    QTest.mousePress(pad, Qt.LeftButton, Qt.NoModifier, QPoint(20, 20))
+    QTest.mouseMove(pad, QPoint(120, 80))
+    QTest.mouseRelease(pad, Qt.LeftButton, Qt.NoModifier, QPoint(120, 80))
+    drawn = core.render(window.spec())
+    assert window.spec().doodle and drawn.getpixel((20, 20)) == 0
+    assert window.doodle.undo.isEnabled() and window.doodle.clear.isEnabled()
+    window.doodle.undo.click()
+    assert window.spec().doodle == ""
+    window.doodle.clear.click()  # nothing to clear: stays empty and disabled
+    assert not window.doodle.clear.isEnabled()
+
+
+def test_loading_a_spec_shows_its_doodle_and_the_eraser_works(window):
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtTest import QTest
+
+    from t003gui import doodle as doodle_mod
+
+    mask = Image.new("L", (core.W, core.SH), 0)
+    mask.paste(255, (0, 0, 199, 99))
+    window.set_spec(core.LabelSpec(doodle=doodle_mod.encode(mask)))
+    assert window.doodle.canvas.data() == doodle_mod.encode(mask)
+    window.doodle.tool.setCurrentIndex(window.doodle.tool.findData("eraser"))
+    window.doodle.brush.setValue(10)
+    for event, point in ((QTest.mousePress, QPoint(50, 50)), (QTest.mouseRelease, QPoint(50, 50))):
+        event(window.doodle.canvas, Qt.LeftButton, Qt.NoModifier, point)
+    assert doodle_mod.decode(window.spec().doodle).getpixel((50, 50)) == 0
+    assert doodle_mod.decode(window.spec().doodle).getpixel((150, 50)) == 255
+
+
+@pytest.mark.parametrize("key", ["system", "y2k-blue", "y2k-pink", "gunmetal", "handheld"])
+def test_every_tab_fits_in_every_theme_without_scroll_arrows(window, app, key):
+    window.apply_theme(key)
+    app.processEvents()
+    bar = window.tabs.tabBar()
+    assert not bar.usesScrollButtons() or bar.sizeHint().width() <= window.tabs.width(), key
+
+
+def _use(window, tool, *points, ink=None):
+    """Drag the doodle pad's `tool` through `points` (a single point is a click)."""
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtTest import QTest
+
+    window.tabs.setCurrentWidget(window.doodle)
+    window.doodle.tool.setCurrentIndex(window.doodle.tool.findData(tool))
+    if ink:
+        window.doodle.ink.setCurrentIndex(window.doodle.ink.findData(ink))
+    pad = window.doodle.canvas
+    QTest.mousePress(pad, Qt.LeftButton, Qt.NoModifier, QPoint(*points[0]))
+    for p in points[1:]:
+        QTest.mouseMove(pad, QPoint(*p))
+    QTest.mouseRelease(pad, Qt.LeftButton, Qt.NoModifier, QPoint(*points[-1]))
+    from t003gui import doodle as doodle_mod
+
+    return doodle_mod.decode(window.spec().doodle)
+
+
+@pytest.mark.parametrize("tool,points", [
+    ("pen", [(20, 20), (80, 60)]), ("square", [(20, 20), (80, 60)]), ("italic", [(20, 20), (80, 60)]),
+    ("spray", [(50, 50)]), ("line", [(20, 20), (80, 60)]), ("box", [(20, 20), (80, 60)]),
+    ("oval", [(20, 20), (80, 60)]), ("stamp", [(100, 100)]),
+])
+def test_every_drawing_tool_leaves_ink_and_undo_takes_it_back(window, tool, points):
+    ink = _use(window, tool, *points)
+    assert ink is not None and ink.getbbox(), tool
+    window.doodle.undo.click()
+    assert window.spec().doodle == ""
+
+
+def test_a_slanted_nib_draws_thin_horizontals_and_thick_diagonals(window):
+    window.doodle.brush.setValue(12)
+    flat = _use(window, "italic", (20, 100), (120, 100))
+    flat_h = flat.getbbox()[3] - flat.getbbox()[1]
+    window.doodle.clear.click()
+    steep = _use(window, "italic", (200, 20), (200, 120))
+    assert flat_h >= 12 and steep.getbbox()[2] - steep.getbbox()[0] >= 12  # the nib spans 12 dots on its diagonal
+
+
+def doodle_ink(window):
+    from t003gui import doodle as doodle_mod
+
+    return doodle_mod.decode(window.spec().doodle)
+
+
+def test_the_paint_bucket_fills_inside_a_shape_and_stops_at_its_edge(window):
+    _use(window, "box", (50, 50), (150, 120))
+    ink = _use(window, "fill", (100, 80))
+    assert ink.getpixel((100, 80)) == 255 and ink.getpixel((60, 110)) == 255
+    assert ink.getpixel((200, 80)) == 0 and ink.getpixel((20, 20)) == 0  # outside the box
+    before = window.spec().doodle
+    _use(window, "fill", (50, 80))  # on the outline itself: nothing to fill
+    assert window.spec().doodle == before
+    window.doodle.undo.click()
+    assert doodle_ink(window).getpixel((100, 80)) == 0  # one undo took the whole fill back
+
+
+def test_the_bucket_also_stops_at_the_labels_own_text(window):
+    window.content.text.setPlainText("I")
+    window.tabs.setCurrentWidget(window.doodle)
+    ink = _use(window, "fill", (5, 5))
+    assert ink.getpixel((5, 5)) == 255
+    letter = core.render(core.LabelSpec(text="I", font=window.spec().font, bold=True))
+    row = [x for x in range(core.W) if letter.getpixel((x, core.SH // 2)) < 128]
+    assert ink.getpixel((row[len(row) // 2], core.SH // 2)) == 0  # the middle of the letter stays unfilled
+
+
+def test_patterned_ink_covers_only_part_of_a_filled_area(window):
+    _use(window, "box", (50, 50), (150, 120))
+    window.doodle.ink.setCurrentIndex(window.doodle.ink.findData("half"))
+    ink = _use(window, "fill", (100, 80))
+    inside = [ink.getpixel((x, y)) for x in range(60, 140) for y in range(60, 110)]
+    assert 0.35 < inside.count(255) / len(inside) < 0.65
+
+
+def test_stickers_land_centred_on_the_click_and_the_picker_lists_them_all(window):
+    from t003gui import stickers
+
+    assert window.doodle.sticker.count() == len(stickers.STICKERS)
+    window.doodle.sticker.setCurrentIndex(window.doodle.sticker.findData("heart"))
+    window.doodle.sticker_size.setValue(3)
+    ink = _use(window, "stamp", (200, 100))
+    left, top, right, bottom = ink.getbbox()
+    heart = stickers.mask("heart", 3).getbbox()
+    assert (right - left, bottom - top) == (heart[2] - heart[0], heart[3] - heart[1])
+    assert abs((left + right) / 2 - 200) <= 36 and abs((top + bottom) / 2 - 100) <= 36
+
+
+def test_each_tool_shows_only_its_own_controls(window):
+    def visible(widget):
+        return not widget.isHidden()
+
+    for tool, ink, brush, sticker in (("pen", True, True, False), ("spray", False, True, False),
+                                      ("fill", True, False, False), ("stamp", False, False, True),
+                                      ("eraser", False, True, False)):
+        window.doodle.tool.setCurrentIndex(window.doodle.tool.findData(tool))
+        assert (visible(window.doodle.ink), visible(window.doodle.brush), visible(window.doodle.sticker)) == \
+            (ink, brush, sticker), tool
+
+
+def test_the_bucket_does_not_leak_through_a_patterned_outline(window):
+    for pattern in ("half", "quarter", "lines", "diagonal"):
+        window.doodle.clear.click()
+        _use(window, "box", (50, 50), (150, 120), ink=pattern)
+        ink = _use(window, "fill", (100, 80), ink="solid")
+        assert ink.getpixel((100, 80)) == 255 and ink.getpixel((200, 80)) == 0 and ink.getpixel((20, 20)) == 0, pattern

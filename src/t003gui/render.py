@@ -11,6 +11,7 @@ import qrcode
 from fontTools.ttLib import TTFont
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps, UnidentifiedImageError
 
+from . import doodle
 from . import fonts as bundled_fonts
 from . import imaging
 from .spec import (
@@ -568,6 +569,14 @@ def _pick(value: str, allowed: tuple[str, ...], default: str) -> str:
 
 def render(spec: LabelSpec) -> Image.Image:
     """Grayscale W x H canvas; everything is drawn inside the top SH rows."""
+    img = _compose(spec)
+    ink = doodle.decode(spec.doodle)
+    if ink is not None:  # the doodle is the top layer, over the picture, QR and text alike
+        img.paste(0, (0, 0), ink)
+    return img
+
+
+def _compose(spec: LabelSpec) -> Image.Image:
     img = Image.new("L", (W, H), 255)
 
     layout = _pick(spec.image_layout, IMAGE_LAYOUTS, "only") if spec.image_path else ""

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import re
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 from PIL import ImageOps
@@ -79,13 +80,15 @@ class MainWindow(QMainWindow):
         self.text_panel = panels.TextPanel()
         self.image_panel = panels.ImagePanel()
         self.decoration = panels.DecorationPanel()
+        self.doodle = panels.DoodlePanel()
         self.output = panels.OutputPanel()
-        self.panels = (self.content, self.text_panel, self.image_panel, self.decoration, self.output)
+        self.panels = (self.content, self.text_panel, self.image_panel, self.decoration, self.doodle, self.output)
         self.content.image.textChanged.connect(lambda text: self.image_panel.set_active(bool(text.strip())))
 
-        tabs = QTabWidget()
-        for panel in (self.content, self.text_panel, self.image_panel, self.decoration):
+        self.tabs = tabs = QTabWidget()
+        for panel in (self.content, self.text_panel, self.image_panel, self.decoration, self.doodle):
             tabs.addTab(panel, panel.title)
+        tabs.currentChanged.connect(self._update_underlay)
 
         self.print_button = QPushButton("Print")
         self.print_button.setDefault(True)
@@ -183,7 +186,7 @@ class MainWindow(QMainWindow):
         help_menu.addSeparator()
         help_menu.addAction("Open &presets folder", lambda: self._open_path(self.presets.path.parent))
 
-        for panel in (self.content, self.text_panel, self.image_panel, self.decoration):
+        for panel in (self.content, self.text_panel, self.image_panel, self.decoration, self.doodle):
             panel.changed.connect(self.refresh_preview)
         self.reload_presets()
         self.refresh_preview()
@@ -197,6 +200,16 @@ class MainWindow(QMainWindow):
     def set_spec(self, spec: core.LabelSpec) -> None:
         for panel in self.panels:
             panel.write(spec)
+        self._update_underlay()
+
+    def _update_underlay(self) -> None:
+        """The doodle pad shows the rest of the label faintly; it only needs it while that tab is open."""
+        if self.tabs.currentWidget() is not self.doodle:
+            return
+        try:
+            self.doodle.set_underlay(core.render(replace(self.spec(), doodle="")))
+        except Exception:  # a bad image path etc.: the preview reports it; the pad just stays blank
+            self.doodle.set_underlay(None)
 
     @staticmethod
     def _saved_theme() -> str:

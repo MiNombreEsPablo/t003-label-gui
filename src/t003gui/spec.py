@@ -56,6 +56,7 @@ class LabelSpec:
     border_style: str = "solid"
     background: str = "none"
     bars: bool = False  # hazard-stripe "under construction" bars top and bottom
+    doodle: str = ""  # freehand ink drawn over everything: a base64 PNG mask, see doodle.py
 
     @classmethod
     def from_dict(cls, raw: dict) -> "LabelSpec":

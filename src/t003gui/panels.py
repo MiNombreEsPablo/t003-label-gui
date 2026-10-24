@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont, QImage, QStandardItem, QStandardItemModel
+from PySide6.QtGui import QFont, QIcon, QImage, QPainter, QPixmap, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -29,10 +29,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from . import core
+from . import core, stickers
 from . import fonts as bundled_fonts
 from .spec import IMAGE_SUFFIXES
-from .widgets import SliderSpin, TenthsSpinBox, log_mapping
+from .widgets import DoodleCanvas, SliderSpin, TenthsSpinBox, ink_image, log_mapping
 
 LABELS = {
     "3d": "3D WordArt", "grid": "Graph paper", "dots": "Polka dots", "bevel": "Win95 bevel",
@@ -42,6 +42,9 @@ LABELS = {
     "threshold": "Hard cutoff (flat art)",
     "only": "Image only", "left": "Left of text", "right": "Right of text",
     "top": "Above text", "bottom": "Below text", "behind": "Behind text",
+    "pen": "Round brush", "square": "Square brush", "italic": "Calligraphy", "spray": "Spray can", "line": "Line",
+    "box": "Rectangle", "oval": "Ellipse", "fill": "Paint bucket", "stamp": "Sticker", "eraser": "Eraser",
+    "half": "50 % checker", "quarter": "25 % dots", "lines": "Lines", "diagonal": "Diagonal lines",
 }
 
 
@@ -445,6 +448,95 @@ class DecorationPanel(QWidget):
         self.background.setCurrentIndex(max(0, self.background.findData(spec.background)))
         self.border_box.setCurrentIndex(max(0, self.border_box.findData(spec.border_style)) if spec.border else 0)
         self.bars.setChecked(spec.bars)
+
+
+class DoodlePanel(QWidget):
+    """A pad to draw on; the ink is printed over everything else. Each tool shows only the controls it uses."""
+
+    title = "Doodle"
+    changed = Signal()
+    USES_INK = ("pen", "square", "italic", "line", "box", "oval", "fill")
+    USES_BRUSH = ("pen", "square", "italic", "spray", "line", "box", "oval", "eraser")
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.canvas = DoodleCanvas()
+        self.tool = _choice_box(DoodleCanvas.TOOLS)
+        self.ink = _choice_box(DoodleCanvas.INKS)
+        self.brush = SliderSpin(1, 24, 4)
+        self.brush.setValue(4)
+        self.brush.set_name("Brush size")
+        self.brush.setToolTip("Width in dots (the eraser is twice as wide, the spray can sprays wider)")
+        self.sticker = QComboBox()
+        for key, (title, _draw) in stickers.STICKERS.items():
+            self.sticker.addItem(QIcon(QPixmap.fromImage(_icon(key))), title, key)
+        self.sticker_size = SliderSpin(1, stickers.MAX_SCALE, 2)
+        self.sticker_size.setValue(2)
+        self.sticker_size.set_name("Sticker size")
+        self.sticker_size.setSuffix("×")
+        self.undo = QPushButton("Undo")
+        self.clear = QPushButton("Clear")
+        buttons = QHBoxLayout()
+        buttons.addWidget(self.undo)
+        buttons.addWidget(self.clear)
+        buttons.addStretch()
+
+        self._form = form = QFormLayout(self)
+        form.addRow("Tool", self.tool)
+        form.addRow("Ink", self.ink)
+        form.addRow("Brush", self.brush)
+        form.addRow("Sticker", self.sticker)
+        form.addRow("Size", self.sticker_size)
+        form.addRow(self.canvas)
+        form.addRow(buttons)
+        form.setAlignment(self.canvas, Qt.AlignHCenter)
+        _tidy(form)
+
+        self.tool.currentIndexChanged.connect(self._sync_tool)
+        self.ink.currentIndexChanged.connect(lambda: setattr(self.canvas, "ink", self.ink.currentData()))
+        self.brush.valueChanged.connect(lambda value: setattr(self.canvas, "brush", value))
+        self.sticker.currentIndexChanged.connect(lambda: setattr(self.canvas, "sticker", self.sticker.currentData()))
+        self.sticker_size.valueChanged.connect(lambda value: setattr(self.canvas, "sticker_scale", value))
+        self.undo.clicked.connect(self.canvas.undo)
+        self.clear.clicked.connect(self.canvas.clear)
+        self.canvas.changed.connect(self.changed)
+        self.canvas.changed.connect(self._sync_buttons)
+        self._sync_tool()
+        self._sync_buttons()
+
+    def _sync_tool(self) -> None:
+        tool = self.tool.currentData()
+        self.canvas.tool = tool
+        self._form.setRowVisible(self.ink, tool in self.USES_INK)
+        self._form.setRowVisible(self.brush, tool in self.USES_BRUSH)
+        self._form.setRowVisible(self.sticker, tool == "stamp")
+        self._form.setRowVisible(self.sticker_size, tool == "stamp")
+        self.canvas.update()
+
+    def _sync_buttons(self) -> None:
+        self.undo.setEnabled(self.canvas.can_undo())
+        self.clear.setEnabled(not self.canvas.is_empty())
+
+    def set_underlay(self, label) -> None:
+        self.canvas.set_underlay(label)
+
+    def read(self) -> dict:
+        return {"doodle": self.canvas.data()}
+
+    def write(self, spec: core.LabelSpec) -> None:
+        self.canvas.set_data(spec.doodle)
+        self._sync_buttons()
+
+
+def _icon(sticker: str) -> QImage:
+    """A sticker's picker icon: black on a white tile, so it reads in every theme."""
+    mask = stickers.mask(sticker, 1)
+    tile = QImage(mask.width + 4, mask.height + 4, QImage.Format_ARGB32)
+    tile.fill(Qt.white)
+    painter = QPainter(tile)
+    painter.drawImage(2, 2, ink_image(mask))
+    painter.end()
+    return tile
 
 
 class OutputPanel(QGroupBox):
