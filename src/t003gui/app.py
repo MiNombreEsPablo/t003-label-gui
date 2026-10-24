@@ -80,7 +80,7 @@ class MainWindow(QMainWindow):
         self.text_panel = panels.TextPanel()
         self.image_panel = panels.ImagePanel()
         self.decoration = panels.DecorationPanel()
-        self.doodle = panels.DoodlePanel()
+        self.doodle = panels.DoodlePanel(PREVIEW_SCALE)
         self.output = panels.OutputPanel()
         self.panels = (self.content, self.text_panel, self.image_panel, self.decoration, self.doodle, self.output)
         self.content.image.textChanged.connect(lambda text: self.image_panel.set_active(bool(text.strip())))
@@ -88,7 +88,7 @@ class MainWindow(QMainWindow):
         self.tabs = tabs = QTabWidget()
         for panel in (self.content, self.text_panel, self.image_panel, self.decoration, self.doodle):
             tabs.addTab(panel, panel.title)
-        tabs.currentChanged.connect(self._update_underlay)
+        tabs.currentChanged.connect(lambda _index: self.refresh_preview())  # the doodle tab draws on the preview
 
         self.print_button = QPushButton("Print")
         self.print_button.setDefault(True)
@@ -115,6 +115,8 @@ class MainWindow(QMainWindow):
             f"{core.W} × {core.SH} dots (about 48 × 28 mm), exactly what prints.\n"
             f"The strip below is the gap between stickers; nothing there is printed."
         )
+        self.doodle.canvas.setParent(self.preview)  # drawing happens on the label itself
+        self.doodle.canvas.hide()
         bezel = QFrame()  # a chrome monitor bezel under the Y2K themes, invisible otherwise
         bezel.setObjectName("bezel")
         bezel_layout = QVBoxLayout(bezel)
@@ -186,8 +188,11 @@ class MainWindow(QMainWindow):
         help_menu.addSeparator()
         help_menu.addAction("Open &presets folder", lambda: self._open_path(self.presets.path.parent))
 
-        for panel in (self.content, self.text_panel, self.image_panel, self.decoration, self.doodle):
+        for panel in (self.content, self.text_panel, self.image_panel, self.decoration):
             panel.changed.connect(self.refresh_preview)
+        # While drawing, the preview is the label without its doodle (the canvas on top draws the ink), so a stroke
+        # changes nothing underneath and needs no re-render.
+        self.doodle.changed.connect(lambda: None if self._drawing() else self.refresh_preview())
         self.reload_presets()
         self.refresh_preview()
 
@@ -200,16 +205,9 @@ class MainWindow(QMainWindow):
     def set_spec(self, spec: core.LabelSpec) -> None:
         for panel in self.panels:
             panel.write(spec)
-        self._update_underlay()
 
-    def _update_underlay(self) -> None:
-        """The doodle pad shows the rest of the label faintly; it only needs it while that tab is open."""
-        if self.tabs.currentWidget() is not self.doodle:
-            return
-        try:
-            self.doodle.set_underlay(core.render(replace(self.spec(), doodle="")))
-        except Exception:  # a bad image path etc.: the preview reports it; the pad just stays blank
-            self.doodle.set_underlay(None)
+    def _drawing(self) -> bool:
+        return self.tabs.currentWidget() is self.doodle
 
     @staticmethod
     def _saved_theme() -> str:
@@ -443,13 +441,18 @@ class MainWindow(QMainWindow):
 
     def refresh_preview(self) -> None:
         spec = self.spec()
+        drawing = self._drawing()
         try:
-            bitmap = core.to_bitmap(core.render(spec)).convert("L")
+            label = core.render(replace(spec, doodle="") if drawing else spec)  # the canvas on top draws the doodle
+            bitmap = core.to_bitmap(label).convert("L")
         except Exception as e:  # bad image path etc. — show it instead of crashing
             self.status.setText(f"Preview error: {e}")
             return
         self.status.setText(self._layout_hint(spec))
         tint = self.active_theme.preview_tint if self.active_theme else None
+        self.doodle.canvas.ink_color = QColor(tint[0] if tint else "black")
+        if drawing:
+            self.doodle.set_underlay(label)
         if tint:  # cosmetic: the theme colours the preview; the printed label stays black on white
             rgb = ImageOps.colorize(bitmap, black=tint[0], white=tint[1])
             qimg = QImage(rgb.tobytes(), core.W, core.H, core.W * 3, QImage.Format_RGB888).copy()
@@ -470,6 +473,20 @@ class MainWindow(QMainWindow):
         painter.drawText(gap, Qt.AlignCenter, "gap between stickers, not printed")  # preview only: exports and prints never see it
         painter.end()
         self.preview.setPixmap(pix)
+        self._place_canvas(pix)
+
+    def _place_canvas(self, pix: QPixmap | None = None) -> None:
+        """Lay the doodle canvas exactly over the sticker part of the preview (the label centres its pixmap)."""
+        pix = pix or self.preview.pixmap()
+        canvas = self.doodle.canvas
+        canvas.move((self.preview.width() - pix.width()) // 2, 0)
+        canvas.setVisible(self._drawing())
+        canvas.raise_()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        if self.preview.pixmap() is not None and not self.preview.pixmap().isNull():
+            self._place_canvas()
 
     @staticmethod
     def _layout_hint(spec: core.LabelSpec) -> str:

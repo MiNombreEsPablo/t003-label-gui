@@ -451,16 +451,17 @@ class DecorationPanel(QWidget):
 
 
 class DoodlePanel(QWidget):
-    """A pad to draw on; the ink is printed over everything else. Each tool shows only the controls it uses."""
+    """The doodle tools; you draw on the preview itself, and the ink is printed over everything else. Each tool shows
+    only the controls it uses."""
 
     title = "Doodle"
     changed = Signal()
     USES_INK = ("pen", "square", "italic", "line", "box", "oval", "fill")
     USES_BRUSH = ("pen", "square", "italic", "spray", "line", "box", "oval", "eraser")
 
-    def __init__(self) -> None:
+    def __init__(self, zoom: int = 2) -> None:
         super().__init__()
-        self.canvas = DoodleCanvas()
+        self.canvas = DoodleCanvas(zoom)  # lives on the preview, not in this panel: MainWindow puts it there
         self.tool = _choice_box(DoodleCanvas.TOOLS)
         self.ink = _choice_box(DoodleCanvas.INKS)
         self.brush = SliderSpin(1, 24, 4)
@@ -487,9 +488,9 @@ class DoodlePanel(QWidget):
         form.addRow("Brush", self.brush)
         form.addRow("Sticker", self.sticker)
         form.addRow("Size", self.sticker_size)
-        form.addRow(self.canvas)
         form.addRow(buttons)
-        form.setAlignment(self.canvas, Qt.AlignHCenter)
+        self.hint = QLabel("Draw on the preview.")
+        form.addRow(self.hint)
         _tidy(form)
 
         self.tool.currentIndexChanged.connect(self._sync_tool)

@@ -168,14 +168,15 @@ def ink_image(mask: Image.Image) -> QImage:
 
 
 class DoodleCanvas(QWidget):
-    """A pad the size of the sticker (one dot per pixel) to draw on with the mouse or a pen.
+    """A transparent layer laid over the label preview, to draw on with the mouse or a pen: you draw on the label itself.
 
     Old-school paint tools: round, square and calligraphy brushes, a spray can, line/rectangle/ellipse, a paint bucket,
     stickers as stamps and an eraser. Strokes are hard-edged (the printer is 1-bit) and `ink` picks a dither pattern to
     paint with instead of solid black. The ink is a transparent image; `data()`/`set_data()` convert it to the
-    `LabelSpec.doodle` text (see doodle.py). `underlay` is the rest of the label, shown faintly so you can draw around
-    the text, and it stops the bucket like ink does; it is never part of the ink. `changed` fires when a stroke ends,
-    not on every mouse move, because each emit re-renders the whole preview.
+    `LabelSpec.doodle` text (see doodle.py). The widget is `zoom` times the label's dots (the preview's scale) and only
+    paints the ink, in `ink_color`: the preview below it is the label without its doodle. `set_underlay` gives it that
+    label so the bucket stops at its text like it does at ink. `changed` fires when a stroke ends, not on every mouse
+    move.
     """
 
     changed = Signal()
@@ -188,15 +189,16 @@ class DoodleCanvas(QWidget):
     UNDO_LIMIT = 30
     SPRAY_MS = 25
 
-    def __init__(self) -> None:
+    def __init__(self, zoom: int = 2) -> None:
         super().__init__()
+        self.zoom = zoom
+        self.ink_color = QColor("black")  # a theme may tint the preview; the ink follows it
         self.tool = "pen"
         self.brush = 4  # stroke width in dots (not `size`: that is QWidget.size())
         self.ink = "solid"
         self.sticker = next(iter(stickers.STICKERS))
         self.sticker_scale = 2
         self._ink = self._blank()
-        self._underlay: QImage | None = None
         self._blocks: Image.Image | None = None  # dark pixels of the underlay: where the bucket stops
         self._undo: list[QImage] = []
         self._start: QPoint | None = None  # where a stroke began
@@ -206,10 +208,9 @@ class DoodleCanvas(QWidget):
         self._spray = QTimer(self)
         self._spray.setInterval(self.SPRAY_MS)
         self._spray.timeout.connect(self._spray_tick)
-        self.setFixedSize(W, SH)
+        self.setFixedSize(W * zoom, SH * zoom)
         self.setMouseTracking(True)
         self.setCursor(Qt.CrossCursor)
-        self.setToolTip("Drawn over everything else and printed exactly as you see it")
 
     @staticmethod
     def _blank() -> QImage:
@@ -234,12 +235,9 @@ class DoodleCanvas(QWidget):
         self.update()
 
     def set_underlay(self, label: Image.Image | None) -> None:
-        self._underlay = self._blocks = None
+        self._blocks = None
         if label is not None:
-            gray = label.convert("L").crop((0, 0, W, SH))
-            self._underlay = QImage(gray.tobytes(), W, SH, W, QImage.Format_Grayscale8).copy()
-            self._blocks = gray.point([255] * 128 + [0] * 128)
-        self.update()
+            self._blocks = label.convert("L").crop((0, 0, W, SH)).point([255] * 128 + [0] * 128)
 
     def is_empty(self) -> bool:
         return not self.data()
@@ -297,7 +295,7 @@ class DoodleCanvas(QWidget):
             return
         if self.tool == "spray":
             return self._spray_at(painter, b)
-        painter.setPen(self._pen(1))
+        painter.setPen(self._pen(2))  # a 1-dot nib leaves every other dot out along a diagonal stroke
         half = self.brush // 2
         steps = max(abs(b.x() - a.x()), abs(b.y() - a.y()), 1)
         for i in range(steps + 1):  # a dab every dot along the way, so fast strokes stay unbroken
@@ -365,8 +363,8 @@ class DoodleCanvas(QWidget):
     # --- mouse ---------------------------------------------------------------------------------------------------
 
     def _inside(self, event) -> QPoint:
-        p = event.position().toPoint()
-        return QPoint(min(W - 1, max(0, p.x())), min(SH - 1, max(0, p.y())))
+        p = event.position().toPoint()  # widget pixels -> label dots
+        return QPoint(min(W - 1, max(0, p.x() // self.zoom)), min(SH - 1, max(0, p.y() // self.zoom)))
 
     def mousePressEvent(self, event) -> None:
         if event.button() != Qt.LeftButton:
@@ -414,23 +412,19 @@ class DoodleCanvas(QWidget):
         self.changed.emit()
 
     def paintEvent(self, event) -> None:
-        painter = QPainter(self)
-        painter.fillRect(self.rect(), Qt.white)
-        if self._underlay is not None:
-            painter.setOpacity(0.3)
-            painter.drawImage(0, 0, self._underlay)
-            painter.setOpacity(1)
-        painter.drawImage(0, 0, self._ink)
+        layer = self._ink.copy()  # in label dots; what is being dragged out is added here, then all of it is enlarged
+        painter = QPainter(layer)
         if self.tool == "stamp" and (self._hover or self._start):  # the sticker, ghosted where it will land
             painter.setOpacity(0.5)
             self._stamp(painter, self._now if self._start is not None else self._hover)
-            painter.setOpacity(1)
-        elif self._start is not None and self.tool in ("line", "box", "oval"):  # the shape being dragged out
+        elif self._start is not None and self.tool in ("line", "box", "oval"):
             self._shape(painter, self._start, self._now)
-        painter.setPen(QColor(120, 120, 120))
-        painter.setBrush(Qt.NoBrush)
-        painter.drawRect(0, 0, W - 1, SH - 1)
+        if self.ink_color != QColor("black"):
+            painter.setOpacity(1)
+            painter.setCompositionMode(QPainter.CompositionMode_SourceIn)
+            painter.fillRect(layer.rect(), self.ink_color)
         painter.end()
+        QPainter(self).drawImage(self.rect(), layer)  # nearest-neighbour: one dot is a block of zoom x zoom pixels
 
 
 _ONLY_128 = [0] * 128 + [255] + [0] * 127  # lookup table: just the flood-filled pixels

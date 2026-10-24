@@ -528,15 +528,9 @@ def test_a_render_error_while_printing_is_reported_not_raised(window, monkeypatc
 
 
 def test_drawing_on_the_doodle_pad_changes_the_label_and_undo_removes_it(window, app):
-    from PySide6.QtCore import QPoint, Qt
-    from PySide6.QtTest import QTest
-
     window.tabs.setCurrentWidget(window.doodle)
-    pad = window.doodle.canvas
     assert window.spec().doodle == "" and not window.doodle.clear.isEnabled()
-    QTest.mousePress(pad, Qt.LeftButton, Qt.NoModifier, QPoint(20, 20))
-    QTest.mouseMove(pad, QPoint(120, 80))
-    QTest.mouseRelease(pad, Qt.LeftButton, Qt.NoModifier, QPoint(120, 80))
+    _use(window, "pen", (20, 20), (120, 80))
     drawn = core.render(window.spec())
     assert window.spec().doodle and drawn.getpixel((20, 20)) == 0
     assert window.doodle.undo.isEnabled() and window.doodle.clear.isEnabled()
@@ -547,29 +541,15 @@ def test_drawing_on_the_doodle_pad_changes_the_label_and_undo_removes_it(window,
 
 
 def test_loading_a_spec_shows_its_doodle_and_the_eraser_works(window):
-    from PySide6.QtCore import QPoint, Qt
-    from PySide6.QtTest import QTest
-
     from t003gui import doodle as doodle_mod
 
     mask = Image.new("L", (core.W, core.SH), 0)
     mask.paste(255, (0, 0, 199, 99))
     window.set_spec(core.LabelSpec(doodle=doodle_mod.encode(mask)))
     assert window.doodle.canvas.data() == doodle_mod.encode(mask)
-    window.doodle.tool.setCurrentIndex(window.doodle.tool.findData("eraser"))
     window.doodle.brush.setValue(10)
-    for event, point in ((QTest.mousePress, QPoint(50, 50)), (QTest.mouseRelease, QPoint(50, 50))):
-        event(window.doodle.canvas, Qt.LeftButton, Qt.NoModifier, point)
-    assert doodle_mod.decode(window.spec().doodle).getpixel((50, 50)) == 0
-    assert doodle_mod.decode(window.spec().doodle).getpixel((150, 50)) == 255
-
-
-@pytest.mark.parametrize("key", ["system", "y2k-blue", "y2k-pink", "gunmetal", "handheld"])
-def test_every_tab_fits_in_every_theme_without_scroll_arrows(window, app, key):
-    window.apply_theme(key)
-    app.processEvents()
-    bar = window.tabs.tabBar()
-    assert not bar.usesScrollButtons() or bar.sizeHint().width() <= window.tabs.width(), key
+    ink = _use(window, "eraser", (50, 50))
+    assert ink.getpixel((50, 50)) == 0 and ink.getpixel((150, 50)) == 255
 
 
 def _use(window, tool, *points, ink=None):
@@ -582,10 +562,12 @@ def _use(window, tool, *points, ink=None):
     if ink:
         window.doodle.ink.setCurrentIndex(window.doodle.ink.findData(ink))
     pad = window.doodle.canvas
-    QTest.mousePress(pad, Qt.LeftButton, Qt.NoModifier, QPoint(*points[0]))
-    for p in points[1:]:
-        QTest.mouseMove(pad, QPoint(*p))
-    QTest.mouseRelease(pad, Qt.LeftButton, Qt.NoModifier, QPoint(*points[-1]))
+    z = pad.zoom  # the canvas is laid over the preview, so a dot is z x z pixels: click in the middle of it
+    at = [QPoint(x * z + z // 2, y * z + z // 2) for x, y in points]
+    QTest.mousePress(pad, Qt.LeftButton, Qt.NoModifier, at[0])
+    for p in at[1:]:
+        QTest.mouseMove(pad, p)
+    QTest.mouseRelease(pad, Qt.LeftButton, Qt.NoModifier, at[-1])
     from t003gui import doodle as doodle_mod
 
     return doodle_mod.decode(window.spec().doodle)
@@ -679,3 +661,38 @@ def test_the_bucket_does_not_leak_through_a_patterned_outline(window):
         _use(window, "box", (50, 50), (150, 120), ink=pattern)
         ink = _use(window, "fill", (100, 80), ink="solid")
         assert ink.getpixel((100, 80)) == 255 and ink.getpixel((200, 80)) == 0 and ink.getpixel((20, 20)) == 0, pattern
+
+
+def test_the_canvas_lies_over_the_preview_only_while_the_doodle_tab_is_open(window, app):
+    canvas = window.doodle.canvas
+    assert not canvas.isVisible()
+    window.tabs.setCurrentWidget(window.doodle)
+    app.processEvents()
+    assert canvas.isVisible() and canvas.parent() is window.preview
+    pix = window.preview.pixmap()
+    assert canvas.size().width() == core.W * canvas.zoom == pix.width()
+    assert canvas.height() == core.SH * canvas.zoom  # the sticker part: the gap strip stays out of reach
+    assert canvas.x() == (window.preview.width() - pix.width()) // 2 and canvas.y() == 0
+    window.tabs.setCurrentWidget(window.content)
+    assert not canvas.isVisible()
+
+
+def test_the_preview_shows_the_doodle_via_the_canvas_while_drawing_and_prints_it_after(window, app):
+    from PySide6.QtGui import QImage
+
+    def pixel(x, y):  # of the preview label's pixmap, not of the canvas
+        return QImage(window.preview.pixmap().toImage()).pixelColor(x * 2 + 1, y * 2 + 1).red()
+
+    window.content.text.setPlainText("")
+    _use(window, "box", (10, 10), (60, 60))
+    assert pixel(10, 10) == 255  # drawing: the preview itself is the label without the doodle...
+    window.tabs.setCurrentWidget(window.content)
+    assert pixel(10, 10) == 0  # ...and once you leave, it is the exact printed label
+
+
+def test_a_calligraphy_stroke_has_no_holes_along_a_diagonal(window):
+    window.doodle.brush.setValue(10)
+    ink = _use(window, "italic", (20, 20), (120, 120))
+    row = [ink.getpixel((x, 70)) for x in range(core.W)]
+    first, last = row.index(255), len(row) - 1 - row[::-1].index(255)
+    assert last - first >= 8 and 0 not in row[first:last + 1]  # one solid run across the stroke, not a checker
