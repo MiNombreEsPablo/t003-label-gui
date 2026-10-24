@@ -160,10 +160,12 @@ class MainWindow(QMainWindow):
         self.clear_image_action.triggered.connect(lambda: self.content.set_image(""))
         self.clear_image_action.setEnabled(False)
         self.content.image.textChanged.connect(lambda text: self.clear_image_action.setEnabled(bool(text.strip())))
+        self.clear_doodle_action = QAction("Clear &doodle", self)
+        self.clear_doodle_action.triggered.connect(self.doodle.canvas.clear)  # undoable, like clearing on the tab
         copy_action = QAction("Copy label as &image", self)
         copy_action.setShortcut(QKeySequence("Ctrl+Shift+C"))  # plain Ctrl+C belongs to the text fields
         copy_action.triggered.connect(self.copy_label_image)
-        for action in (paste_action, self.clear_image_action):
+        for action in (paste_action, self.clear_image_action, self.clear_doodle_action):
             edit_menu.addAction(action)
         edit_menu.addSeparator()
         edit_menu.addAction(copy_action)
@@ -193,6 +195,8 @@ class MainWindow(QMainWindow):
         # While drawing, the preview is the label without its doodle (the canvas on top draws the ink), so a stroke
         # changes nothing underneath and needs no re-render.
         self.doodle.changed.connect(lambda: None if self._drawing() else self.refresh_preview())
+        self.doodle.changed.connect(self._sync_clear_doodle)
+        self._sync_clear_doodle()
         self.reload_presets()
         self.refresh_preview()
 
@@ -205,6 +209,11 @@ class MainWindow(QMainWindow):
     def set_spec(self, spec: core.LabelSpec) -> None:
         for panel in self.panels:
             panel.write(spec)
+        self._sync_clear_doodle()
+        self.refresh_preview()  # writing the doodle emits nothing, and the status line mentions it
+
+    def _sync_clear_doodle(self) -> None:
+        self.clear_doodle_action.setEnabled(not self.doodle.canvas.is_empty())
 
     def _drawing(self) -> bool:
         return self.tabs.currentWidget() is self.doodle
@@ -448,7 +457,10 @@ class MainWindow(QMainWindow):
         except Exception as e:  # bad image path etc. — show it instead of crashing
             self.status.setText(f"Preview error: {e}")
             return
-        self.status.setText(self._layout_hint(spec))
+        hint = self._layout_hint(spec)
+        if spec.doodle and not drawing:  # it prints over everything, and it is invisible from the other tabs' controls
+            hint = (hint + " " if hint else "") + "The label has a doodle (Doodle tab; Edit > Clear doodle removes it)."
+        self.status.setText(hint)
         tint = self.active_theme.preview_tint if self.active_theme else None
         self.doodle.canvas.ink_color = QColor(tint[0] if tint else "black")
         if drawing:

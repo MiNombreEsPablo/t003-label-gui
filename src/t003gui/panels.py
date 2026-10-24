@@ -174,7 +174,7 @@ class ContentPanel(QWidget):
 
 
 class TextPanel(QWidget):
-    title = "Text"
+    title = "Font"
     changed = Signal()
 
     def __init__(self) -> None:

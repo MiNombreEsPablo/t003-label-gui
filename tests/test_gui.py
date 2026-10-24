@@ -140,7 +140,7 @@ def test_pasting_a_clipboard_image_sets_the_image_path(window, app):
 
 def test_tabs_exist(window):
     tabs = window.findChild(QTabWidget)
-    assert [tabs.tabText(i) for i in range(tabs.count())] == ["Content", "Text", "Image", "Decoration", "Doodle"]
+    assert [tabs.tabText(i) for i in range(tabs.count())] == ["Content", "Font", "Image", "Decoration", "Doodle"]
 
 
 def test_widget_attributes_do_not_shadow_qt_methods(window):
@@ -404,7 +404,7 @@ def test_menu_bar_has_file_edit_view_help_in_that_order(window):
     assert [top.text().replace("&", "") for top in window.menuBar().actions()] == ["File", "Edit", "View", "Help"]
     menus = _menu_texts(window)
     assert "Print label" in menus["File"]
-    assert {"Paste image", "Clear image", "Copy label as image"} <= set(menus["Edit"])
+    assert {"Paste image", "Clear image", "Clear doodle", "Copy label as image"} <= set(menus["Edit"])
 
 
 def test_print_is_in_the_file_menu_and_on_ctrl_p(window, monkeypatch):
@@ -696,3 +696,34 @@ def test_a_calligraphy_stroke_has_no_holes_along_a_diagonal(window):
     row = [ink.getpixel((x, 70)) for x in range(core.W)]
     first, last = row.index(255), len(row) - 1 - row[::-1].index(255)
     assert last - first >= 8 and 0 not in row[first:last + 1]  # one solid run across the stroke, not a checker
+
+
+def test_clear_doodle_in_the_edit_menu_follows_the_doodle_and_is_undoable(window):
+    assert not window.clear_doodle_action.isEnabled()
+    _use(window, "box", (10, 10), (60, 60))
+    assert window.clear_doodle_action.isEnabled()
+    window.clear_doodle_action.trigger()
+    assert window.spec().doodle == "" and not window.clear_doodle_action.isEnabled()
+    window.doodle.undo.click()
+    assert window.spec().doodle and window.clear_doodle_action.isEnabled()
+    window.set_spec(core.LabelSpec())  # loading a label without one
+    assert not window.clear_doodle_action.isEnabled()
+
+
+def test_the_status_line_mentions_a_doodle_except_while_drawing(window):
+    _use(window, "box", (10, 10), (60, 60))
+    assert "doodle" not in window.status.text().lower()  # you are looking at it
+    window.tabs.setCurrentWidget(window.content)
+    assert "Clear doodle" in window.status.text()
+    window.clear_doodle_action.trigger()
+    assert "doodle" not in window.status.text().lower()
+
+
+def test_loading_a_label_that_differs_only_by_its_doodle_updates_the_status(window):
+    from t003gui import doodle as doodle_mod
+
+    window.tabs.setCurrentWidget(window.content)
+    mask = Image.new("L", (core.W, core.SH), 0)
+    mask.paste(255, (5, 5, 30, 30))
+    window.set_spec(core.LabelSpec(doodle=doodle_mod.encode(mask)))
+    assert "Clear doodle" in window.status.text()
