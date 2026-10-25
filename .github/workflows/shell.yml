@@ -65,7 +65,8 @@ jobs:
           $clean = SelfTest "files as built"
           # A downloaded zip's files carry a "from the internet" mark: mark ours the same way, then unblock them like a user would
           $files = Get-ChildItem "dist\T003 Label Studio" -Recurse -File
-          $files | ForEach-Object { Set-Content -Path $_.FullName -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3" }
+          $files | ForEach-Object { try { Set-Content -Path $_.FullName -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3" -ErrorAction Stop } catch { Write-Host "could not mark $($_.Exception.Message)" } }
+          Write-Host ("marked: " + (@($files | Where-Object { Get-Item $_.FullName -Stream Zone.Identifier -ErrorAction SilentlyContinue }).Count) + " of " + $files.Count)
           $marked = SelfTest "files marked as downloaded"
           Get-ChildItem "dist\T003 Label Studio" -Recurse | Unblock-File
           $unblocked = SelfTest "marked, then Unblock-File"
