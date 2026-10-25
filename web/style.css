@@ -1,80 +1,15 @@
-/* The look: Y2K Blue, an iMac-G3 candy-plastic studio (ported from the Qt app's theme.py).
-   Every colour, bevel and radius is a custom property below, so another look is a different set of values, not new rules. */
-
-@font-face {
-  font-family: "Orbitron";
-  src: url("fonts/Orbitron%5Bwght%5D.ttf") format("truetype");
-  font-weight: 400 900;
-  font-display: swap;
-}
-
-:root {
-  --font: "Verdana", "DejaVu Sans", system-ui, sans-serif;
-  --title-font: "Orbitron", "Verdana", sans-serif;
-
-  --text: #0b2a63;
-  --edge: #3b7fc4; /* outlines and bevels (this look is flat-edged: highlight = shadow) */
-  --window: linear-gradient(#f4fcff 0%, #d4edff 60%, #aad8f7 100%);
-  --panel: linear-gradient(#ffffff, #e3f3ff);
-
-  /* gel: a bright top half, a hard seam at the middle, a glowing lower half */
-  --btn: linear-gradient(#ffffff 0%, #d7edff 48%, #a9d6fb 50%, #e2f4ff 100%);
-  --btn-hot: linear-gradient(#ffffff 0%, #e6f4ff 48%, #bfe3ff 50%, #f0fbff 100%);
-  --btn-down: linear-gradient(#8cc4f0 0%, #a9d6fb 48%, #d7edff 50%, #ffffff 100%);
-  --btn-off: linear-gradient(#f4f4f6 0%, #e6e8ec 48%, #d4d8de 50%, #eceef2 100%);
-  --btn-hover-border: #1ea0f0;
-  --dis-text: #8da2bb;
-  --dis-border: #aebfd3;
-
-  --default-bg: linear-gradient(#fff2c6 0%, #ffd27a 48%, #ff9d1e 50%, #ffc65c 100%); /* the Print button */
-  --default-bg-down: linear-gradient(#ff9d1e 0%, #ffb347 48%, #ffd27a 50%, #fff2c6 100%);
-  --default-text: #5a2a00;
-  --default-border: #c26a00;
-  --default-hover: #ff8a00;
-
-  --input-bg: #ffffff;
-  --input-dis-bg: #eef2f7;
-  --focus: #ff8a00;
-  --select-bg: #1ea0f0;
-  --tab-unselected: #3a6aa8;
-  --tab-accent: #ffa31a;
-
-  --led-on: radial-gradient(circle at 35% 30%, #eaffd0, #52e04a 45%, #14852a);
-  --led-off: radial-gradient(circle at 35% 30%, #ffffff, #bcd3ea);
-  --led-on-border: #14852a;
-
-  --bezel: linear-gradient(#ffffff 0%, #dfe7f2 45%, #b9c6d8 55%, #8d9db3 100%);
-  --bezel-border: #6b7c95;
-  --screen-border: #3a4a63;
-  --screen: #ffffff;
-  --gap: #d8d8d8; /* the strip between stickers: shown, never printed */
-  --gap-text: #777777;
-
-  --status: #14602a;
-  --error: #b3261e;
-  --tip-bg: #fff6a8;
-  --tip-border: #c9a400;
-
-  --banner: linear-gradient(#7fe3ff 0%, #1ea0f0 50%, #0b57d0 100%);
-  --banner-outline: #0b3a8c;
-  --banner-shadow: #062a6b;
-
-  --r-ctl: 9px;
-  --r-btn: 13px;
-  --r-default: 16px;
-  --r-pane: 12px;
-  --r-title: 10px;
-  --r-bezel: 18px;
-}
+/* Where things go and how they behave. Every colour, bevel, radius and font comes from a theme token (themes.css), so a
+   new look is a new set of values and never new rules here. Keep the vocabulary: gel buttons, LED checkboxes, plastic
+   tabs, a bezelled preview; new controls (and the doodle's) use the same tokens. */
 
 * { box-sizing: border-box; }
-html { background: #aad8f7; }
+html { background: var(--window-bottom); }
 body {
   margin: 0;
   min-height: 100vh;
   background: var(--window) fixed;
   color: var(--text);
-  font: 14px/1.4 var(--font);
+  font: var(--font-size)/1.4 var(--font);
 }
 [hidden] { display: none !important; }
 
@@ -104,7 +39,7 @@ body {
   .stage { position: sticky; top: 12px; }
 }
 
-/* the banner: a glossy plate with the app's mark */
+/* the banner: a plate with the app's mark (glossy in the candy looks) */
 .banner {
   position: relative;
   display: flex;
@@ -114,26 +49,27 @@ body {
   padding: 0 16px 0 12px;
   background: var(--banner);
   border: 2px solid var(--banner-outline);
-  border-radius: 22px;
+  border-radius: var(--banner-radius);
+  box-shadow: var(--banner-inset);
   overflow: hidden;
 }
-.banner::before { /* the candy highlight over the top half */
+.banner::before { /* the candy highlight over the top half (nothing when the looks have no gloss) */
   content: "";
   position: absolute;
   inset: 0 0 50% 0;
-  background: linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.1));
+  background: linear-gradient(rgba(255, 255, 255, var(--banner-gloss-top)), rgba(255, 255, 255, var(--banner-gloss-bottom)));
 }
 .banner img { position: relative; height: 38px; width: auto; }
 .banner h1 {
   position: relative;
   margin: 0;
-  color: #fff;
-  font: 900 20px/1 var(--title-font);
-  letter-spacing: 1.5px;
-  text-shadow: 2px 2px 0 var(--banner-shadow);
+  color: var(--banner-color);
+  font: var(--banner-weight) var(--banner-size)/1 var(--banner-font);
+  letter-spacing: var(--banner-spacing);
+  text-shadow: var(--banner-text-shadow);
 }
 
-/* the preview: a chrome bezel around a screen, the gap between stickers captioned underneath */
+/* the preview: a bezel around a screen, the gap between stickers captioned underneath */
 .bezel {
   padding: 10px;
   background: var(--bezel);
@@ -164,7 +100,7 @@ body {
 #hint {
   margin: 10px 0 0;
   padding: 6px 10px;
-  color: var(--text);
+  color: var(--tip-text);
   background: var(--tip-bg);
   border: 2px solid var(--tip-border);
   border-radius: 6px;
@@ -181,19 +117,21 @@ body {
   color: var(--tab-unselected);
   font: bold clamp(11.5px, 3.3vw, 14px) var(--font);
   background: var(--btn-off);
-  border: 2px solid var(--edge);
+  border: 2px solid;
+  border-color: var(--raised);
   border-bottom: 0;
-  border-radius: var(--r-pane) var(--r-pane) 0 0;
+  border-radius: var(--r-tab) var(--r-tab) 0 0;
   white-space: nowrap;
   cursor: pointer;
 }
 .tab:hover { background: var(--btn-hot); box-shadow: inset 0 3px 0 var(--tab-accent); }
-.tab[aria-selected="true"] { margin-top: 0; padding-top: 8px; color: var(--text); background: #fff; box-shadow: inset 0 3px 0 var(--tab-accent); }
+.tab[aria-selected="true"] { margin-top: 0; padding-top: 8px; color: var(--text); background: var(--tab-selected); box-shadow: inset 0 3px 0 var(--tab-accent); }
 .panel {
   margin-top: -2px;
   padding: 10px 12px 12px;
   background: var(--panel);
-  border: 2px solid var(--edge);
+  border: 2px solid;
+  border-color: var(--raised);
   border-radius: var(--r-pane);
   border-top-left-radius: 0;
 }
@@ -209,38 +147,42 @@ textarea, select, input:not([type="checkbox"]) {
   width: 100%;
   padding: 3px 8px;
   font: inherit;
-  color: var(--text);
+  color: var(--input-text);
   background: var(--input-bg);
-  border: 2px solid var(--edge);
+  border: 2px solid;
+  border-color: var(--inset);
   border-radius: var(--r-ctl);
 }
 textarea { resize: vertical; min-height: 4.2rem; }
-textarea:focus, select:focus, input:focus { outline: none; border-color: var(--focus); }
-input::placeholder { color: var(--dis-text); }
+textarea:focus, select:focus, input:focus { outline: none; border-color: var(--focus-border); }
+textarea:disabled, select:disabled, input:disabled { color: var(--dis-text); background: var(--input-dis-bg); border-color: var(--dis-border); }
+input::placeholder { color: var(--placeholder); opacity: 1; }
 /* Our own select: some web engines (the desktop shell's) keep a light native background whatever the theme says. */
 select {
   appearance: none;
   -webkit-appearance: none;
   padding-right: 2.2rem;
-  background: var(--input-bg) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' fill='none' stroke='%230b2a63' stroke-width='2.2'/></svg>") no-repeat right .7rem center;
+  background: var(--input-bg) var(--select-arrow) no-repeat right .7rem center;
 }
-option, optgroup { background: var(--input-bg); color: var(--text); }
+option, optgroup { background: var(--input-bg); color: var(--input-text); }
 
 /* checkboxes are LEDs */
 input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
   flex: none;
-  width: 16px;
-  height: 16px;
+  width: var(--led-size);
+  height: var(--led-size);
   margin: 0;
   background: var(--led-off);
-  border: 2px solid var(--edge);
-  border-radius: 4px;
+  border: 2px solid;
+  border-color: var(--inset);
+  border-radius: var(--led-radius);
   cursor: pointer;
 }
 input[type="checkbox"]:hover { border-color: var(--select-bg); }
 input[type="checkbox"]:checked { background: var(--led-on); border-color: var(--led-on-border); }
+input[type="checkbox"]:disabled { background: var(--led-dis); border-color: var(--dis-border); cursor: default; }
 input[type="checkbox"]:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .field.bare .checks { grid-column: 1 / -1; }
 .field.wide { grid-template-columns: minmax(0, 1fr); gap: 3px; } /* the picture row needs the full width: label above */
@@ -255,15 +197,18 @@ fieldset.output {
   margin: 14px 0 0;
   padding: 6px 12px 12px;
   background: var(--panel);
-  border: 2px solid var(--edge);
+  border: 2px solid;
+  border-color: var(--raised);
   border-radius: var(--r-pane);
 }
 fieldset.output legend {
   margin-left: 6px;
   padding: 1px 12px;
+  color: var(--btn-text);
   font-weight: bold;
   background: var(--btn);
-  border: 2px solid var(--edge);
+  border: 2px solid;
+  border-color: var(--raised);
   border-radius: var(--r-title);
 }
 
@@ -274,12 +219,12 @@ fieldset.output legend {
   z-index: 2;
   margin: 12px -12px 0;
   padding: 14px 12px 8px;
-  background: linear-gradient(rgba(170, 216, 247, 0), rgba(170, 216, 247, 0.96) 28%); /* the window's bottom colour */
+  background: linear-gradient(transparent, var(--window-bottom) 28%); /* fades into the window's bottom colour */
 }
 
 @media (max-height: 520px) { .actions { position: static; background: none; } } /* a very short window: don't cover the controls */
 
-/* buttons are gel; the Print button is the orange one */
+/* buttons are gel; the Print button is the default one (orange, grape, lime text, inverted...) */
 #print {
   display: block;
   width: 100%;
@@ -288,27 +233,29 @@ fieldset.output legend {
   color: var(--default-text);
   font: bold 17px var(--font);
   background: var(--default-bg);
-  border: 2px solid var(--default-border);
+  border: 2px solid;
+  border-color: var(--default-border);
   border-radius: var(--r-default);
   cursor: pointer;
 }
 #print:hover { border-color: var(--default-hover); }
 #print:active { background: var(--default-bg-down); }
-#print:disabled { color: #6f7c8c; background: var(--btn-off); border-color: #c9b48d; cursor: default; }
+#print:disabled { color: var(--default-dis-text); background: var(--btn-off); border-color: var(--default-dis-border); cursor: default; }
 #print:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 #status { min-height: 1.4em; margin: 6px 2px 0; color: var(--status); font-weight: bold; }
 #status.error { color: var(--error); }
+#status.error::before { content: "⚠ "; } /* an error is never told apart by colour alone */
 
 /* sliders: an inset track filled up to the handle, a gel handle */
 input[type="range"] { -webkit-appearance: none; appearance: none; flex: 1; min-width: 0; height: 20px; padding: 0; background: none; border: 0; border-radius: 0; --fill: 0%; }
 input[type="range"]:focus { outline: none; }
-input[type="range"]::-webkit-slider-runnable-track { height: 6px; border: 2px solid var(--edge); border-radius: 5px; background: linear-gradient(to right, var(--select-bg) var(--fill), var(--input-bg) var(--fill)); }
-input[type="range"]::-moz-range-track { height: 6px; border: 2px solid var(--edge); border-radius: 5px; background: linear-gradient(to right, var(--select-bg) var(--fill), var(--input-bg) var(--fill)); }
-input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -6px; border: 2px solid var(--edge); border-radius: 9px; background: var(--btn); cursor: pointer; }
-input[type="range"]::-moz-range-thumb { width: 10px; height: 10px; border: 2px solid var(--edge); border-radius: 9px; background: var(--btn); cursor: pointer; }
+input[type="range"]::-webkit-slider-runnable-track { height: 6px; border: 2px solid; border-color: var(--inset); border-radius: min(var(--r-ctl), 5px); background: linear-gradient(to right, var(--slider-fill) var(--fill), var(--input-bg) var(--fill)); }
+input[type="range"]::-moz-range-track { height: 6px; border: 2px solid; border-color: var(--inset); border-radius: min(var(--r-ctl), 5px); background: linear-gradient(to right, var(--slider-fill) var(--fill), var(--input-bg) var(--fill)); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -6px; border: 2px solid; border-color: var(--raised); border-radius: min(var(--r-btn), 9px); background: var(--slider-handle); cursor: pointer; }
+input[type="range"]::-moz-range-thumb { width: 10px; height: 10px; border: 2px solid; border-color: var(--raised); border-radius: min(var(--r-btn), 9px); background: var(--slider-handle); cursor: pointer; }
 input[type="range"]:focus-visible::-webkit-slider-thumb { border-color: var(--focus); }
-input[type="range"]:disabled { opacity: 0.5; }
+input[type="range"]:disabled { opacity: 0.5; background: none; border: 0; }
 .slider { display: flex; align-items: center; gap: 8px; }
 .slider .value { flex: none; width: 5.2rem; }
 .suffixed { display: flex; flex: none; align-items: center; gap: 6px; }
@@ -318,14 +265,15 @@ input[type="range"]:disabled { opacity: 0.5; }
 /* small gel buttons and the picture chooser */
 .gel {
   padding: 3px 12px;
-  color: var(--text);
+  color: var(--btn-text);
   font: bold 13px var(--font);
   background: var(--btn);
-  border: 2px solid var(--edge);
+  border: 2px solid;
+  border-color: var(--raised);
   border-radius: var(--r-btn);
   cursor: pointer;
 }
-.gel:hover { background: var(--btn-hot); border-color: var(--btn-hover-border); }
+.gel:hover { background: var(--btn-hot); border-color: var(--hover-border, var(--raised)); }
 .gel:active { background: var(--btn-down); }
 .gel:disabled { color: var(--dis-text); background: var(--btn-off); border-color: var(--dis-border); cursor: default; }
 .gel:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -344,10 +292,15 @@ body.dropping .bezel { outline: 3px dashed var(--focus); outline-offset: 4px; }
 .paper .overlay { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; cursor: crosshair; touch-action: none; }
 .doodle-tools .field.wide .row-title { margin-bottom: 2px; }
 .stickers { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 6px; }
-.sticker { padding: 4px; line-height: 0; background: var(--btn); border: 2px solid var(--edge); border-radius: var(--r-ctl); cursor: pointer; }
+.sticker { padding: 4px; line-height: 0; background: var(--btn); border: 2px solid; border-color: var(--raised); border-radius: var(--r-ctl); cursor: pointer; }
 .sticker canvas { width: 28px; height: 28px; image-rendering: pixelated; background: #fff; border-radius: 3px; }
-.sticker:hover { border-color: var(--btn-hover-border); }
+.sticker:hover { border-color: var(--hover-border, var(--raised)); }
 .sticker[aria-pressed="true"] { border-color: var(--focus); background: var(--btn-down); }
 .sticker:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .reset-row.buttons { justify-content: flex-start; gap: 8px; }
 .doodle-hint { margin: 8px 0 0; }
+
+/* the look picker, until the View menu exists */
+.look { display: flex; align-items: center; gap: 10px; margin: 10px 2px 4px; }
+.look label { color: var(--text); }
+.look select { width: auto; min-width: 9rem; }

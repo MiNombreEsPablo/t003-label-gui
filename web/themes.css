@@ -1,0 +1,471 @@
+/* The looks. Every colour, bevel, radius, font and banner detail the page uses is a token below, set per theme; style.css
+   only says where to use them. A theme is chosen by data-theme on <html> (web/themes.js). Values are the Qt app's
+   (src/t003gui/theme.py), which this replaces.
+
+   Y2K Blue is the default (:root). Y2K Pink changes colours only, so it overrides just those. Gunmetal, Handheld and
+   System define every token themselves, so nothing leaks into them from the candy plastic.
+
+   Tokens whose value is a border-color list (--raised, --inset, --focus-border, --default-border, ...) hold one colour
+   (a flat edge) or four (top right bottom left: a bevel with a light and a dark side). */
+
+@font-face { font-family: "Orbitron"; src: url("fonts/Orbitron%5Bwght%5D.ttf") format("truetype"); font-weight: 400 900; font-display: swap; }
+@font-face { font-family: "VT323"; src: url("fonts/VT323-Regular.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Pixelify Sans"; src: url("fonts/PixelifySans%5Bwght%5D.ttf") format("truetype"); font-weight: 400 700; font-display: swap; }
+
+/* ---- Y2K Blue: iMac-G3 candy plastic -------------------------------------------------------------------------------- */
+:root, :root[data-theme="y2k-blue"] {
+  color-scheme: light;
+  --font: "Verdana", "DejaVu Sans", system-ui, sans-serif;
+  --font-size: 14px;
+  --text: #0b2a63;
+  --btn-text: var(--text);
+  --raised: #3b7fc4;
+  --inset: #3b7fc4;
+  --window: linear-gradient(#f4fcff 0%, #d4edff 60%, #aad8f7 100%);
+  --window-bottom: #aad8f7; /* what the sticky Print bar fades into */
+  --panel: linear-gradient(#ffffff, #e3f3ff);
+
+  /* gel: a bright top half, a hard seam at the middle, a glowing lower half */
+  --btn: linear-gradient(#ffffff 0%, #d7edff 48%, #a9d6fb 50%, #e2f4ff 100%);
+  --btn-hot: linear-gradient(#ffffff 0%, #e6f4ff 48%, #bfe3ff 50%, #f0fbff 100%);
+  --btn-down: linear-gradient(#8cc4f0 0%, #a9d6fb 48%, #d7edff 50%, #ffffff 100%);
+  --btn-off: linear-gradient(#f4f4f6 0%, #e6e8ec 48%, #d4d8de 50%, #eceef2 100%);
+  --hover-border: #1ea0f0;
+  --dis-text: #8da2bb;
+  --placeholder: #5d7391;
+  --dis-border: #aebfd3;
+
+  --default-bg: linear-gradient(#fff2c6 0%, #ffd27a 48%, #ff9d1e 50%, #ffc65c 100%); /* the Print button */
+  --default-bg-down: linear-gradient(#ff9d1e 0%, #ffb347 48%, #ffd27a 50%, #fff2c6 100%);
+  --default-text: #5a2a00;
+  --default-border: #c26a00;
+  --default-hover: #ff8a00;
+  --default-dis-text: #6f7c8c;
+  --default-dis-border: #c9b48d;
+
+  --input-bg: #ffffff;
+  --input-text: #0b2a63;
+  --input-dis-bg: #eef2f7;
+  --focus: #ff8a00;
+  --focus-border: #ff8a00;
+  --select-bg: #1ea0f0;
+  --select-text: #ffffff;
+  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' fill='none' stroke='%230b2a63' stroke-width='2.2'/></svg>");
+  --slider-fill: #1ea0f0;
+  --slider-handle: var(--btn);
+
+  --tab-unselected: #3a6aa8;
+  --tab-selected: #ffffff;
+  --tab-accent: #ffa31a;
+
+  --led-on: radial-gradient(circle at 35% 30%, #eaffd0, #52e04a 45%, #14852a);
+  --led-off: radial-gradient(circle at 35% 30%, #ffffff, #bcd3ea);
+  --led-on-border: #14852a;
+  --led-dis: #e4e9f0;
+  --led-size: 16px;
+  --led-radius: 4px;
+
+  --bezel: linear-gradient(#ffffff 0%, #dfe7f2 45%, #b9c6d8 55%, #8d9db3 100%);
+  --bezel-border: #6b7c95;
+  --screen-border: #3a4a63;
+  --screen: #ffffff;
+  --preview-ink: #000000; /* the preview is tinted by some looks; prints stay black on white */
+  --preview-paper: #ffffff;
+  --gap: #d8d8d8; /* the strip between stickers: shown, never printed */
+  --gap-text: #777777;
+
+  --status: #14602a;
+  --error: #b3261e;
+  --tip-bg: #fff6a8;
+  --tip-text: #0b2a63;
+  --tip-border: #c9a400;
+
+  --banner: linear-gradient(#7fe3ff 0%, #1ea0f0 50%, #0b57d0 100%);
+  --banner-outline: #0b3a8c;
+  --banner-radius: 22px;
+  --banner-gloss-top: 0.6; /* the candy highlight over the top half */
+  --banner-gloss-bottom: 0.1;
+  --banner-inset: none;
+  --banner-font: "Orbitron", "Verdana", sans-serif;
+  --banner-size: 20px;
+  --banner-weight: 900;
+  --banner-spacing: 1.5px;
+  --banner-color: #ffffff;
+  --banner-text-shadow: 2px 2px 0 #062a6b;
+
+  --r-ctl: 9px;
+  --r-btn: 13px;
+  --r-default: 16px;
+  --r-pane: 12px;
+  --r-tab: 12px;
+  --r-title: 10px;
+  --r-bezel: 18px;
+}
+
+/* ---- Y2K Pink: the same plastic in bubblegum (colours only) ---------------------------------------------------------- */
+:root[data-theme="y2k-pink"] {
+  --text: #5a0f3d;
+  --raised: #c2468f;
+  --inset: #c2468f;
+  --window: linear-gradient(#fff5fb 0%, #ffdcef 60%, #ffb6df 100%);
+  --window-bottom: #ffb6df;
+  --panel: linear-gradient(#ffffff, #ffeaf5);
+  --btn: linear-gradient(#ffffff 0%, #ffe3f2 48%, #ffb3dc 50%, #ffecf7 100%);
+  --btn-hot: linear-gradient(#ffffff 0%, #ffeef8 48%, #ffc7e6 50%, #fff4fb 100%);
+  --btn-down: linear-gradient(#ff9ed3 0%, #ffb3dc 48%, #ffe3f2 50%, #ffffff 100%);
+  --btn-off: linear-gradient(#f7f4f6 0%, #ece8eb 48%, #dcd5da 50%, #f1edf0 100%);
+  --hover-border: #ff4fa8;
+  --dis-text: #b58aa3;
+  --placeholder: #8a5a77;
+  --dis-border: #e3c2d5;
+  --default-bg: linear-gradient(#f1e1ff 0%, #cfa6ff 48%, #8f45f2 50%, #bd92ff 100%); /* grape: the blue theme's orange fights the pink */
+  --default-bg-down: linear-gradient(#8f45f2 0%, #a869ff 48%, #cfa6ff 50%, #f1e1ff 100%);
+  --default-text: #2e0a5e;
+  --default-border: #6a24c9;
+  --default-hover: #a56bff;
+  --default-dis-text: #7c6a78;
+  --default-dis-border: #cdb5c6;
+  --input-text: #5a0f3d;
+  --input-dis-bg: #fbf0f6;
+  --focus: #12b5b0;
+  --focus-border: #12b5b0;
+  --select-bg: #ff4fa8;
+  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' fill='none' stroke='%235a0f3d' stroke-width='2.2'/></svg>");
+  --slider-fill: #ff4fa8;
+  --tab-unselected: #a8467f;
+  --tab-accent: #8f45f2;
+  --led-off: radial-gradient(circle at 35% 30%, #ffffff, #f0c4dc);
+  --led-dis: #f3e3ec;
+  --bezel: linear-gradient(#fff3fa 0%, #ffc9e6 45%, #ff9fd2 55%, #d4579f 100%);
+  --bezel-border: #b03a80;
+  --screen-border: #6b1f4d;
+  --status: #1b6a3a;
+  --tip-text: #5a0f3d;
+  --banner: linear-gradient(#ffb3de 0%, #ff4fa8 50%, #c2187a 100%);
+  --banner-outline: #8a1259;
+  --banner-text-shadow: 2px 2px 0 #6d0e48;
+}
+
+/* ---- Gunmetal: bevelled steel, black LCD fields, lime text -------------------------------------------------------- */
+:root[data-theme="gunmetal"] {
+  color-scheme: dark;
+  --font: "Arial", "Liberation Sans", "DejaVu Sans", sans-serif;
+  --font-size: 14px;
+  --text: #c8d0e0;
+  --btn-text: #ffffff;
+  --raised: #9ba0b8 #14151d #14151d #9ba0b8;
+  --inset: #0d0e14 #7c819a #7c819a #0d0e14;
+  --window: linear-gradient(#3d4052, #262835);
+  --window-bottom: #262835;
+  --panel: linear-gradient(#3a3d4e, #2c2e3c);
+
+  --btn: linear-gradient(#7a7f96, #4a4e63);
+  --btn-hot: linear-gradient(#8d92aa, #5a5e74);
+  --btn-down: linear-gradient(#3f4356, #5a5e74);
+  --btn-off: linear-gradient(#3e4152, #313444);
+  --hover-border: initial; /* the bevel stays */
+  --dis-text: #6b7088;
+  --placeholder: #8e94ac;
+  --dis-border: #4a4e62 #14151d #14151d #4a4e62;
+
+  --default-bg: linear-gradient(#7a7f96, #4a4e63);
+  --default-bg-down: linear-gradient(#3f4356, #5a5e74);
+  --default-text: #7dff7d;
+  --default-border: #b9bed4 #14151d #14151d #b9bed4;
+  --default-hover: #d8ffd8 #0a3a0a #0a3a0a #d8ffd8;
+  --default-dis-text: #6b7088;
+  --default-dis-border: #4a4e62 #14151d #14151d #4a4e62;
+
+  --input-bg: #000000;
+  --input-text: #00e000;
+  --input-dis-bg: #101218;
+  --focus: #00e000;
+  --focus-border: #00a000 #00e000 #00e000 #00a000;
+  --select-bg: #0000c6;
+  --select-text: #ffffff;
+  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' fill='none' stroke='%2300e000' stroke-width='2.2'/></svg>");
+  --slider-fill: #00a800;
+  --slider-handle: var(--btn);
+
+  --tab-unselected: #a9afc6;
+  --tab-selected: #3a3d4e;
+  --tab-accent: transparent;
+
+  --led-on: radial-gradient(circle at 40% 35%, #d8ffd8, #2cf02c 50%, #0a7a0a);
+  --led-off: radial-gradient(circle at 40% 35%, #2f3a2f, #101810);
+  --led-on-border: #06400a;
+  --led-dis: #22252f;
+  --led-size: 14px;
+  --led-radius: 3px;
+
+  --bezel: linear-gradient(#2a2c39, #1b1c26);
+  --bezel-border: #0d0e14;
+  --screen-border: #000000;
+  --screen: #ffffff;
+  --preview-ink: #000000;
+  --preview-paper: #ffffff;
+  --gap: #d8d8d8;
+  --gap-text: #777777;
+
+  --status: #5bff5b;
+  --error: #ff7b7b;
+  --tip-bg: #000000;
+  --tip-text: #00e000;
+  --tip-border: #7c819a;
+
+  --banner: linear-gradient(#7a7f96 0%, #4c5068 50%, #2f3243 100%);
+  --banner-outline: #0d0e14;
+  --banner-radius: 3px;
+  --banner-gloss-top: 0;
+  --banner-gloss-bottom: 0;
+  --banner-inset: inset 0 0 0 1px #aab0c8;
+  --banner-font: "VT323", "DejaVu Sans Mono", monospace;
+  --banner-size: 28px;
+  --banner-weight: 400;
+  --banner-spacing: 2px;
+  --banner-color: #00e000;
+  --banner-text-shadow: 2px 2px 0 #003800;
+
+  --r-ctl: 2px;
+  --r-btn: 2px;
+  --r-default: 2px;
+  --r-pane: 3px;
+  --r-tab: 3px;
+  --r-title: 2px;
+  --r-bezel: 4px;
+}
+
+/* ---- Handheld: a 90s handheld's four shades of olive green, nothing else -------------------------------------------- */
+:root[data-theme="handheld"] {
+  color-scheme: light;
+  --d: #0f380f; /* darkest */
+  --m: #306230;
+  --l: #8bac0f;
+  --p: #9bbc0f; /* lightest: the paper */
+  --font: "Pixelify Sans", "DejaVu Sans Mono", monospace;
+  --font-size: 15px; /* pixel fonts are only crisp at their design size */
+  --text: var(--d);
+  --btn-text: var(--d);
+  --raised: var(--p) var(--d) var(--d) var(--p);
+  --inset: var(--m) var(--p) var(--p) var(--m);
+  --window: var(--p);
+  --window-bottom: var(--p);
+  --panel: var(--l);
+
+  --btn: var(--l);
+  --btn-hot: var(--p);
+  --btn-down: #7a990c;
+  --btn-off: var(--p); /* a lighter tab or a disabled button against the olive panel */
+  --hover-border: initial;
+  --dis-text: var(--m);
+  --placeholder: var(--m);
+  --dis-border: var(--m);
+
+  --default-bg: var(--d); /* an inverted Print button */
+  --default-bg-down: var(--m);
+  --default-text: var(--p);
+  --default-border: var(--m) var(--d) var(--d) var(--m);
+  --default-hover: var(--l) var(--m) var(--m) var(--l);
+  --default-dis-text: var(--m);
+  --default-dis-border: var(--m);
+
+  --input-bg: var(--p);
+  --input-text: var(--d);
+  --input-dis-bg: var(--l);
+  --focus: var(--d);
+  --focus-border: var(--d);
+  --select-bg: var(--d);
+  --select-text: var(--p);
+  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' fill='none' stroke='%230f380f' stroke-width='2.2'/></svg>");
+  --slider-fill: var(--m);
+  --slider-handle: var(--d);
+
+  --tab-unselected: var(--d);
+  --tab-selected: var(--l);
+  --tab-accent: var(--d); /* the cue for the open tab (and the hovered one) with only four shades to spend */
+
+  --led-on: var(--d);
+  --led-off: var(--p);
+  --led-on-border: var(--d);
+  --led-dis: var(--l);
+  --led-size: 14px;
+  --led-radius: 0;
+
+  --bezel: var(--m);
+  --bezel-border: var(--d);
+  --screen-border: var(--d);
+  --screen: var(--p);
+  --preview-ink: var(--d); /* the preview is tinted to the screen (the print is still black on white) */
+  --preview-paper: var(--p);
+  --gap: #7a990c;
+  --gap-text: var(--m);
+
+  --status: var(--d);
+  --error: var(--d); /* four shades only: an error is told apart by its warning sign (see #status.error) */
+  --tip-bg: var(--p);
+  --tip-text: var(--d);
+  --tip-border: var(--d);
+
+  --banner: linear-gradient(var(--m) 0%, var(--d) 50%, var(--d) 100%);
+  --banner-outline: var(--d);
+  --banner-radius: 3px;
+  --banner-gloss-top: 0;
+  --banner-gloss-bottom: 0;
+  --banner-inset: inset 0 0 0 1px var(--l);
+  --banner-font: "Pixelify Sans", "DejaVu Sans Mono", monospace;
+  --banner-size: 22px;
+  --banner-weight: 700;
+  --banner-spacing: 1px;
+  --banner-color: var(--p);
+  --banner-text-shadow: none;
+
+  --r-ctl: 0;
+  --r-btn: 0;
+  --r-default: 0;
+  --r-pane: 0;
+  --r-tab: 0;
+  --r-title: 0;
+  --r-bezel: 10px;
+}
+
+/* ---- System: no custom look; flat, and light or dark as the operating system says ------------------------------------ */
+:root[data-theme="system"] {
+  color-scheme: light dark;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-size: 14px;
+  --text: #14213d;
+  --btn-text: var(--text);
+  --raised: #b8c2da;
+  --inset: #b8c2da;
+  --window: #f4f6fb;
+  --window-bottom: #f4f6fb;
+  --panel: #ffffff;
+
+  --btn: #eef1f9;
+  --btn-hot: #e3e9f7;
+  --btn-down: #d3dcf1;
+  --btn-off: #f0f1f4;
+  --hover-border: #2b59c3;
+  --dis-text: #8791ab;
+  --placeholder: #66708a;
+  --dis-border: #d2d8e6;
+
+  --default-bg: #2b59c3;
+  --default-bg-down: #1f449a;
+  --default-text: #ffffff;
+  --default-border: #1f449a;
+  --default-hover: #6f93e6;
+  --default-dis-text: #8791ab;
+  --default-dis-border: #d2d8e6;
+
+  --input-bg: #ffffff;
+  --input-text: #14213d;
+  --input-dis-bg: #eef0f5;
+  --focus: #2b59c3;
+  --focus-border: #2b59c3;
+  --select-bg: #2b59c3;
+  --select-text: #ffffff;
+  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' fill='none' stroke='%2314213d' stroke-width='2.2'/></svg>");
+  --slider-fill: #2b59c3;
+  --slider-handle: #ffffff;
+
+  --tab-unselected: #5a6784;
+  --tab-selected: #ffffff;
+  --tab-accent: #2b59c3;
+
+  --led-on: #2b59c3;
+  --led-off: #ffffff;
+  --led-on-border: #1f449a;
+  --led-dis: #e4e8f0;
+  --led-size: 16px;
+  --led-radius: 4px;
+
+  --bezel: #e3e8f4;
+  --bezel-border: #b8c2da;
+  --screen-border: #8791ab;
+  --screen: #ffffff;
+  --preview-ink: #000000;
+  --preview-paper: #ffffff;
+  --gap: #d8d8d8;
+  --gap-text: #777777;
+
+  --status: #1b6a3a;
+  --error: #b3261e;
+  --tip-bg: #fff6a8;
+  --tip-text: #14213d;
+  --tip-border: #c9a400;
+
+  --banner: #ffffff;
+  --banner-outline: #b8c2da;
+  --banner-radius: 8px;
+  --banner-gloss-top: 0;
+  --banner-gloss-bottom: 0;
+  --banner-inset: none;
+  --banner-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --banner-size: 20px;
+  --banner-weight: 700;
+  --banner-spacing: 1px;
+  --banner-color: #14213d;
+  --banner-text-shadow: none;
+
+  --r-ctl: 6px;
+  --r-btn: 6px;
+  --r-default: 6px;
+  --r-pane: 6px;
+  --r-tab: 6px;
+  --r-title: 6px;
+  --r-bezel: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    --text: #e8ecf8;
+    --raised: #34406a;
+    --inset: #34406a;
+    --window: #12182b;
+    --window-bottom: #12182b;
+    --panel: #1b2340;
+    --btn: #26305a;
+    --btn-hot: #2f3b6b;
+    --btn-down: #1b2340;
+    --btn-off: #1a2140;
+    --hover-border: #7aa2ff;
+    --dis-text: #6c789a;
+    --placeholder: #98a3c4;
+    --dis-border: #2a3358;
+    --default-bg: #7aa2ff;
+    --default-bg-down: #5d84e6;
+    --default-text: #0d1426;
+    --default-border: #5d84e6;
+    --default-hover: #a9c3ff;
+    --default-dis-text: #6c789a;
+    --default-dis-border: #2a3358;
+    --input-bg: #1b2340;
+    --input-text: #e8ecf8;
+    --input-dis-bg: #151b33;
+    --focus: #7aa2ff;
+    --focus-border: #7aa2ff;
+    --select-bg: #7aa2ff;
+    --select-text: #0d1426;
+    --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23e8ecf8' stroke-width='2.2'/></svg>");
+    --slider-fill: #7aa2ff;
+    --slider-handle: #e8ecf8;
+    --tab-unselected: #9aa6c6;
+    --tab-selected: #1b2340;
+    --tab-accent: #7aa2ff;
+    --led-on: #7aa2ff;
+    --led-off: #12182b;
+    --led-on-border: #a9c3ff;
+    --led-dis: #1a2140;
+    --bezel: #1b2340;
+    --bezel-border: #34406a;
+    --screen-border: #34406a;
+    --status: #6fd08c;
+    --error: #ff8a80;
+    --tip-bg: #2a3358;
+    --tip-text: #e8ecf8;
+    --tip-border: #7aa2ff;
+    --banner: #1b2340;
+    --banner-outline: #34406a;
+    --banner-color: #e8ecf8;
+  }
+}

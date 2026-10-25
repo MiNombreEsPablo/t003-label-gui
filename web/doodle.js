@@ -58,12 +58,13 @@ export function createDoodleWidget(options) {
   const context = overlay.getContext("2d");
   const buffer = new Uint8ClampedArray(width * height * 4);
   let queued = false;
+  let inkColor = [0, 0, 0]; // the looks that tint the preview tint the ink with it
   const redraw = () => {
     if (queued) return;
     queued = true;
     requestAnimationFrame(() => {
       queued = false;
-      context.putImageData(new ImageData(doodle.toRgba(buffer), width, height), 0, 0);
+      context.putImageData(new ImageData(doodle.toRgba(buffer, inkColor), width, height), 0, 0);
     });
   };
 
@@ -203,6 +204,10 @@ export function createDoodleWidget(options) {
     setActive(on) { // only while the Doodle tab is open: elsewhere the engine draws the doodle into the preview itself
       active = on;
       overlay.hidden = !on;
+      redraw();
+    },
+    setInk(rgb) {
+      inkColor = rgb;
       redraw();
     },
     setUnderlay(gray) { // the label without its doodle: where its dark dots are, the paint bucket stops
