@@ -90,8 +90,8 @@ goes away with Qt (making them shared data would mean refactoring the frozen Qt 
       had never been checked; Gunmetal's buttons and tabs, Handheld's tabs and every look's placeholder text were below
       4.5:1 and are fixed; left as in Qt: the Y2K banner title, 2.9:1 but large type with a hard shadow, and Gunmetal's
       bold Print at 4.4:1). Y2K Blue itself is byte-identical to before (741 computed properties on 39 elements)
-- [ ] Look at the other looks on the phone (touch targets, the pixel font at phone size)
-- **Phase 1.5 is done** apart from the phone look at the new looks. The preset bar and menu bar that sit in the Qt
+- [x] The other looks on the phone (Pixel 7a, Chrome): fine, the pixel font and the dark controls included
+- **Phase 1.5 is done.** The preset bar and menu bar that sit in the Qt
   window's top rows arrive with Phase 4
 
 ## Phase 2 — Images (L)
