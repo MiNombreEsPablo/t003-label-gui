@@ -13,8 +13,22 @@ MISSING_QT = (
 
 MISSING_WEBVIEW = (
     "The web window needs pywebview, which isn't installed.\n"
-    "  pip install 't003-label-gui[web]'"
+    "  pip install 't003-label-gui[web]'      (Linux without WebKitGTK: 't003-label-gui[web-qt]')"
 )
+NO_TOOLKIT = (
+    "pywebview found no window toolkit. On Linux install WebKitGTK and PyGObject from your distribution\n"
+    "(Arch: webkit2gtk-4.1 python-gobject; Debian/Ubuntu: gir1.2-webkit2-4.1 python3-gi), or use QtWebEngine:\n"
+    "  pip install 't003-label-gui[web-qt]'"
+)
+
+
+def shell_main() -> None:
+    """The entry of the packaged web app: the window, or `--selftest` to prove the bundle is complete."""
+    if "--selftest" in sys.argv:
+        from .selftest import run
+
+        sys.exit(run(web=True))
+    web_shell()
 
 
 def web_shell() -> None:
@@ -28,6 +42,10 @@ def web_shell() -> None:
         if (e.name or "").split(".")[0] != "webview":
             raise
         sys.exit(MISSING_WEBVIEW)
+    except Exception as e:
+        if type(e).__name__ == "WebViewException":  # pywebview's own: no toolkit it can use
+            sys.exit(f"{NO_TOOLKIT}\n({e})")
+        raise
 
 
 def main() -> None:
