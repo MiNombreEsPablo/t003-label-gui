@@ -84,7 +84,7 @@ jobs:
           dnf install -y --skip-broken --setopt=install_weak_deps=False git tar gzip xz which file binutils curl \
             ca-certificates desktop-file-utils mesa-libEGL mesa-libGL libglvnd-glx libxkbcommon libxkbcommon-x11 \
             fontconfig freetype dbus-libs glib2 libX11 libXext libXrender libXi libSM libICE libxcb \
-            nss nspr libXcomposite libXdamage libXrandr libXtst alsa-lib mesa-libgbm libxshmfence \
+            nss nspr libXcomposite libXdamage libXrandr libXtst alsa-lib mesa-libgbm libxshmfence libatomic \
             xcb-util-cursor xcb-util-image xcb-util-keysyms xcb-util-renderutil xcb-util-wm
       - uses: actions/checkout@v5
       - name: Python 3.12 from python-build-standalone
