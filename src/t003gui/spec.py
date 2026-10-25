@@ -89,3 +89,12 @@ def layout_hint(spec: LabelSpec) -> str:
         what = "text and QR code aren't" if spec.text and spec.qr else ("text isn't" if spec.text else "QR code isn't")
         return f"The {what} printed: the layout is \u201cImage only\u201d. Choose another layout on the Image tab."
     return ""
+
+
+CONTENT_FIELDS = ("text", "qr", "image_path", "doodle")  # what a label can say; a border or a pattern alone is not content
+
+
+def has_content(spec: LabelSpec) -> bool:
+    """Is there anything to print? Text, a QR code, a picture or a doodle; blank text does not count. Every client uses
+    this (print, export and copy all refuse an empty label), so no one of them can forget a field again."""
+    return any(str(getattr(spec, field)).strip() for field in CONTENT_FIELDS)

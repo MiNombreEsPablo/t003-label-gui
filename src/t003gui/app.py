@@ -40,7 +40,7 @@ from PySide6.QtWidgets import (
 from . import __version__, about, composition, core, panels, theme, updates
 from . import fonts as bundled_fonts
 from .presets import PresetStore
-from .spec import layout_hint
+from .spec import has_content, layout_hint
 
 PREVIEW_SCALE = 2
 NO_PRESET = "— presets —"
@@ -435,7 +435,7 @@ class MainWindow(QMainWindow):
 
     def export_image(self) -> None:
         spec = self.spec()
-        if not (spec.text or spec.qr or spec.image_path):
+        if not has_content(spec):
             self.status.setText("Nothing to export.")
             return
         path, chosen = QFileDialog.getSaveFileName(
@@ -516,7 +516,7 @@ class MainWindow(QMainWindow):
 
     def copy_label_image(self) -> None:
         spec = self.spec()
-        if not (spec.text or spec.qr or spec.image_path):
+        if not has_content(spec):
             self.status.setText("Nothing to copy.")
             return
         try:
@@ -534,7 +534,7 @@ class MainWindow(QMainWindow):
 
     def print_now(self) -> None:
         spec = self.spec()
-        if not (spec.text or spec.qr or spec.image_path):
+        if not has_content(spec):
             self.status.setText("Nothing to print.")
             return
         self.print_button.setEnabled(False)

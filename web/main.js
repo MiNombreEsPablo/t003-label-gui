@@ -165,7 +165,7 @@ async function main() {
 
   async function print() {
     const current = spec();
-    if (!current.text.trim() && !current.qr.trim() && !current.image_path) return status("Nothing to print.");
+    if (!options.content_fields.some((name) => String(current[name]).trim())) return status("Nothing to print."); // as spec.has_content
     $("print").disabled = true;
     status("Printing…");
     const result = await printer.print(current, { mode: $("mode").value, address: $("address").value.trim() });

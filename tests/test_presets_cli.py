@@ -44,3 +44,23 @@ def test_cli_reports_an_oversized_qr_instead_of_a_traceback(tmp_path):
     with pytest.raises(SystemExit) as e:
         cli.main(["x", "--qr", "x" * 5000, "--preview", str(tmp_path / "o.png")])
     assert "error:" in str(e.value)
+
+
+def test_a_saved_label_that_is_only_a_doodle_prints(tmp_path, monkeypatch):
+    from t003gui import composition, doodle
+
+    ink = Image.new("L", (core.W, core.SH), 0)
+    ink.paste(255, (10, 10, 100, 30))
+    path = tmp_path / "scribble.t003label"
+    composition.save(path, core.LabelSpec(doodle=doodle.encode(ink)))
+    sent = []
+    monkeypatch.setattr(core, "print_label", lambda spec, bluetooth=None: sent.append(spec) or [])
+    cli.main(["--file", str(path)])
+    assert len(sent) == 1 and sent[0].doodle
+
+
+def test_an_empty_label_still_asks_for_something_to_print(monkeypatch):
+    monkeypatch.setattr(core, "print_label", lambda *a, **k: (_ for _ in ()).throw(AssertionError("must not print")))
+    with pytest.raises(SystemExit) as e:
+        cli.main([])
+    assert e.value.code == 2

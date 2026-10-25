@@ -791,3 +791,31 @@ def test_the_printer_choice_is_remembered(app, clean_connection):
 def test_the_printer_choice_is_not_part_of_a_label(window, clean_connection):
     window.output.printer.setCurrentIndex(1)
     assert "bluetooth" not in window.spec().__dict__ and set(window.output.read()) == {"copies", "density"}
+
+
+def _doodle_only_spec():
+    from PIL import Image
+
+    from t003gui import doodle
+
+    ink = Image.new("L", (core.W, core.SH), 0)
+    ink.paste(255, (40, 40, 200, 60))
+    return core.LabelSpec(doodle=doodle.encode(ink))
+
+
+def test_a_label_with_only_a_doodle_prints(window, monkeypatch):
+    sent = []
+    monkeypatch.setattr(core, "print_label", lambda spec: sent.append(spec) or [])
+    window.set_spec(_doodle_only_spec())
+    window.print_action.trigger()
+    assert len(sent) == 1 and sent[0].doodle and not sent[0].text
+    assert "Nothing to print" not in window.status.text()
+
+
+def test_a_label_with_only_a_doodle_can_be_exported_and_copied(window, monkeypatch, tmp_path):
+    window.set_spec(_doodle_only_spec())
+    monkeypatch.setattr("PySide6.QtWidgets.QFileDialog.getSaveFileName", lambda *a, **k: (str(tmp_path / "d.png"), ""))
+    window.export_image()
+    assert (tmp_path / "d.png").exists() and "Nothing to export" not in window.status.text()
+    window.copy_label_image()
+    assert "Nothing to copy" not in window.status.text()

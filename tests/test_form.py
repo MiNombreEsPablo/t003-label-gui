@@ -90,3 +90,19 @@ def test_every_choice_has_the_wording_the_qt_window_uses():
 def test_the_doodle_is_the_last_control_to_get_a_place_in_the_schema():
     assert form.PENDING == frozenset()
     assert next(f for f in form.FIELDS if f.kind == "doodle").tab == "doodle"
+
+
+@pytest.mark.parametrize("field, value", [("text", "hi"), ("qr", "https://x"), ("image_path", "/tmp/p.png"), ("doodle", "AAAA")])
+def test_each_kind_of_content_counts_as_something_to_print(field, value):
+    assert spec.has_content(spec.LabelSpec(**{field: value}))
+
+
+def test_nothing_to_print_means_none_of_them_and_blank_text_does_not_count():
+    assert not spec.has_content(spec.LabelSpec())
+    assert not spec.has_content(spec.LabelSpec(text="  \n", qr=" "))
+    assert not spec.has_content(spec.LabelSpec(border=True, background="stars", bars=True))  # decoration alone is not content
+
+
+def test_the_web_page_reads_the_content_fields_from_the_engine():
+    assert json.loads(api.options())["content_fields"] == list(spec.CONTENT_FIELDS)
+    assert set(spec.CONTENT_FIELDS) <= set(spec.LabelSpec.__dataclass_fields__)
