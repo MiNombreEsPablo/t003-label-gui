@@ -45,7 +45,7 @@ def test_core_and_cli_work_without_qt(tmp_path):
 
 
 def test_launcher_says_what_to_install_when_qt_is_missing():
-    result = _run_without_qt("from t003gui import launcher; launcher.main()")
+    result = _run_without_qt("import sys; sys.argv = ['t003-gui', '--qt']; from t003gui import launcher; launcher.main()")
     assert result.returncode != 0
     assert "pip install 't003-label-gui[gui]'" in result.stderr and "t003-print" in result.stderr
     assert "Traceback" not in result.stderr  # a message, not a stack trace
@@ -60,6 +60,7 @@ def test_launcher_does_not_hide_real_import_errors():
         "        if name == 't003gui.app':\n"
         "            raise ImportError('boom', name='some.other.module')\n"
         "sys.meta_path.insert(0, Break())\n"
+        "sys.argv = ['t003-gui', '--qt']\n"
         "from t003gui import launcher\n"
         "launcher.main()\n"
     )
@@ -68,9 +69,17 @@ def test_launcher_does_not_hide_real_import_errors():
     assert "pip install" not in result.stderr
 
 
-def test_launcher_says_what_to_install_when_pywebview_is_missing():
-    blocker = "import sys; sys.modules['webview'] = None; sys.argv = ['t003-gui', '--web']; "
+def test_launcher_says_what_to_install_when_nothing_can_open_a_window():
+    blocker = "import sys; sys.modules['webview'] = None; sys.modules['PySide6'] = None; sys.argv = ['t003-gui']; "
     result = subprocess.run([sys.executable, "-c", blocker + "from t003gui import launcher; launcher.main()"],
                             capture_output=True, text=True, cwd=ROOT, timeout=60)
     assert result.returncode != 0
     assert "pip install 't003-label-gui[web]'" in result.stderr
+
+
+def test_launcher_falls_back_to_the_qt_window_when_pywebview_is_missing():
+    """An install with only the old window keeps working; it is told about the new one."""
+    code = ("import sys; sys.modules['webview'] = None; sys.argv = ['t003-gui']; "
+            "from t003gui import launcher; launcher.qt_window = lambda: print('QT OPENED'); launcher.main()")
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=ROOT, timeout=60)
+    assert "QT OPENED" in result.stdout and "pip install 't003-label-gui[web]'" in result.stderr

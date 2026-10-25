@@ -41,6 +41,11 @@ def run(web: bool = False) -> int:
             import webview  # noqa: F401
         except ImportError as e:
             problems.append(f"the window toolkit (pywebview) is missing: {e}")
+        if getattr(sys, "frozen", False) and sys.platform.startswith("linux"):
+            try:  # loads Chromium and the system libraries it needs, so a missing one fails here and not on a user's screen
+                from PySide6 import QtWebEngineWidgets  # noqa: F401
+            except ImportError as e:
+                problems.append(f"QtWebEngine doesn't load: {e}")
 
     spec = core.LabelSpec(text="日本語 TEST", font="Orbitron", effect="neon", background="circuit", qr="t003")
     if core.render(spec).point(lambda v: 255 - v).getbbox() is None:
