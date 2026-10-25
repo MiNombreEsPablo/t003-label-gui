@@ -24,6 +24,7 @@ NAME_PREFIX = "T003"  # the printer advertises as "T003-XXXX"
 RFCOMM_CHANNEL = 1  # the printer's serial-port channel
 RFCOMM_CHUNK = 512  # bytes per write
 RFCOMM_GAP = 0.02  # seconds between writes; without a gap the printer's buffer can overflow
+SCAN_SECONDS = 5  # how long "auto" looks for a printer the system has not seen yet
 SETTLE = 1.0  # seconds to let the printer take the last bytes before asking for its status
 BLE = {  # measured on the T003: TSPL written to `write` is answered with the status byte on `notify`
     "service": "000018f0-0000-1000-8000-00805f9b34fb",
@@ -58,15 +59,28 @@ def known_printers() -> list[tuple[str, str]]:
     return found
 
 
+def scan(seconds: int = SCAN_SECONDS) -> None:
+    """Let the system's Bluetooth look around for a few seconds, so a printer it has not seen yet becomes known
+    (Linux's bluetoothctl). Best effort; never raises."""
+    try:
+        subprocess.run(["bluetoothctl", "--timeout", str(seconds), "scan", "on"], capture_output=True, text=True,
+                       timeout=seconds + 5)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
 def resolve(target: str) -> str:
     """The address to print to: `target` itself when it is one, or the first known T003 for "" / "auto"."""
     text = target.strip()
     if text.lower() in ("", "auto"):
         printers = known_printers()
+        if not printers:  # the system only lists devices it has seen: look around once before giving up
+            scan()
+            printers = known_printers()
         if not printers:
             raise PrinterError(
-                "No T003 known to the system's Bluetooth. Switch the printer on and scan for it in the Bluetooth "
-                "settings, or give its address (AA:BB:CC:DD:EE:FF)."
+                "No T003 found over Bluetooth. Switch the printer on (and disconnect it from any phone), "
+                "or give its address (AA:BB:CC:DD:EE:FF)."
             )
         return printers[0][0]
     address = normalize_address(text)

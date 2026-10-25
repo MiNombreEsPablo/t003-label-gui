@@ -115,8 +115,8 @@ The T003 speaks TSPL over a plain USB printer interface. The app renders a 384×
 The T003 also has Bluetooth (classic serial and BLE) and takes the same TSPL over it. The app and CLI can print over
 classic Bluetooth: choose **Bluetooth** under *Printer* in the Output box, or run `t003-print "Hi" --bluetooth`
 (optionally `--bluetooth AA:BB:CC:DD:EE:FF`). The printer has to be on and not connected to a phone, and it doesn't
-need pairing. With no address the app looks for a T003 the system already knows (Linux: `bluetoothctl`, so scan or pair
-it once). Tested on Linux only: it needs Python's Bluetooth sockets, which macOS builds don't have and Windows may.
+need pairing. With no address the app looks for a T003 (Linux: `bluetoothctl`; it scans for about 5 seconds if the
+system hasn't seen the printer yet). Tested on Linux only: it needs Python's Bluetooth sockets, which macOS builds don't have and Windows may.
 
 ## Roadmap
 

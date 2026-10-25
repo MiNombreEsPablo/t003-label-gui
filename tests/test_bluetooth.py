@@ -137,8 +137,35 @@ def test_resolve(monkeypatch):
     with pytest.raises(core.PrinterError, match="not a Bluetooth address"):
         bluetooth.resolve("T003-7A36")
     monkeypatch.setattr(bluetooth, "known_printers", lambda: [])
-    with pytest.raises(core.PrinterError, match="No T003 known"):
+    with pytest.raises(core.PrinterError, match="No T003 found"):
         bluetooth.resolve("auto")
+
+
+def test_auto_scans_once_when_no_printer_is_known_yet(monkeypatch):
+    known, scans = [[], [(ADDRESS, "T003-7A36")]], []
+    monkeypatch.setattr(bluetooth, "known_printers", lambda: known.pop(0))
+    monkeypatch.setattr(bluetooth, "scan", lambda *a: scans.append(1))
+    assert bluetooth.resolve("auto") == ADDRESS and scans == [1]
+
+
+def test_auto_does_not_scan_when_a_printer_is_already_known(monkeypatch):
+    monkeypatch.setattr(bluetooth, "known_printers", lambda: [(ADDRESS, "T003-7A36")])
+    monkeypatch.setattr(bluetooth, "scan", lambda *a: (_ for _ in ()).throw(AssertionError("must not scan")))
+    assert bluetooth.resolve("") == ADDRESS
+
+
+def test_an_explicit_address_never_scans(monkeypatch):
+    monkeypatch.setattr(bluetooth, "scan", lambda *a: (_ for _ in ()).throw(AssertionError("must not scan")))
+    assert bluetooth.resolve(ADDRESS) == ADDRESS
+
+
+def test_scan_runs_bluetoothctl_with_a_timeout_and_never_raises(monkeypatch):
+    seen = []
+    monkeypatch.setattr(bluetooth.subprocess, "run", lambda cmd, **kw: seen.append((cmd, kw["timeout"])))
+    bluetooth.scan(4)
+    assert seen == [(["bluetoothctl", "--timeout", "4", "scan", "on"], 9)]
+    monkeypatch.setattr(bluetooth.subprocess, "run", lambda *a, **k: (_ for _ in ()).throw(FileNotFoundError()))
+    bluetooth.scan()  # no bluetoothctl: silently nothing
 
 
 def test_print_label_uses_usb_unless_given_a_bluetooth_target(monkeypatch):
