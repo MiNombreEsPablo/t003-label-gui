@@ -67,7 +67,7 @@ jobs:
           $clean = SelfTest "files as built"
           # A downloaded zip's files carry a "from the internet" mark: mark ours the same way, then unblock them like a user would
           $files = Get-ChildItem $dir -Recurse -File | Where-Object { $_.Extension -in ".dll", ".pyd", ".exe" }
-          foreach ($f in $files) { cmd /c "echo [ZoneTransfer]> `"$($f.FullName):Zone.Identifier`" & echo ZoneId=3>> `"$($f.FullName):Zone.Identifier`"" }
+          python -c "import sys, pathlib; [open(str(p) + ':Zone.Identifier', 'w').write('[ZoneTransfer]\r\nZoneId=3\r\n') for p in pathlib.Path(sys.argv[1]).rglob('*') if p.suffix in ('.dll', '.pyd', '.exe')]" $dir
           Write-Host ("marked: " + (@($files | Where-Object { Test-Path -LiteralPath ($_.FullName + ":Zone.Identifier") }).Count) + " of " + $files.Count)
           $marked = SelfTest "files marked as downloaded"
           Get-ChildItem $dir -Recurse -File | Unblock-File
