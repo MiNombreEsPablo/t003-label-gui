@@ -64,6 +64,8 @@ jobs:
             if (-not $p.WaitForExit(120000)) { Write-Host "no exit after 120 s (an error dialog?): killing it"; $p.Kill(); $p.WaitForExit() }
             Write-Host "=== $label : exit $($p.ExitCode), log written: $(Test-Path $log)"
             if (Test-Path $log) { Get-Content $log | ForEach-Object { Write-Host $_ } }
+            $applog = Join-Path $env:LOCALAPPDATA "T003 Label Studio\t003-label-studio.log"
+            if (Test-Path $applog) { Write-Host "--- the app's own log:"; Get-Content $applog -Tail 60 | ForEach-Object { Write-Host $_ }; Remove-Item $applog }
             return $p.ExitCode
           }
           $clean = SelfTest "files as built"

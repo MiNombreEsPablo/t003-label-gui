@@ -61,11 +61,21 @@ def web_shell() -> None:
 
 def shell_main() -> None:
     """The entry of the packaged app: the window, or `--selftest` to prove the bundle is complete."""
+    from . import applog
+
+    applog.start()  # a windowed build has no console: whatever goes wrong is in this file
     if "--selftest" in sys.argv:
         from .selftest import run
 
         sys.exit(run(web=True))
-    web_shell()
+    try:
+        run_shell()
+    except ShellUnavailable as e:
+        applog.record(e)
+        sys.exit(f"{e}\n\nLog: {applog.log_path()}")
+    except Exception as e:
+        applog.record(e)
+        raise SystemExit(f"T003 Label Studio couldn't start: {e}\n\nLog: {applog.log_path()}") from e
 
 
 def main() -> None:
