@@ -1,5 +1,6 @@
 // Files seam, browser adapter: a file the page made is offered as a download; an image goes to the clipboard through the
-// browser's own clipboard.   save(bytes, name, mime) -> {saved, cancelled?, error?}   copyImage(pngBytes) -> void (throws)
+// browser's own clipboard.   save(bytes, name, mime, kind) -> {saved, cancelled?, error?}   copyImage(pngBytes) -> void (throws)
+// (`kind` words the file type in a dialog, "PNG image"; a download has no dialog)
 // The desktop adapter reuses copyImage.
 
 export async function copyImage(bytes) {
@@ -15,7 +16,7 @@ export async function copyImage(bytes) {
 
 export function createFiles() {
   return {
-    async save(bytes, name, mime) {
+    async save(bytes, name, mime, kind) {
       const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
       const link = Object.assign(document.createElement("a"), { href: url, download: name });
       document.body.append(link);

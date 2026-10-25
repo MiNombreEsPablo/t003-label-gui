@@ -43,6 +43,13 @@ def decode(data: str) -> Image.Image | None:
         return None
 
 
+def canonical(data: str) -> str:
+    """The doodle in the engine's own compact encoding (a 1-bit PNG), whoever made it: a browser canvas writes a
+    full-colour PNG several times the size. "" for an empty or damaged doodle. Idempotent."""
+    mask = decode(data)
+    return encode(mask) if mask is not None else ""
+
+
 # --- the drawing tools, as data: a client draws, the engine says what there is to draw with --------------------------
 
 TOOLS = ("pen", "square", "italic", "spray", "line", "box", "oval", "fill", "stamp", "eraser")

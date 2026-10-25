@@ -141,3 +141,19 @@ def test_save_file_failures_are_data(tmp_path):
     blocked.write_text("x")
     assert Bridge(dialogs=FakeDialogs(str(blocked / "a.png"))).save_file("eA==", "a.png")["error"]  # can't write there
     assert Bridge(dialogs=FakeDialogs(str(tmp_path / "b.png"))).save_file("***", "b.png")["error"]  # not base64
+
+
+# --- label files --------------------------------------------------------------------------------------------------------
+
+def test_a_label_file_goes_out_and_comes_back_through_the_bridge():
+    out = Bridge().composition_dumps(json.dumps({"text": "Neon Nights\nx", "effect": "neon"}))
+    assert out["error"] is None and out["name"] == "Neon Nights.t003label"
+    text = base64.b64decode(out["data"]).decode("utf-8")
+    back = Bridge().composition_loads(text)
+    assert back["error"] is None and json.loads(back["spec"])["effect"] == "neon"
+
+
+def test_a_bad_label_file_is_an_error_sentence():
+    result = Bridge().composition_loads("this is not a label")
+    assert result["spec"] is None and "not a label file" in result["error"]
+    assert Bridge().composition_loads('{"format": "t003-label", "version": 7, "spec": {}}')["error"].startswith("this file was made")

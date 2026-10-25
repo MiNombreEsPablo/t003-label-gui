@@ -22,7 +22,7 @@ FONTS = PACKAGE / "fonts"
 
 # api and what it imports, no more: the browser must not need Qt, USB or anything else
 ENGINE_MODULES = ["__init__.py", "spec.py", "render.py", "imaging.py", "doodle.py", "stickers.py", "fonts.py",
-                  "protocol.py", "bluetooth.py", "form.py", "api.py"]
+                  "protocol.py", "bluetooth.py", "form.py", "composition.py", "api.py"]
 ASSETS = PACKAGE / "assets"
 SITE_ASSETS = ["icon-mark.png"]  # what the page uses (the banner's mark)
 PYODIDE = "314.0.7"

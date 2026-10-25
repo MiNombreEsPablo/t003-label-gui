@@ -14,7 +14,7 @@ import json
 from dataclasses import asdict
 from pathlib import PurePath
 
-from . import bluetooth, doodle, fonts, form, imaging, render, spec, stickers
+from . import bluetooth, composition, doodle, fonts, form, imaging, render, spec, stickers
 from .protocol import STATUS_QUERY, status_problems, tspl  # noqa: F401
 
 
@@ -56,6 +56,17 @@ def export_png(raw: str | bytes | dict, scale: int = 1) -> bytes:
 def file_stem(raw: str | bytes | dict) -> str:
     """What to call a file made from this label (see `spec.file_stem`)."""
     return spec.file_stem(label_from_json(raw))
+
+
+def composition_dumps(raw: str | bytes | dict) -> str:
+    """The whole label design as the text of a `.t003label` file (the picture travels inside, the doodle is compact)."""
+    return composition.dumps(label_from_json(raw))
+
+
+def composition_loads(text: str) -> str:
+    """The label in a `.t003label` file, as JSON text for a client to show; an embedded picture is stored where the
+    engine can read it. Raises ValueError with a sentence for the user when it is not a label file."""
+    return json.dumps(asdict(composition.loads(text)))
 
 
 def adopt_image(path: str, name: str = "") -> str:
@@ -111,5 +122,6 @@ def options() -> str:
         "doodle": doodle.describe(),
         "defaults": asdict(spec.LabelSpec()),
         "export": {"scales": [[s, spec.export_size_name(s)] for s in spec.EXPORT_SCALES], "extension": ".png"},
+        "composition": {"extension": composition.SUFFIX, "mime": "application/json"},
         "content_fields": list(spec.CONTENT_FIELDS),  # a label with none of these set has nothing to print
     })

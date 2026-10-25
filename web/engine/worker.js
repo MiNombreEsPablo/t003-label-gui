@@ -77,6 +77,20 @@ const handlers = {
       throw new Error(pythonMessage(e));
     }
   },
+  async compositionDumps({ spec }) { // the label as the text of a .t003label file
+    try {
+      return { data: new TextEncoder().encode(api.composition_dumps(spec)), name: `${api.file_stem(spec)}.t003label` };
+    } catch (e) {
+      throw new Error(pythonMessage(e));
+    }
+  },
+  async compositionLoads({ text }) { // a .t003label file -> the label, as JSON text
+    try {
+      return api.composition_loads(text);
+    } catch (e) {
+      throw new Error(pythonMessage(e));
+    }
+  },
   async exportPng({ spec, scale }) {
     await ensureFonts(spec);
     const data = takeBytes(api.export_png(spec, scale));

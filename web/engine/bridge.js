@@ -23,6 +23,16 @@ export function createEngine() {
       if (result.error) throw new Error(result.error);
       return result.path;
     },
+    async compositionDumps(spec) {
+      const result = await api().composition_dumps(JSON.stringify(spec));
+      if (result.error) throw new Error(result.error);
+      return { data: fromBase64(result.data), name: result.name };
+    },
+    async compositionLoads(text) {
+      const result = await api().composition_loads(text);
+      if (result.error) throw new Error(result.error);
+      return JSON.parse(result.spec);
+    },
     async exportPng(spec, scale) {
       const result = await api().export_png(JSON.stringify(spec), scale);
       if (result.error) throw new Error(result.error);

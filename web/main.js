@@ -120,6 +120,12 @@ async function main() {
   });
   addEventListener("drop", (event) => {
     document.body.classList.remove("dropping");
+    const label = Array.from((event.dataTransfer && event.dataTransfer.files) || []).find((f) => f.name.toLowerCase().endsWith(".t003label"));
+    if (label) {
+      event.preventDefault();
+      openLabelFile(label);
+      return;
+    }
     const file = pictureIn(event.dataTransfer);
     if (file) {
       event.preventDefault();
@@ -198,7 +204,7 @@ async function main() {
     try {
       const image = await makeImage("save");
       if (!image) return;
-      const result = await files.save(image.data, image.name, "image/png");
+      const result = await files.save(image.data, image.name, "image/png", "PNG image");
       if (result.error) status(result.error, true);
       else if (!result.cancelled) status(`Saved ${result.saved}.`);
     } catch (e) {
@@ -213,6 +219,33 @@ async function main() {
       status("Copied the label to the clipboard.");
     } catch (e) {
       status(`Couldn't copy the image: ${e.message}`, true);
+    }
+  });
+
+  // the whole label design as a .t003label file (the picture travels inside it), and back
+  async function openLabelFile(file) {
+    try {
+      form.write(await engine.compositionLoads(await file.text()));
+      status(`Opened ${file.name}.`);
+      await refresh();
+    } catch (e) {
+      status(`Couldn't open ${file.name}: ${e.message}`, true);
+    }
+  }
+  $("open-label").addEventListener("click", () => $("label-file").click());
+  $("label-file").addEventListener("change", () => {
+    const [file] = $("label-file").files;
+    $("label-file").value = "";
+    if (file) openLabelFile(file);
+  });
+  $("save-label").addEventListener("click", async () => {
+    try {
+      const file = await engine.compositionDumps(spec());
+      const result = await files.save(file.data, file.name, options.composition.mime, "T003 label");
+      if (result.error) status(result.error, true);
+      else if (!result.cancelled) status(`Saved ${result.saved}.`);
+    } catch (e) {
+      status(`Couldn't save the label: ${e.message}`, true);
     }
   });
 

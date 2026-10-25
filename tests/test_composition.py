@@ -99,3 +99,41 @@ def test_wrong_typed_fields_fall_back_to_their_defaults():
                        "spec": {"text": "hi", "copies": "two", "bold": 1, "gamma": 2, "threshold": None}})
     spec = composition.loads(text)
     assert (spec.text, spec.copies, spec.bold, spec.gamma, spec.threshold) == ("hi", 1, True, 2, None)
+
+
+# --- a doodle is compact in a file, whichever client drew it -------------------------------------------------------------
+
+def _browser_style_doodle(boxes):
+    """The doodle as a browser writes it: an opaque RGBA PNG, white dots = ink."""
+    import base64
+    import io
+
+    from PIL import Image
+
+    from t003gui.spec import SH, W
+
+    canvas = Image.new("RGBA", (W, SH), (0, 0, 0, 255))
+    for box in boxes:
+        canvas.paste((255, 255, 255, 255), box)
+    out = io.BytesIO()
+    canvas.save(out, "PNG")
+    return base64.b64encode(out.getvalue()).decode("ascii")
+
+
+def test_saving_re_encodes_a_browsers_doodle_compactly_without_changing_it():
+    from t003gui import doodle
+
+    bulky = _browser_style_doodle([(10, 10, 90, 40), (200, 100, 210, 180)])
+    spec = core.LabelSpec(text="x", doodle=bulky)
+    saved = composition.loads(composition.dumps(spec))
+    assert len(saved.doodle) < len(bulky) / 3
+    assert doodle.decode(saved.doodle).tobytes() == doodle.decode(bulky).tobytes()  # the same ink, dot for dot
+    assert composition.dumps(saved) == composition.dumps(composition.loads(composition.dumps(saved)))  # and stable
+
+
+def test_canonical_is_idempotent_and_drops_what_is_not_a_doodle():
+    from t003gui import doodle
+
+    once = doodle.canonical(_browser_style_doodle([(5, 5, 50, 50)]))
+    assert once and doodle.canonical(once) == once
+    assert doodle.canonical("") == "" and doodle.canonical("not a png") == ""
