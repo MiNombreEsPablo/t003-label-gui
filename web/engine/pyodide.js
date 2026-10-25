@@ -1,5 +1,6 @@
 // Engine seam, browser adapter: the same calls as the desktop bridge, answered by Pyodide in a worker.
-//   init(onProgress)  options() -> object  preview(spec) -> Uint8Array(W*H gray)  tspl(spec) -> Uint8Array
+//   init(onProgress)  options() -> object  preview(spec) -> {pixels: Uint8Array(W*H gray), hints: string[]}
+//   tspl(spec) -> Uint8Array
 //   statusProblems(byte) -> string[]
 // `spec` is a plain object (the label's JSON); the worker gets it as text.
 

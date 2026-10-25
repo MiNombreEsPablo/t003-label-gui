@@ -97,3 +97,30 @@ def test_api_and_protocol_import_without_qt_or_usb():
     )
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=ROOT, timeout=60)
     assert result.returncode == 0 and "ok" in result.stdout, result.stderr
+
+
+def test_fonts_needed_covers_every_font_a_render_opens(monkeypatch):
+    """A client that loads fonts on demand (the web build) gets exactly `fonts_needed`; a font opened that is not on
+    the list would silently fall back to another face there. Record what rendering really opens, for every effect,
+    background, border, font and weight."""
+    from pathlib import PurePath
+
+    opened = []
+    real = ImageFont.truetype
+    monkeypatch.setattr(render.ImageFont, "truetype", lambda path, *a, **k: opened.append(path) or real(path, *a, **k))
+    cases = [{"text": "Hi 日本語", "effect": e} for e in core.EFFECTS]
+    cases += [{"text": "BG", "background": b} for b in core.BACKGROUNDS]
+    cases += [{"text": "Box", "border": True, "border_style": s} for s in core.BORDER_STYLES]
+    cases += [{"text": "Hello 日本語", "font": f.family, "bold": bold, "italic": italic}
+              for f in fonts.BUNDLED for bold in (False, True) for italic in (False, True)]
+    for raw in cases:
+        opened.clear()
+        api.preview_pixels(raw)
+        needed = set(api.fonts_needed(raw))
+        extra = {PurePath(p).name for p in opened if PurePath(p).parent == PurePath(fonts.FONT_DIR)} - needed
+        assert not extra, (raw, extra)
+
+
+def test_the_matrix_background_asks_for_its_mono_font():
+    assert "DejaVuSansMono.ttf" in api.fonts_needed({"background": "matrix"})
+    assert "DejaVuSansMono.ttf" not in api.fonts_needed({"background": "dots"})

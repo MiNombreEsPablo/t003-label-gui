@@ -10,33 +10,17 @@
 <main>
   <h1>T003 Label Studio</h1>
   <canvas id="preview" width="384" height="240" aria-label="Label preview"></canvas>
+  <p id="hint" role="note" hidden></p>
 
-  <label for="text">Text</label>
-  <textarea id="text" rows="3" placeholder="What should the label say?"></textarea>
+  <div id="form"></div>
+  <div id="output"></div>
 
-  <div class="row">
-    <div>
-      <label for="font">Font</label>
-      <select id="font"></select>
-    </div>
-    <div>
-      <label for="effect">Effect</label>
-      <select id="effect"></select>
-    </div>
-  </div>
-  <div class="row checks">
-    <label><input type="checkbox" id="bold" checked> Bold</label>
-    <label><input type="checkbox" id="border"> Border</label>
-  </div>
-
-  <div class="row" id="printer-row" hidden>
-    <div>
-      <label for="mode">Printer</label>
+  <!-- moved into the Output box once the form is built; the choices depend on the client -->
+  <div class="field" id="printer-row" hidden>
+    <label for="mode">Printer</label>
+    <div class="inline">
       <select id="mode"></select>
-    </div>
-    <div>
-      <label for="address">Bluetooth address</label>
-      <input id="address" placeholder="first T003 found" hidden>
+      <input id="address" placeholder="first T003 found" aria-label="Bluetooth address" hidden>
     </div>
   </div>
 

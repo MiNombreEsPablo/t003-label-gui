@@ -40,6 +40,7 @@ from PySide6.QtWidgets import (
 from . import __version__, about, composition, core, panels, theme, updates
 from . import fonts as bundled_fonts
 from .presets import PresetStore
+from .spec import layout_hint
 
 PREVIEW_SCALE = 2
 NO_PRESET = "— presets —"
@@ -505,11 +506,7 @@ class MainWindow(QMainWindow):
 
     @staticmethod
     def _layout_hint(spec: core.LabelSpec) -> str:
-        """The text and QR code are silently dropped by the default "Image only" layout: say so, and where to change it."""
-        if spec.image_path and spec.image_layout == "only" and (spec.text or spec.qr):
-            what = "text and QR code aren't" if spec.text and spec.qr else ("text isn't" if spec.text else "QR code isn't")
-            return f"The {what} printed: the layout is “Image only”. Choose another layout on the Image tab."
-        return ""
+        return layout_hint(spec)
 
     def paste_image_from_clipboard(self) -> None:
         if self.content.paste_image():

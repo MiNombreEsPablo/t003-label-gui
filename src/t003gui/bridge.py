@@ -13,16 +13,22 @@ import base64
 
 from . import api, bluetooth, core
 from .render import PrinterError
+from .settings import Settings
 
 
 class Bridge:
+    def __init__(self, settings: Settings | None = None) -> None:
+        self._settings = settings or Settings()
+
     def options(self) -> str:
         """See `api.options`: the allowed choices, geometry, fonts and Bluetooth constants, as JSON text."""
         return api.options()
 
-    def preview(self, spec_json: str) -> str:
-        """The label as printed (`api.preview_pixels`, W x H gray bytes), base64-encoded."""
-        return base64.b64encode(api.preview_pixels(spec_json)).decode("ascii")
+    def preview(self, spec_json: str) -> dict:
+        """The label as printed (`api.preview_pixels`, W x H gray bytes, base64-encoded) with the hints worth showing
+        (`api.hints`): {"pixels": "...", "hints": [...]}."""
+        pixels = base64.b64encode(api.preview_pixels(spec_json)).decode("ascii")
+        return {"pixels": pixels, "hints": api.hints(spec_json)}
 
     def print_label(self, spec_json: str, bluetooth_target: str | None = None) -> dict:
         """Print over USB, or over Bluetooth when `bluetooth_target` is an address ("" or "auto" = the first T003 the
@@ -41,3 +47,14 @@ class Bridge:
     def known_printers(self) -> list[dict]:
         """T003s the system's Bluetooth knows, for a picker: [{"address": ..., "name": ...}]."""
         return [{"address": address, "name": name} for address, name in bluetooth.known_printers()]
+
+    def get_setting(self, key: str, default=None):
+        return self._settings.get(key, default)
+
+    def set_setting(self, key: str, value) -> dict:
+        """Remember a value; failing to write is data for the page ({"error": ...}), not an exception."""
+        try:
+            self._settings.set(key, value)
+        except OSError as e:
+            return {"error": str(e)}
+        return {"error": None}

@@ -11,8 +11,21 @@ def test_options_are_the_apis():
     assert Bridge().options() == api.options()
 
 
-def test_preview_is_the_api_pixels_in_base64():
-    assert base64.b64decode(Bridge().preview(SPEC)) == api.preview_pixels(SPEC)
+def test_preview_is_the_api_pixels_in_base64_with_the_hints():
+    result = Bridge().preview(SPEC)
+    assert base64.b64decode(result["pixels"]) == api.preview_pixels(SPEC) and result["hints"] == []
+
+
+def test_settings_are_remembered_and_a_write_failure_is_data(tmp_path):
+    from t003gui.settings import Settings
+
+    bridge = Bridge(Settings(tmp_path / "s.json"))
+    assert bridge.get_setting("printer") is None and bridge.get_setting("printer", "usb") == "usb"
+    assert bridge.set_setting("printer", {"mode": "Bluetooth", "address": "AA:BB"}) == {"error": None}
+    assert Bridge(Settings(tmp_path / "s.json")).get_setting("printer") == {"mode": "Bluetooth", "address": "AA:BB"}
+    blocked = tmp_path / "file"
+    blocked.write_text("x")
+    assert Bridge(Settings(blocked / "s.json")).set_setting("a", 1)["error"]  # the folder can't be created
 
 
 def test_print_goes_over_usb_without_a_target(monkeypatch):
@@ -54,7 +67,7 @@ def test_the_bridge_needs_neither_qt_nor_pywebview():
     from pathlib import Path
 
     code = ("import sys; sys.modules['PySide6'] = None; sys.modules['webview'] = None\n"
-            "from t003gui.bridge import Bridge; print(len(Bridge().preview('{}')) > 0)")
+            "from t003gui.bridge import Bridge; print(len(Bridge().preview('{}')['pixels']) > 0)")
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
                             cwd=Path(__file__).resolve().parent.parent, timeout=60)
     assert result.returncode == 0 and "True" in result.stdout, result.stderr

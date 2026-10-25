@@ -38,21 +38,27 @@ Theme, Help (about, updates, report an issue, presets folder); Ctrl+O/S/E/P/V/Sh
 
 ## Phase 0 — decisions before more controls (S)
 
-- [ ] **Form schema**: let `api.options()` describe the simple fields (name, type, range, default, label, tab, tooltip)
-      so `web/` builds those controls from it. The doodle, image picker, font picker and preset bar stay hand-written.
-      Try it on Phase 1; keep it only if it feels better than hand-written HTML.
-- [ ] Tabs + layout shell (Content, Text, Image, Decoration, Doodle; Output and Print always visible), phone-friendly
-- [ ] A fourth seam, **store/files**: presets, settings, open/save/export. Browser: localStorage, file input,
-      downloads. Desktop shell: the bridge, so presets stay in the same JSON file the CLI and Qt app read.
+- [x] **Form schema** (`src/t003gui/form.py`): `api.options()["form"]` describes the simple fields (name, kind, label, tab,
+      choices, range, tooltip) and `web/form.js` builds the controls from it. Kept: a new effect/background/border in
+      `spec.py` needs no UI change, and `tests/test_form.py` fails when a `LabelSpec` field has neither a control nor an
+      entry in `PENDING`. The doodle, image picker, font picker and preset bar stay hand-written.
+- [x] Tabs + layout shell (ARIA tabs with arrow keys; Output and Print always visible), phone-friendly. Image and Doodle
+      tabs appear when their phases land
+- [x] A third seam, **store** (settings; `store/local.js`, `store/bridge.js` + `settings.py`). Still to come on it, with
+      the phases that need them: presets and open/save/export (browser: localStorage, file input, downloads; desktop
+      shell: the bridge, so presets stay in the JSON file the CLI and Qt app read).
 
 ## Phase 1 — Decoration and the other simple controls (M)
 
-- [ ] Decoration: border style (none + 9), background (none + 12), hazard bars *(the schema trial)*
-- [ ] Text: italic, size (Auto / cap), align, vertical align
-- [ ] Content: QR text
-- [ ] Output: copies, darkness (printer row is done)
-- [ ] The "Image only hides the text" hint (move the rule into the engine so every client says the same)
-- [ ] Remember the printer choice and Bluetooth address (store seam)
+- [x] Decoration: border style (none + 9), background (none + 12), hazard bars *(the schema trial)*
+- [x] Text: italic, size (Auto / cap), align, vertical align
+- [x] Content: QR text
+- [x] Output: copies, darkness (printer row is done)
+- [x] The "Image only hides the text" hint: the rule is `spec.layout_hint`, shared with Qt; the page shows `hints` that
+      come with every preview (it only fires once pictures exist, in phase 2)
+- [x] Remember the printer choice and Bluetooth address (store seam)
+- Checked: 44 label variations driven through the real controls are bit-identical to the native engine (the one
+  mismatch was a real bug, `fonts_needed` missing the matrix background's mono font; now fixed and guarded by a test)
 
 ## Phase 2 — Images (L)
 

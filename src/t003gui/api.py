@@ -13,7 +13,7 @@ import json
 from dataclasses import asdict
 from pathlib import PurePath
 
-from . import bluetooth, fonts, render, spec, stickers
+from . import bluetooth, fonts, form, render, spec, stickers
 from .protocol import STATUS_QUERY, status_problems, tspl  # noqa: F401
 
 
@@ -38,12 +38,21 @@ def tspl_bytes(raw: str | bytes | dict) -> bytes:
     return tspl(label_from_json(raw))
 
 
+def hints(raw: str | bytes | dict) -> list[str]:
+    """Things worth telling the user about this label (for example that "Image only" drops the text), as plain
+    sentences; empty when there is nothing to say."""
+    hint = spec.layout_hint(label_from_json(raw))
+    return [hint] if hint else []
+
+
 def fonts_needed(raw: str | bytes | dict) -> list[str]:
     """Names of the font files (in the bundled `fonts/` folder) that rendering this label can open, so a client that
-    loads fonts on demand knows what to fetch first: the chosen font, the Japanese fallback and the last resort."""
+    loads fonts on demand knows what to fetch first: the chosen font, the Japanese fallback, the last resort and any font a background draws with."""
     label = label_from_json(raw)
     wanted = [render.font_path(label.font, label.bold, label.italic)[0], fonts.FALLBACK_JA.pick(label.bold, False)[0],
               *render.FALLBACK_FONT_PATHS]
+    if label.background in render.BACKGROUND_FONTS:  # a pattern made of text, such as the matrix rain
+        wanted.append(render.font_path(render.BACKGROUND_FONTS[label.background], False)[0])
     names: list[str] = []
     for path in wanted:
         if PurePath(path).parent == PurePath(fonts.FONT_DIR) and PurePath(path).name not in names:
@@ -68,6 +77,7 @@ def options() -> str:
             {"family": f.family, "category": f.category, "japanese": f.ja, "files": f.files} for f in fonts.BUNDLED
         ],
         "bluetooth": {"name_prefix": bluetooth.NAME_PREFIX, "ble": bluetooth.BLE, "status_query": list(STATUS_QUERY)},
+        "form": form.describe(),
         "stickers": {name: label for name, (label, _) in stickers.STICKERS.items()},
         "defaults": asdict(spec.LabelSpec()),
     })

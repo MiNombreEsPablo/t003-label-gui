@@ -57,7 +57,11 @@ const handlers = {
   },
   async preview({ spec }) {
     await ensureFonts(spec);
-    return takeBytes(api.preview_pixels(spec));
+    const pixels = takeBytes(api.preview_pixels(spec));
+    const hints = api.hints(spec);
+    const list = hints.toJs();
+    hints.destroy();
+    return { pixels, hints: list };
   },
   async tspl({ spec }) {
     await ensureFonts(spec);
@@ -74,7 +78,8 @@ const handlers = {
 self.onmessage = async ({ data: { id, method, args } }) => {
   try {
     const result = await handlers[method](args || {});
-    self.postMessage({ id, result }, result instanceof Uint8Array ? [result.buffer] : []);
+    const buffers = result instanceof Uint8Array ? [result.buffer] : result && result.pixels instanceof Uint8Array ? [result.pixels.buffer] : [];
+    self.postMessage({ id, result }, buffers);
   } catch (e) {
     self.postMessage({ id, error: String((e && e.message) || e) });
   }

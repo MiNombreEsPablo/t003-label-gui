@@ -29,6 +29,7 @@ from .spec import (
 )
 
 FALLBACK_FONT_PATHS = (str(bundled_fonts.FONT_DIR / "DejaVuSans-Bold.ttf"),)
+BACKGROUND_FONTS = {"matrix": "DejaVu Sans Mono"}  # backgrounds that draw text, with the (bundled) font they use
 HAS_FONTCONFIG = shutil.which("fc-match") is not None  # Linux; Windows/macOS use only the bundled fonts
 ITALIC_SHEAR = 0.25
 BAR_H = 14
@@ -449,7 +450,7 @@ def _synthwave(img: Image.Image) -> None:
 def _matrix(d: ImageDraw.ImageDraw) -> None:
     """Falling columns of 0/1, dense at the head and thinning to a tail (seeded)."""
     rng = random.Random(11)
-    font = _font(font_path("DejaVu Sans Mono", False)[0], 10)
+    font = _font(font_path(BACKGROUND_FONTS["matrix"], False)[0], 10)
     for x in range(2, W, 11):
         length, start = rng.randrange(4, 20), rng.randrange(-8, 14)
         for i in range(length):

@@ -21,7 +21,7 @@ FONTS = PACKAGE / "fonts"
 
 # api and what it imports, no more: the browser must not need Qt, USB or anything else
 ENGINE_MODULES = ["__init__.py", "spec.py", "render.py", "imaging.py", "doodle.py", "stickers.py", "fonts.py",
-                  "protocol.py", "bluetooth.py", "api.py"]
+                  "protocol.py", "bluetooth.py", "form.py", "api.py"]
 PYODIDE = "314.0.7"
 mimetypes.add_type("text/javascript", ".js")
 mimetypes.add_type("text/x-python", ".py")
