@@ -2,10 +2,12 @@
 
 The T003 is dual-mode and takes the same TSPL (protocol.py) over both transports:
 
-- Classic serial (RFCOMM), used by the desktop app and CLI through `send` below. Linux only so far: it needs Python's
-  Bluetooth sockets, which Linux has, macOS lacks and Windows may have (untested).
-- BLE (GATT), used by the web build from a browser (Web Bluetooth). Its UUIDs and timings are in `BLE` so the web
-  client reads them from `api.options()` instead of repeating them; nothing in Python opens a BLE connection.
+- Classic serial (RFCOMM), used by the desktop app and CLI on Linux through `send` below: it needs Python's Bluetooth
+  sockets, which Linux has and macOS and Windows lack.
+- BLE (GATT): the web build uses it from a browser (Web Bluetooth) and the desktop app on Windows and macOS from Python
+  (`ble.py`, through `bleak`). Its UUIDs and timings are in `BLE` so every client reads them from one place.
+
+`print_to` picks the transport for the system.
 
 No Qt and no USB in here. Pairing is not needed (RFCOMM connects to an unpaired printer, verified on Linux); the
 printer only has to be switched on, in range and not held by a phone.
@@ -15,6 +17,7 @@ from __future__ import annotations
 import re
 import socket
 import subprocess
+import sys
 import time
 
 from . import protocol
@@ -87,6 +90,20 @@ def resolve(target: str) -> str:
     if address is None:
         raise PrinterError(f"{text!r} is not a Bluetooth address (expected AA:BB:CC:DD:EE:FF).")
     return address
+
+
+def uses_ble() -> bool:
+    """Whether this system prints over BLE (Windows, macOS) instead of RFCOMM (Linux)."""
+    return not sys.platform.startswith("linux")
+
+
+def print_to(payload: bytes, target: str) -> list[str]:
+    """Send `payload` to `target` ("" / "auto" or an address) over the transport this system has; see `send`."""
+    if uses_ble():
+        from . import ble
+
+        return ble.send(payload, target)
+    return send(payload, resolve(target))
 
 
 def _connect(address: str, channel: int):

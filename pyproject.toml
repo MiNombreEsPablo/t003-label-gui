@@ -13,6 +13,7 @@ dependencies = [
     "pyusb>=1.2.1",
     "qrcode>=7.4",
     "fonttools>=4.30",
+    "bleak>=0.22; sys_platform != 'linux'",  # Bluetooth (BLE) printing on Windows and macOS; Linux uses RFCOMM sockets
     # Bundles libusb for Windows, macOS and Linux x86-64/arm64. Elsewhere pip would try to build it from source, which
     # fails; there the code falls back to the system libusb (apt/dnf/pkg install libusb). Not older than 1.0.30:
     # every 1.0.26.x library is rejected by pyusb on a machine with no system libusb (found with a CI probe).

@@ -169,6 +169,7 @@ def test_scan_runs_bluetoothctl_with_a_timeout_and_never_raises(monkeypatch):
 
 
 def test_print_label_uses_usb_unless_given_a_bluetooth_target(monkeypatch):
+    monkeypatch.setattr(bluetooth.sys, "platform", "linux")  # RFCOMM; Windows and macOS print over BLE (test_ble.py)
     calls = []
     monkeypatch.setattr(core, "send", lambda payload: calls.append(("usb", payload)) or [])
     monkeypatch.setattr(core.bt, "send", lambda payload, address: calls.append(("bt", payload, address)) or ["head open"])
