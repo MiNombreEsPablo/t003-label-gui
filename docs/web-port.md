@@ -121,7 +121,7 @@ goes away with Qt (making them shared data would mean refactoring the frozen Qt 
 - [x] The rest of the label shows through while drawing: the engine renders the label without its doodle, the overlay
       draws the ink on it, the bucket uses that picture to stop at the text
 - Checked: 9 doodles built through the page (every tool kind, patterned inks, a bucket fill stopped by text) decode and
-  render natively bit for bit; real mouse input in the browser; the desktop shell's engine; **touch on the phone: to do**
+  render natively bit for bit; real mouse input in the browser; the desktop shell's engine; touch on the phone (Pixel 7a, Chrome): works
 
 ## Phase 4 — Presets, files, themes, shortcuts (L)
 
