@@ -648,6 +648,17 @@ def _compose(spec: LabelSpec) -> Image.Image:
     return img
 
 
+def label_bitmap(spec: LabelSpec, scale: int = 1) -> Image.Image:
+    """The exact 1-bit image that prints: just the sticker (no gap rows), optionally enlarged.
+
+    Enlarging is nearest-neighbour so every printed dot stays a crisp square.
+    """
+    bitmap = to_bitmap(render(spec)).crop((0, 0, W, SH))
+    if scale > 1:
+        bitmap = bitmap.resize((W * scale, SH * scale), Image.Resampling.NEAREST)
+    return bitmap
+
+
 def to_bitmap(img: Image.Image) -> Image.Image:
     """The exact 1-bit image the printer will burn (also used for the GUI preview)."""
     return img.convert("1", dither=Image.Dither.FLOYDSTEINBERG)

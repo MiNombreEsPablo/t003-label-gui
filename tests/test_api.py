@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from PIL import ImageFont
 
-from t003gui import api, core, fonts, protocol, render
+from t003gui import api, core, fonts, protocol, render, spec
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -134,3 +134,42 @@ def test_adopt_image_gives_back_a_path_for_the_label(tmp_path):
     path = api.adopt_image(str(source), "in.png")
     assert api.hints({"text": "hi", "image_path": path})  # "Image only" hides the text: the hint now has a real picture
     assert 0 in api.preview_pixels({"image_path": path})
+
+
+# --- exporting the label as an image ---------------------------------------------------------------------------------
+
+def test_export_png_is_the_printed_sticker_at_the_chosen_size():
+    import io
+
+    from PIL import Image, ImageChops
+
+    raw = {"text": "Hi", "border": True}
+    for scale in spec.EXPORT_SCALES:
+        image = Image.open(io.BytesIO(api.export_png(raw, scale)))
+        assert image.format == "PNG" and image.size == (core.W * scale, core.SH * scale)
+        assert ImageChops.difference(image.convert("L"), core.label_bitmap(core.LabelSpec(text="Hi", border=True), scale).convert("L")).getbbox() is None
+
+
+def test_export_sizes_are_the_engines_and_other_sizes_snap_to_the_nearest():
+    import io
+
+    from PIL import Image
+
+    sizes = json.loads(api.options())["export"]
+    assert [s for s, _ in sizes["scales"]] == list(spec.EXPORT_SCALES) and sizes["extension"] == ".png"
+    assert all(f"{core.W * s}×{core.SH * s}" in label for s, label in sizes["scales"])
+    assert Image.open(io.BytesIO(api.export_png({"text": "x"}, 3))).width == core.W * 4  # 3 is closer to 4 than to 1
+    assert Image.open(io.BytesIO(api.export_png({"text": "x"}, 0))).width == core.W
+    assert Image.open(io.BytesIO(api.export_png({"text": "x"}, 99))).width == core.W * 4
+
+
+def test_files_are_named_after_the_label():
+    assert api.file_stem({"text": "  Neon Nights!\nsecond line"}) == "Neon Nights"
+    assert api.file_stem({"text": ""}) == "label" and api.file_stem({"text": "***"}) == "label"
+    assert len(api.file_stem({"text": "x" * 100})) == 40
+
+
+def test_the_export_sizes_match_the_qt_window_for_now():
+    app = pytest.importorskip("t003gui.app")  # needs PySide6; goes away with the Qt UI
+    assert sorted(app.MainWindow.EXPORT_FORMATS.values()) == sorted(spec.EXPORT_SCALES)
+    assert set(app.MainWindow.EXPORT_FORMATS) == {f"{spec.export_size_label(s)} (*.png)" for s in spec.EXPORT_SCALES}

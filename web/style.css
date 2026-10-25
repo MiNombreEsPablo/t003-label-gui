@@ -300,6 +300,11 @@ body.dropping .bezel { outline: 3px dashed var(--focus); outline-offset: 4px; }
 .reset-row.buttons { justify-content: flex-start; gap: 8px; }
 .doodle-hint { margin: 8px 0 0; }
 
+/* saving and copying the label as an image, under the preview */
+.stage-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.stage-tools select { flex: 1 1 11rem; width: auto; min-width: 0; }
+.stage-tools .gel { flex: none; }
+
 /* the look picker, until the View menu exists */
 .look { display: flex; align-items: center; gap: 10px; margin: 10px 2px 4px; }
 .look label { color: var(--text); }

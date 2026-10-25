@@ -10,11 +10,10 @@ import time
 
 import usb.core
 import usb.util
-from PIL import Image
 
 from . import bluetooth as bt
 from .protocol import STATUS_FLAGS, STATUS_QUERY, chunks, status_problems, tspl  # noqa: F401
-from .render import PrinterError, font_path, list_font_families, render, to_bitmap  # noqa: F401
+from .render import PrinterError, font_path, label_bitmap, list_font_families, render, to_bitmap  # noqa: F401
 from .spec import (  # noqa: F401
     ALIGNMENTS,
     BACKGROUNDS,
@@ -94,17 +93,6 @@ def send(payload: bytes) -> list[str]:
     finally:
         usb.util.dispose_resources(dev)
     return status_problems(status)
-
-
-def label_bitmap(spec: LabelSpec, scale: int = 1) -> Image.Image:
-    """The exact 1-bit image that prints: just the sticker (no gap rows), optionally enlarged.
-
-    Enlarging is nearest-neighbour so every printed dot stays a crisp square.
-    """
-    bitmap = to_bitmap(render(spec)).crop((0, 0, W, SH))
-    if scale > 1:
-        bitmap = bitmap.resize((W * scale, SH * scale), Image.Resampling.NEAREST)
-    return bitmap
 
 
 def export_png(spec: LabelSpec, path, scale: int = 1) -> None:

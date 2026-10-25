@@ -9,6 +9,7 @@ build writes the upload into Pyodide's virtual file system).
 """
 from __future__ import annotations
 
+import io
 import json
 from dataclasses import asdict
 from pathlib import PurePath
@@ -41,6 +42,20 @@ def tspl_bytes(raw: str | bytes | dict) -> bytes:
 def _rows(sticker: str):
     mask = stickers.mask(sticker, 1)
     return [[mask.getpixel((x, y)) for x in range(mask.width)] for y in range(mask.height)]
+
+
+def export_png(raw: str | bytes | dict, scale: int = 1) -> bytes:
+    """The label as a PNG file: the sticker as it prints (no gap rows), at `scale` times the dots (an export size from
+    `options()["export"]`; anything else is clamped to the nearest one)."""
+    scale = min(spec.EXPORT_SCALES, key=lambda s: abs(s - scale))
+    out = io.BytesIO()
+    render.label_bitmap(label_from_json(raw), scale).save(out, format="PNG")
+    return out.getvalue()
+
+
+def file_stem(raw: str | bytes | dict) -> str:
+    """What to call a file made from this label (see `spec.file_stem`)."""
+    return spec.file_stem(label_from_json(raw))
 
 
 def adopt_image(path: str, name: str = "") -> str:
@@ -95,5 +110,6 @@ def options() -> str:
         },
         "doodle": doodle.describe(),
         "defaults": asdict(spec.LabelSpec()),
+        "export": {"scales": [[s, spec.export_size_name(s)] for s in spec.EXPORT_SCALES], "extension": ".png"},
         "content_fields": list(spec.CONTENT_FIELDS),  # a label with none of these set has nothing to print
     })

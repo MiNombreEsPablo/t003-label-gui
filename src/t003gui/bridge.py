@@ -20,8 +20,11 @@ from .settings import Settings
 
 
 class Bridge:
-    def __init__(self, settings: Settings | None = None) -> None:
+    def __init__(self, settings: Settings | None = None, dialogs=None) -> None:
+        """`dialogs` is the shell's native file dialogs (the shell has them, this module doesn't know the toolkit):
+        an object with save(suggested_name, kind) -> path or None, where `kind` words the file type ("PNG image")."""
         self._settings = settings or Settings()
+        self._dialogs = dialogs
 
     def options(self) -> str:
         """See `api.options`: the allowed choices, geometry, fonts and Bluetooth constants, as JSON text."""
@@ -59,6 +62,28 @@ class Bridge:
             return {"path": None, "error": str(e)}
         finally:
             os.unlink(scratch)
+
+    def export_png(self, spec_json: str, scale: int = 1) -> dict:
+        """The label as a PNG (`api.export_png`), base64-encoded, with a name for it: {"data", "name", "error"}."""
+        try:
+            return {"data": base64.b64encode(api.export_png(spec_json, scale)).decode("ascii"),
+                    "name": api.file_stem(spec_json) + ".png", "error": None}
+        except (PrinterError, OSError, ValueError) as e:  # a missing picture, a QR code too big to encode
+            return {"data": None, "name": None, "error": str(e)}
+
+    def save_file(self, data_base64: str, name: str, kind: str = "PNG image") -> dict:
+        """Ask where to put a file the page made, and write it: {"saved": file name, "cancelled": bool, "error"}."""
+        if self._dialogs is None:
+            return {"saved": None, "cancelled": False, "error": "This window can't save files."}
+        try:
+            path = self._dialogs.save(name, kind)
+            if not path:
+                return {"saved": None, "cancelled": True, "error": None}
+            with open(path, "wb") as f:
+                f.write(base64.b64decode(data_base64, validate=True))
+            return {"saved": os.path.basename(path), "cancelled": False, "error": None}
+        except (OSError, ValueError, binascii.Error) as e:
+            return {"saved": None, "cancelled": False, "error": str(e)}
 
     def known_printers(self) -> list[dict]:
         """T003s the system's Bluetooth knows, for a picker: [{"address": ..., "name": ...}]."""

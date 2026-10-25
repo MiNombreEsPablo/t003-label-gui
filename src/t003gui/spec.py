@@ -5,6 +5,7 @@ Geometry: 58 mm paper, 384 printable dots wide (203 dpi). The label pitch is 240
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, fields
 
 W, H = 384, 240  # printable dots; H is the label pitch
@@ -98,3 +99,24 @@ def has_content(spec: LabelSpec) -> bool:
     """Is there anything to print? Text, a QR code, a picture or a doodle; blank text does not count. Every client uses
     this (print, export and copy all refuse an empty label), so no one of them can forget a field again."""
     return any(str(getattr(spec, field)).strip() for field in CONTENT_FIELDS)
+
+
+EXPORT_SCALES = (1, 4)  # the sizes a label can be exported at: as printed (one image dot per printed dot) or enlarged 4x
+
+
+def export_size_label(scale: int) -> str:
+    """How an export size is worded in a dialog or a menu."""
+    what = "printed size" if scale == 1 else f"enlarged {scale}\u00d7"
+    return f"PNG image, {what} ({W * scale}\u00d7{SH * scale})"
+
+
+def export_size_name(scale: int) -> str:
+    """The short wording, for a picker beside the Save button."""
+    name = "Printed size" if scale == 1 else f"Enlarged {scale}\u00d7"
+    return f"{name} ({W * scale}\u00d7{SH * scale})"
+
+
+def file_stem(spec: LabelSpec) -> str:
+    """A name for a file made from this label: its first line of text, made safe, or "label"."""
+    first_line = (spec.text.strip().splitlines() or [""])[0]
+    return re.sub(r"[^\w -]+", "", first_line).strip()[:40] or "label"

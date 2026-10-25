@@ -92,3 +92,52 @@ def test_a_bad_upload_is_an_error_sentence_not_an_exception():
     assert not_a_picture["path"] is None and "notes.png isn't a picture" in not_a_picture["error"]
     broken = bridge.upload_image("***not base64***", "x.png")
     assert broken["path"] is None and broken["error"]
+
+
+# --- exporting and saving the label as an image -------------------------------------------------------------------
+
+class FakeDialogs:
+    def __init__(self, answer):
+        self.answer, self.asked = answer, []
+
+    def save(self, name, kind):
+        self.asked.append((name, kind))
+        return self.answer
+
+
+def test_export_png_returns_the_image_and_a_name():
+    import io
+
+    from PIL import Image
+
+    result = Bridge().export_png(json.dumps({"text": "Neon Nights\nsecond"}), 4)
+    assert result["error"] is None and result["name"] == "Neon Nights.png"
+    image = Image.open(io.BytesIO(base64.b64decode(result["data"])))
+    assert image.size == (core.W * 4, core.SH * 4)
+
+
+def test_a_bad_label_cannot_be_exported_but_says_why():
+    result = Bridge().export_png(json.dumps({"text": "x", "image_path": "/no/such/picture.png"}))
+    assert result["data"] is None and result["error"]
+
+
+def test_save_file_writes_where_the_dialog_says(tmp_path):
+    target = tmp_path / "out.png"
+    dialogs = FakeDialogs(str(target))
+    result = Bridge(dialogs=dialogs).save_file(base64.b64encode(b"PNGDATA").decode(), "Neon.png", "PNG image")
+    assert result == {"saved": "out.png", "cancelled": False, "error": None}
+    assert target.read_bytes() == b"PNGDATA" and dialogs.asked == [("Neon.png", "PNG image")]
+
+
+def test_cancelling_the_dialog_is_not_an_error(tmp_path):
+    result = Bridge(dialogs=FakeDialogs(None)).save_file(base64.b64encode(b"x").decode(), "a.png")
+    assert result == {"saved": None, "cancelled": True, "error": None}
+    assert not list(tmp_path.iterdir())
+
+
+def test_save_file_failures_are_data(tmp_path):
+    assert "can't save" in Bridge().save_file("eA==", "a.png")["error"]  # a window without dialogs
+    blocked = tmp_path / "file"
+    blocked.write_text("x")
+    assert Bridge(dialogs=FakeDialogs(str(blocked / "a.png"))).save_file("eA==", "a.png")["error"]  # can't write there
+    assert Bridge(dialogs=FakeDialogs(str(tmp_path / "b.png"))).save_file("***", "b.png")["error"]  # not base64

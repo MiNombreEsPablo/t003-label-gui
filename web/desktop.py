@@ -18,13 +18,32 @@ import dev_server  # noqa: E402
 from t003gui.bridge import Bridge  # noqa: E402
 
 
+class Dialogs:
+    """The shell's native file dialogs, for the bridge (which doesn't know the toolkit)."""
+
+    def __init__(self) -> None:
+        self.window = None  # set once the window exists
+
+    def save(self, suggested_name: str, kind: str) -> str | None:
+        import webview
+
+        result = self.window.create_file_dialog(
+            webview.SAVE_DIALOG, save_filename=suggested_name, file_types=(f"{kind} (*.png)",))
+        if isinstance(result, (list, tuple)):  # some toolkits answer with a tuple of one path
+            result = result[0] if result else None
+        if result and not result.lower().endswith(".png"):
+            result += ".png"
+        return result or None
+
+
 def main() -> None:
     import webview  # imported here so that the rest of this file can be tested without it
 
     server = dev_server.make_server(port=0)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     url = f"http://127.0.0.1:{server.server_address[1]}/?client=desktop"
-    webview.create_window("T003 Label Studio", url, js_api=Bridge(), width=520, height=860)
+    dialogs = Dialogs()
+    dialogs.window = webview.create_window("T003 Label Studio", url, js_api=Bridge(dialogs=dialogs), width=520, height=860)
     webview.start()
 
 

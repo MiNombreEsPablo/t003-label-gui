@@ -1,0 +1,29 @@
+// Files seam, browser adapter: a file the page made is offered as a download; an image goes to the clipboard through the
+// browser's own clipboard.   save(bytes, name, mime) -> {saved, cancelled?, error?}   copyImage(pngBytes) -> void (throws)
+// The desktop adapter reuses copyImage.
+
+export async function copyImage(bytes) {
+  if (!navigator.clipboard || !window.ClipboardItem) {
+    throw new Error("This browser can't copy images to the clipboard: use Save image instead.");
+  }
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": new Blob([bytes], { type: "image/png" }) })]);
+  } catch (e) {
+    throw new Error(e.name === "NotAllowedError" ? "The browser didn't allow copying: click the page and try again." : e.message);
+  }
+}
+
+export function createFiles() {
+  return {
+    async save(bytes, name, mime) {
+      const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+      const link = Object.assign(document.createElement("a"), { href: url, download: name });
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      return { saved: name };
+    },
+    copyImage,
+  };
+}

@@ -1,7 +1,6 @@
 """Qt GUI: edit a label, see the exact 1-bit preview, print it."""
 from __future__ import annotations
 
-import re
 import sys
 from dataclasses import replace
 from pathlib import Path
@@ -40,7 +39,7 @@ from PySide6.QtWidgets import (
 from . import __version__, about, composition, core, panels, theme, updates
 from . import fonts as bundled_fonts
 from .presets import PresetStore
-from .spec import has_content, layout_hint
+from .spec import file_stem, has_content, layout_hint
 
 PREVIEW_SCALE = 2
 NO_PRESET = "— presets —"
@@ -390,9 +389,7 @@ class MainWindow(QMainWindow):
         QSettings().setValue("lastDir", str(Path(path).parent))
 
     def _suggested_name(self, suffix: str) -> str:
-        first_line = (self.content.text.toPlainText().strip().splitlines() or [""])[0]
-        stem = re.sub(r"[^\w -]+", "", first_line).strip()[:40] or "label"
-        return str(Path(self._start_dir()) / (stem + suffix))
+        return str(Path(self._start_dir()) / (file_stem(self.spec()) + suffix))
 
     def save_composition(self) -> None:
         path, _ = QFileDialog.getSaveFileName(
