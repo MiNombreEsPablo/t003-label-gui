@@ -7,6 +7,7 @@ Each OS must build for itself (PyInstaller does not cross-compile); the release 
 """
 import os
 import platform
+import plistlib
 import shutil
 import subprocess
 import sys
@@ -20,6 +21,16 @@ UNUSED_QT = ("Qt3DAnimation", "Qt3DCore", "Qt3DExtras", "Qt3DInput", "Qt3DLogic"
              "QtDesigner", "QtGraphs", "QtHelp", "QtMultimedia", "QtMultimediaWidgets", "QtNetworkAuth", "QtNfc", "QtPdf",
              "QtPdfWidgets", "QtQuick3D", "QtRemoteObjects", "QtScxml", "QtSensors", "QtSerialBus", "QtSerialPort", "QtSpatialAudio",
              "QtSql", "QtStateMachine", "QtSvg", "QtSvgWidgets", "QtTest", "QtTextToSpeech", "QtUiTools", "QtWebSockets", "QtXml")
+
+
+def allow_bluetooth(app: Path) -> None:
+    """macOS kills an app that uses Bluetooth without saying why in its Info.plist; the edit breaks the signature
+    PyInstaller put on the bundle, so it is signed again (ad hoc, like PyInstaller's)."""
+    plist_path = app / "Contents" / "Info.plist"
+    info = plistlib.loads(plist_path.read_bytes())
+    info["NSBluetoothAlwaysUsageDescription"] = "T003 Label Studio sends labels to your T003 printer over Bluetooth."
+    plist_path.write_bytes(plistlib.dumps(info))
+    subprocess.check_call(["codesign", "--force", "--deep", "--sign", "-", str(app)])
 
 
 def prune(folder: Path) -> None:
@@ -57,6 +68,10 @@ def main() -> None:
         backends = {"Linux": "qt", "Windows": "winforms", "Darwin": "cocoa"}  # Linux: QtWebEngine comes with the bundle
         mine = backends[SYSTEM]
         args += ["--hidden-import", f"webview.platforms.{mine}"]
+        if SYSTEM != "Linux":  # printing over BLE (ble.py): bleak picks its WinRT or CoreBluetooth backend by name
+            args += ["--collect-submodules", "bleak"]
+        if SYSTEM == "Darwin":
+            args += ["--hidden-import", "CoreBluetooth", "--hidden-import", "objc"]
         if SYSTEM == "Windows":
             args += ["--hidden-import", "webview.platforms.edgechromium"]  # WebView2, which winforms draws with
         if SYSTEM == "Linux":
@@ -79,6 +94,8 @@ def main() -> None:
     subprocess.check_call(args, cwd=ROOT)
     if shell and SYSTEM == "Linux":
         prune(ROOT / "dist" / name)
+    if shell and SYSTEM == "Darwin":
+        allow_bluetooth(ROOT / "dist" / f"{name}.app")
 
 
 if __name__ == "__main__":

@@ -117,4 +117,4 @@ def print_label(spec: LabelSpec, bluetooth: str | None = None) -> list[str]:
     payload = tspl(spec)
     if bluetooth is None:
         return send(payload)
-    return bt.send(payload, bt.resolve(bluetooth))
+    return bt.print_to(payload, bluetooth)
