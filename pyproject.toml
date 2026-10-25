@@ -20,7 +20,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-web = ["pywebview>=5.3"]  # the web UI in a native window: `t003-gui --web`
+# The web UI in a native window: `t003-gui --web`. Linux draws it with QtWebEngine (PySide6, as the Qt window does);
+# Windows (WebView2) and macOS (WKWebView) use what the system has.
+web = ["pywebview[pyside6]>=5.3; sys_platform == 'linux'", "pywebview>=5.3; sys_platform != 'linux'"]
 gui = ["PySide6>=6.4"]  # 6.4 added QFormLayout.setRowVisible
 dev = ["pytest", "PySide6>=6.4"]
 

@@ -17,6 +17,15 @@ MISSING_WEBVIEW = (
 )
 
 
+def shell_main() -> None:
+    """The entry of the packaged web app: the window, or `--selftest` to prove the bundle is complete."""
+    if "--selftest" in sys.argv:
+        from .selftest import run
+
+        sys.exit(run(web=True))
+    web_shell()
+
+
 def web_shell() -> None:
     """The web UI in a native window (src/t003gui/web/desktop.py), the Qt window's successor."""
     web = Path(__file__).resolve().parent / "web"
