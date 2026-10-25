@@ -36,11 +36,11 @@ async function main() {
   const { engine, store, makePrinter } = await connectSeams();
   const options = await engine.options();
   const printer = makePrinter(options);
-  const { width, height, sticker_height: stickerHeight } = options.geometry;
+  const { width, sticker_height: stickerHeight } = options.geometry;
 
   const canvas = $("preview");
   canvas.width = width;
-  canvas.height = height;
+  canvas.height = stickerHeight; // the gap between stickers is never printed: the page captions it under the canvas
   const context = canvas.getContext("2d");
 
   // Render the newest request only: while one is running, later keystrokes just replace the waiting one.
@@ -96,14 +96,12 @@ async function main() {
 
   function draw(gray) {
     last = gray;
-    const image = context.createImageData(width, height);
-    for (let i = 0; i < gray.length; i++) {
+    const image = context.createImageData(width, stickerHeight);
+    for (let i = 0; i < width * stickerHeight; i++) {
       const v = gray[i];
       image.data.set([v, v, v, 255], i * 4);
     }
     context.putImageData(image, 0, 0);
-    context.fillStyle = "rgba(0, 0, 0, 0.08)"; // the gap between stickers is never printed
-    context.fillRect(0, stickerHeight, width, height - stickerHeight);
   }
 
   async function print() {

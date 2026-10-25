@@ -68,25 +68,27 @@ look is part of the app's point (see "Scope" in AGENTS.md), so it comes before t
 toolbar), not after. CSS only: no framework, no build step. The four palettes are copied by hand from `theme.py`, which
 goes away with Qt (making them shared data would mean refactoring the frozen Qt UI for a file that is about to be deleted).
 
-- [ ] **Theme tokens**: one set of CSS custom properties (colours, bevel highlight/shadow pairs, gel gradient stops,
+- [x] **Theme tokens**: one set of CSS custom properties (colours, bevel highlight/shadow pairs, gel gradient stops,
       radii, font) that the whole stylesheet uses; no colour is written anywhere else
-- [ ] **Y2K Blue first, as the default**: sky-blue gradient window; gel buttons (bright top half, seam, glowing lower
+- [x] **Y2K Blue first, as the default**: sky-blue gradient window; gel buttons (bright top half, seam, glowing lower
       half) and the orange gel Print button; bevelled inset fields; plastic tabs that join their pane; LED checkboxes
       (green on, hollow off); round-cornered Output group with its caption sitting on the frame
-- [ ] **The banner**: the app icon mark (`assets/icon-mark.png`) and "T003 LABEL STUDIO" in the title font, on a glossy plate
-- [ ] **The preview as a screen**: chrome bezel around the canvas, the captioned "gap between stickers, not printed"
+- [x] **The banner**: the app icon mark (`assets/icon-mark.png`) and "T003 LABEL STUDIO" in the title font, on a glossy plate
+- [x] **The preview as a screen**: chrome bezel around the canvas, the captioned "gap between stickers, not printed"
       strip (preview only), crisp dots
-- [ ] **Layout**: two columns on a wide window (controls left, the bezelled preview right, as in the Qt screenshots),
+- [x] **Layout**: two columns on a wide window (controls left, the bezelled preview right, as in the Qt screenshots),
       one column on a phone; the preview stays visible while editing
 - [ ] **The other three looks**: Y2K Pink (colour changes only), Gunmetal (black LCD fields, lime text) and Handheld (four
       olive shades, flat, Pixelify Sans, tinted preview), plus "System" (no custom look; dark/light by the OS)
 - [ ] **A theme switcher** (View › Theme, or a small picker on a phone) remembered through the store seam; first run
       gets Y2K Blue
-- [ ] Fonts for the look (title font, Pixelify Sans) served with the page like the label fonts; they are bundled and
+- [~] Fonts for the look (title font done: Orbitron; Pixelify Sans comes with Handheld) served with the page like the label fonts; they are bundled and
       open-licensed already
 - [ ] Check every theme at phone and desktop widths, in the desktop shell's web engine and in a browser, and for
       readable text and visible focus (the select styling already needed a fix in Qt's engine once)
-- Cheap first cut if wanted: Y2K Blue + layout + banner + bezel, then the other looks and the switcher
+- **The cheap first cut is done** (Y2K Blue, layout, banner, bezel, checked at 960 px and at 390 px wide). Still to do:
+  the other three looks, the switcher, "System", the theme-wide checks, and the preset bar/menu bar that sit in the
+  Qt window's top rows (they arrive with Phase 4)
 
 ## Phase 2 — Images (L)
 

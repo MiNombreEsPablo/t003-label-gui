@@ -4,6 +4,7 @@ The URL layout is the one the published site will have: the files of web/ as the
   /engine/<module>.py        the engine's Python sources, straight from src/t003gui
   /engine/manifest.json      what the browser has to load (Pyodide version, packages, modules)
   /fonts/<file>.ttf          the bundled fonts, fetched on demand
+  /assets/<file>.png         the few images the page uses (the banner's mark)
 so the browser build can be built later by copying exactly these files.
 """
 from __future__ import annotations
@@ -22,6 +23,8 @@ FONTS = PACKAGE / "fonts"
 # api and what it imports, no more: the browser must not need Qt, USB or anything else
 ENGINE_MODULES = ["__init__.py", "spec.py", "render.py", "imaging.py", "doodle.py", "stickers.py", "fonts.py",
                   "protocol.py", "bluetooth.py", "form.py", "api.py"]
+ASSETS = PACKAGE / "assets"
+SITE_ASSETS = ["icon-mark.png"]  # what the page uses (the banner's mark)
 PYODIDE = "314.0.7"
 mimetypes.add_type("text/javascript", ".js")
 mimetypes.add_type("text/x-python", ".py")
@@ -59,6 +62,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._file(PACKAGE / path[len("/engine/"):])
         if path.startswith("/fonts/") and path[len("/fonts/"):] in manifest()["fonts"]:
             return self._file(FONTS / path[len("/fonts/"):])
+        if path.startswith("/assets/") and path[len("/assets/"):] in SITE_ASSETS:
+            return self._file(ASSETS / path[len("/assets/"):])
         target = (WEB / (path.lstrip("/") or "index.html")).resolve()
         if target.is_file() and WEB in target.parents and target.suffix != ".py":
             return self._file(target)

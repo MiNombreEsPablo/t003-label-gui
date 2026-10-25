@@ -7,26 +7,39 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<main>
-  <h1>T003 Label Studio</h1>
-  <canvas id="preview" width="384" height="240" aria-label="Label preview"></canvas>
-  <p id="hint" role="note" hidden></p>
+<div class="app">
+  <header class="banner">
+    <img src="assets/icon-mark.png" alt="">
+    <h1>T003 LABEL STUDIO</h1>
+  </header>
 
-  <div id="form"></div>
-  <div id="output"></div>
-
-  <!-- moved into the Output box once the form is built; the choices depend on the client -->
-  <div class="field" id="printer-row" hidden>
-    <label for="mode">Printer</label>
-    <div class="inline">
-      <select id="mode"></select>
-      <input id="address" placeholder="first T003 found" aria-label="Bluetooth address" hidden>
+  <section class="stage" aria-label="Preview">
+    <div class="bezel">
+      <div class="screen">
+        <canvas id="preview" width="384" height="224" aria-label="Label preview"></canvas>
+        <div class="gap" aria-hidden="true">gap between stickers, not printed</div>
+      </div>
     </div>
-  </div>
+    <p id="hint" role="note" hidden></p>
+  </section>
 
-  <button id="print" disabled>Print</button>
-  <p id="status" role="status">Loading…</p>
-</main>
+  <section class="controls">
+    <div id="form"></div>
+    <div id="output"></div>
+
+    <!-- moved into the Output box once the form is built; the choices depend on the client -->
+    <div class="field" id="printer-row" hidden>
+      <label for="mode">Printer</label>
+      <div class="inline">
+        <select id="mode"></select>
+        <input id="address" placeholder="first T003 found" aria-label="Bluetooth address" hidden>
+      </div>
+    </div>
+
+    <button id="print" disabled>Print</button>
+    <p id="status" role="status">Loading…</p>
+  </section>
+</div>
 <noscript>This app needs JavaScript.</noscript>
 <script type="module" src="main.js"></script>
 </body>

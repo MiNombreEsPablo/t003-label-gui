@@ -1,92 +1,282 @@
+/* The look: Y2K Blue, an iMac-G3 candy-plastic studio (ported from the Qt app's theme.py).
+   Every colour, bevel and radius is a custom property below, so another look is a different set of values, not new rules. */
+
+@font-face {
+  font-family: "Orbitron";
+  src: url("fonts/Orbitron%5Bwght%5D.ttf") format("truetype");
+  font-weight: 400 900;
+  font-display: swap;
+}
+
 :root {
-  --bg: #f4f6fb;
-  --fg: #14213d;
-  --muted: #5a6784;
-  --panel: #ffffff;
-  --line: #b8c2da;
-  --accent: #2b59c3;
-  --accent-fg: #ffffff;
+  --font: "Verdana", "DejaVu Sans", system-ui, sans-serif;
+  --title-font: "Orbitron", "Verdana", sans-serif;
+
+  --text: #0b2a63;
+  --edge: #3b7fc4; /* outlines and bevels (this look is flat-edged: highlight = shadow) */
+  --window: linear-gradient(#f4fcff 0%, #d4edff 60%, #aad8f7 100%);
+  --panel: linear-gradient(#ffffff, #e3f3ff);
+
+  /* gel: a bright top half, a hard seam at the middle, a glowing lower half */
+  --btn: linear-gradient(#ffffff 0%, #d7edff 48%, #a9d6fb 50%, #e2f4ff 100%);
+  --btn-hot: linear-gradient(#ffffff 0%, #e6f4ff 48%, #bfe3ff 50%, #f0fbff 100%);
+  --btn-down: linear-gradient(#8cc4f0 0%, #a9d6fb 48%, #d7edff 50%, #ffffff 100%);
+  --btn-off: linear-gradient(#f4f4f6 0%, #e6e8ec 48%, #d4d8de 50%, #eceef2 100%);
+  --btn-hover-border: #1ea0f0;
+  --dis-text: #8da2bb;
+  --dis-border: #aebfd3;
+
+  --default-bg: linear-gradient(#fff2c6 0%, #ffd27a 48%, #ff9d1e 50%, #ffc65c 100%); /* the Print button */
+  --default-bg-down: linear-gradient(#ff9d1e 0%, #ffb347 48%, #ffd27a 50%, #fff2c6 100%);
+  --default-text: #5a2a00;
+  --default-border: #c26a00;
+  --default-hover: #ff8a00;
+
+  --input-bg: #ffffff;
+  --input-dis-bg: #eef2f7;
+  --focus: #ff8a00;
+  --select-bg: #1ea0f0;
+  --tab-unselected: #3a6aa8;
+  --tab-accent: #ffa31a;
+
+  --led-on: radial-gradient(circle at 35% 30%, #eaffd0, #52e04a 45%, #14852a);
+  --led-off: radial-gradient(circle at 35% 30%, #ffffff, #bcd3ea);
+  --led-on-border: #14852a;
+
+  --bezel: linear-gradient(#ffffff 0%, #dfe7f2 45%, #b9c6d8 55%, #8d9db3 100%);
+  --bezel-border: #6b7c95;
+  --screen-border: #3a4a63;
+  --screen: #ffffff;
+  --gap: #d8d8d8; /* the strip between stickers: shown, never printed */
+  --gap-text: #777777;
+
+  --status: #14602a;
   --error: #b3261e;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #12182b;
-    --fg: #e8ecf8;
-    --muted: #9aa6c6;
-    --panel: #1b2340;
-    --line: #34406a;
-    --accent: #7aa2ff;
-    --accent-fg: #0d1426;
-    --error: #ff8a80;
-  }
+  --tip-bg: #fff6a8;
+  --tip-border: #c9a400;
+
+  --banner: linear-gradient(#7fe3ff 0%, #1ea0f0 50%, #0b57d0 100%);
+  --banner-outline: #0b3a8c;
+  --banner-shadow: #062a6b;
+
+  --r-ctl: 9px;
+  --r-btn: 13px;
+  --r-default: 16px;
+  --r-pane: 12px;
+  --r-title: 10px;
+  --r-bezel: 18px;
 }
 
-:root { color-scheme: light dark; } /* the browser's own controls (scrollbars, pickers) follow the theme too */
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.4 system-ui, sans-serif; }
-main { max-width: 34rem; margin: 0 auto; padding: 1rem; }
-h1 { font-size: 1.3rem; margin: 0 0 .75rem; }
+html { background: #aad8f7; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--window) fixed;
+  color: var(--text);
+  font: 14px/1.4 var(--font);
+}
+[hidden] { display: none !important; }
 
-canvas {
+/* layout: one column on a phone (banner, preview, controls); controls beside a sticky preview on a wide window */
+.app {
+  display: grid;
+  gap: 12px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 12px;
+  grid-template-areas: "banner" "stage" "controls";
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+.banner { grid-area: banner; }
+.stage { grid-area: stage; }
+.controls { grid-area: controls; }
+@media (min-width: 56rem) {
+  .app {
+    grid-template-areas: "banner stage" "controls stage";
+    grid-template-columns: minmax(21rem, 26rem) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+  .stage { position: sticky; top: 12px; }
+}
+
+/* the banner: a glossy plate with the app's mark */
+.banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 54px;
+  padding: 0 16px 0 12px;
+  background: var(--banner);
+  border: 2px solid var(--banner-outline);
+  border-radius: 22px;
+  overflow: hidden;
+}
+.banner::before { /* the candy highlight over the top half */
+  content: "";
+  position: absolute;
+  inset: 0 0 50% 0;
+  background: linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.1));
+}
+.banner img { position: relative; height: 38px; width: auto; }
+.banner h1 {
+  position: relative;
+  margin: 0;
+  color: #fff;
+  font: 900 20px/1 var(--title-font);
+  letter-spacing: 1.5px;
+  text-shadow: 2px 2px 0 var(--banner-shadow);
+}
+
+/* the preview: a chrome bezel around a screen, the gap between stickers captioned underneath */
+.bezel {
+  padding: 10px;
+  background: var(--bezel);
+  border: 3px solid var(--bezel-border);
+  border-radius: var(--r-bezel);
+}
+.screen {
+  overflow: hidden;
+  background: var(--screen);
+  border: 3px solid var(--screen-border);
+  border-radius: 6px;
+}
+.screen canvas {
   display: block;
   width: 100%;
   height: auto;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 6px;
   image-rendering: pixelated; /* every dot stays a crisp square, as on the sticker */
 }
+.gap {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 384 / 16; /* the real gap: 16 of the label's 240 dots */
+  background: var(--gap);
+  color: var(--gap-text);
+  font-size: clamp(7px, 1.3vw, 11px);
+  line-height: 1;
+}
+#hint {
+  margin: 10px 0 0;
+  padding: 6px 10px;
+  color: var(--text);
+  background: var(--tip-bg);
+  border: 2px solid var(--tip-border);
+  border-radius: 6px;
+}
 
-.field { margin: .7rem 0 0; display: grid; gap: .25rem; }
-.field > label, .row-title { color: var(--muted); font-size: .9rem; }
-@media (min-width: 30rem) {
-  .field { grid-template-columns: 7.5rem 1fr; align-items: center; gap: .75rem; }
+/* tabs: plastic tabs that join their pane */
+.tablist { display: flex; gap: 2px; padding: 0 2px; overflow-x: auto; position: relative; z-index: 1; }
+.tab {
+  margin: 3px 0 0;
+  padding: 5px 12px;
+  color: var(--tab-unselected);
+  font: bold 14px var(--font);
+  background: var(--btn-off);
+  border: 2px solid var(--edge);
+  border-bottom: 0;
+  border-radius: var(--r-pane) var(--r-pane) 0 0;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tab:hover { background: var(--btn-hot); border-top-color: var(--tab-accent); }
+.tab[aria-selected="true"] { margin-top: 0; padding-top: 8px; color: var(--text); background: #fff; border-top-color: var(--tab-accent); }
+.panel {
+  margin-top: -2px;
+  padding: 10px 12px 12px;
+  background: var(--panel);
+  border: 2px solid var(--edge);
+  border-radius: var(--r-pane);
+  border-top-left-radius: 0;
+}
+
+/* fields */
+.field { margin: 0 0 8px; display: grid; gap: 3px; }
+.field:last-child { margin-bottom: 0; }
+.field > label, .row-title { color: var(--text); }
+@media (min-width: 22rem) {
+  .field { grid-template-columns: 6.5rem minmax(0, 1fr); align-items: center; gap: 12px; }
 }
 textarea, select, input:not([type="checkbox"]) {
   width: 100%;
-  padding: .55rem .6rem;
+  padding: 3px 8px;
   font: inherit;
-  color: var(--fg);
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  color: var(--text);
+  background: var(--input-bg);
+  border: 2px solid var(--edge);
+  border-radius: var(--r-ctl);
 }
+textarea { resize: vertical; min-height: 4.2rem; }
+textarea:focus, select:focus, input:focus { outline: none; border-color: var(--focus); }
+input::placeholder { color: var(--dis-text); }
 /* Our own select: some web engines (the desktop shell's) keep a light native background whatever the theme says. */
 select {
   appearance: none;
   -webkit-appearance: none;
-  padding-right: 2rem;
-  background: var(--panel) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' fill='none' stroke='%238a96b8' stroke-width='2'/></svg>") no-repeat right .7rem center;
+  padding-right: 2.2rem;
+  background: var(--input-bg) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' fill='none' stroke='%230b2a63' stroke-width='2.2'/></svg>") no-repeat right .7rem center;
 }
-option, optgroup { background: var(--panel); color: var(--fg); }
-input[type="checkbox"] { accent-color: var(--accent); width: 1.1rem; height: 1.1rem; }
-.field.bare .checks { grid-column: 1 / -1; } /* a lone checkbox has no row title: use the whole width */
-.checks { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; }
-.check { display: inline-flex; align-items: center; gap: .45rem; color: var(--fg); }
-.inline { display: flex; gap: .5rem; }
+option, optgroup { background: var(--input-bg); color: var(--text); }
+
+/* checkboxes are LEDs */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  background: var(--led-off);
+  border: 2px solid var(--edge);
+  border-radius: 4px;
+  cursor: pointer;
+}
+input[type="checkbox"]:hover { border-color: var(--select-bg); }
+input[type="checkbox"]:checked { background: var(--led-on); border-color: var(--led-on-border); }
+input[type="checkbox"]:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.field.bare .checks { grid-column: 1 / -1; }
+.checks { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.check { display: inline-flex; align-items: center; gap: 8px; }
+.inline { display: flex; gap: 8px; }
 .inline > * { min-width: 0; }
 
-.tablist { display: flex; gap: .25rem; margin-top: 1rem; border-bottom: 1px solid var(--line); overflow-x: auto; }
-.tab { margin: 0; width: auto; padding: .5rem .9rem; color: var(--muted); background: none; border: 0;
-       border-bottom: 3px solid transparent; border-radius: 0; font-weight: 500; }
-.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
-.panel { padding-bottom: .4rem; }
-fieldset.output { margin: 1rem 0 0; padding: 0 .9rem .9rem; border: 1px solid var(--line); border-radius: 6px; }
-fieldset.output legend { padding: 0 .4rem; color: var(--muted); font-size: .9rem; }
-#hint { margin: .5rem 0 0; padding: .5rem .7rem; color: var(--fg); background: var(--panel); border-left: 3px solid var(--accent); border-radius: 4px; }
-
-button {
-  margin-top: 1.1rem;
-  width: 100%;
-  padding: .75rem;
-  font: inherit;
-  font-weight: 600;
-  color: var(--accent-fg);
-  background: var(--accent);
-  border: 0;
-  border-radius: 6px;
+/* the Output group: a raised frame with its title sitting on the edge */
+fieldset.output {
+  margin: 14px 0 0;
+  padding: 6px 12px 12px;
+  background: var(--panel);
+  border: 2px solid var(--edge);
+  border-radius: var(--r-pane);
 }
-button:disabled { opacity: .5; }
-#status { min-height: 1.4em; color: var(--muted); }
+fieldset.output legend {
+  margin-left: 6px;
+  padding: 1px 12px;
+  font-weight: bold;
+  background: var(--btn);
+  border: 2px solid var(--edge);
+  border-radius: var(--r-title);
+}
+
+/* buttons are gel; the Print button is the orange one */
+#print {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  margin-top: 12px;
+  padding: 5px 14px;
+  color: var(--default-text);
+  font: bold 17px var(--font);
+  background: var(--default-bg);
+  border: 2px solid var(--default-border);
+  border-radius: var(--r-default);
+  cursor: pointer;
+}
+#print:hover { border-color: var(--default-hover); }
+#print:active { background: var(--default-bg-down); }
+#print:disabled { color: #6f7c8c; background: var(--btn-off); border-color: #c9b48d; cursor: default; }
+#print:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+#status { min-height: 1.4em; margin: 8px 2px 0; color: var(--status); font-weight: bold; }
 #status.error { color: var(--error); }
-[hidden] { display: none !important; }
