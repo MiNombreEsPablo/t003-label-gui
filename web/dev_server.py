@@ -5,6 +5,7 @@ The URL layout is the one the published site will have: the files of web/ as the
   /engine/manifest.json      what the browser has to load (Pyodide version, packages, modules)
   /fonts/<file>.ttf          the bundled fonts, fetched on demand
   /assets/<file>.png         the few images the page uses (the banner's mark)
+  /licenses.txt              the project's licence and every font's, made on the fly
 so the browser build can be built later by copying exactly these files.
 """
 from __future__ import annotations
@@ -29,6 +30,17 @@ PYODIDE = "314.0.7"
 mimetypes.add_type("text/javascript", ".js")
 mimetypes.add_type("text/x-python", ".py")
 mimetypes.add_type("font/ttf", ".ttf")
+
+
+def licenses_text() -> str:
+    """The project's licence and the licence of every bundled font family, for the site to publish with them."""
+    parts = ["T003 Label Studio is MIT licensed:\n\n" + (WEB.parent / "LICENSE").read_text(encoding="utf-8").strip()]
+    folder = FONTS / "LICENSES"
+    parts.append("The bundled fonts are open source; each family's licence follows.")
+    for path in sorted(folder.iterdir(), key=lambda p: p.name.lower()):
+        title = path.name.replace("LICENSE.", "", 1).replace("-", " ")
+        parts.append(f"{'=' * 78}\n{title}\n{'=' * 78}\n{path.read_text(encoding='utf-8', errors='replace').strip()}")
+    return "\n\n".join(parts) + "\n"
 
 
 def manifest() -> dict:
@@ -56,6 +68,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         path = unquote(urlparse(self.path).path)
+        if path == "/licenses.txt":
+            return self._send(licenses_text().encode("utf-8"), "text/plain; charset=utf-8")
         if path == "/engine/manifest.json":
             return self._send(json.dumps(manifest()).encode(), "application/json")
         if path.startswith("/engine/") and path[len("/engine/"):] in ENGINE_MODULES:

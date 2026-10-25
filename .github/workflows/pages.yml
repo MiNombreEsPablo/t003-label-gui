@@ -1,0 +1,55 @@
+name: Pages
+
+# Publishes the web app (web/ plus the engine and fonts, see web/build_site.py) to GitHub Pages when main changes.
+# It does nothing until the repository is ready for it: in Settings > Pages choose "GitHub Actions" as the source, then
+# add a repository variable PAGES_ENABLED with the value true (Settings > Secrets and variables > Actions > Variables).
+# Until then the build job still runs, to prove the site builds, but nothing is deployed.
+
+on:
+  push:
+    branches: [main]
+    paths: ["web/**", "src/**", ".github/workflows/pages.yml"]
+  pull_request:
+    paths: ["web/**", "src/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build the site
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python web/build_site.py _site
+      - name: What was built
+        run: |
+          find _site -type f | wc -l
+          du -sh _site
+          cat _site/engine/manifest.json
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.PAGES_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
