@@ -170,4 +170,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "$GITHUB_REF_NAME" artifacts/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+        run: |
+          # a tag with "rc" (v0.5.0rc1) is a pre-release: it never becomes "Latest", so the update check and the download link keep pointing at the last stable one
+          case "$GITHUB_REF_NAME" in *rc*) pre="--prerelease" ;; *) pre="" ;; esac
+          gh release create "$GITHUB_REF_NAME" artifacts/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes $pre
