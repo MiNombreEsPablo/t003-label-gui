@@ -9,7 +9,7 @@ PACKAGE = ROOT / "src" / "t003gui"
 
 
 def _dev_server():
-    spec = importlib.util.spec_from_file_location("dev_server", ROOT / "web" / "dev_server.py")
+    spec = importlib.util.spec_from_file_location("dev_server", ROOT / "src" / "t003gui" / "web" / "dev_server.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

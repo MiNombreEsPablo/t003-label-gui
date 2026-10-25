@@ -125,7 +125,7 @@ jobs:
       - run: python -m pip install -e ".[dev]"
       - name: Pyodide, the version the site uses
         run: |
-          version=$(python -c "import sys; sys.path.insert(0, 'web'); import dev_server; print(dev_server.PYODIDE)")
+          version=$(python -c "import sys; sys.path.insert(0, 'src/t003gui/web'); import dev_server; print(dev_server.PYODIDE)")
           mkdir -p "$RUNNER_TEMP/pyodide" && cd "$RUNNER_TEMP/pyodide" && npm init -y >/dev/null && npm install "pyodide@$version"
       - run: python -m pytest -q tests/test_web_parity.py tests/test_web_js.py
         env:

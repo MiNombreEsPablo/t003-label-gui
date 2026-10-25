@@ -48,7 +48,7 @@ def test_the_web_engine_draws_the_same_dots_as_the_native_one(tmp_path):
     cases = _cases()
     (tmp_path / "cases.json").write_text(json.dumps(cases))
     node = subprocess.run(
-        ["node", str(ROOT / "web" / "test" / "parity.mjs"), str(tmp_path / "cases.json"), str(tmp_path / "out.json"),
+        ["node", str(ROOT / "src" / "t003gui" / "web" / "test" / "parity.mjs"), str(tmp_path / "cases.json"), str(tmp_path / "out.json"),
          str(ROOT / "src" / "t003gui"), PYODIDE],
         capture_output=True, text=True, timeout=600)
     assert node.returncode == 0, node.stdout[-2000:] + node.stderr[-2000:]

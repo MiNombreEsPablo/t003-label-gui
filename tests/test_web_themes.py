@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-WEB = ROOT / "web"
+WEB = ROOT / "src" / "t003gui" / "web"
 THEMES_CSS = (WEB / "themes.css").read_text(encoding="utf-8")
 STYLE_CSS = (WEB / "style.css").read_text(encoding="utf-8")
 
