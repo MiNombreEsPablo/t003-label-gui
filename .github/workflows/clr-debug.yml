@@ -1,0 +1,43 @@
+name: Debug the frozen .NET loader (temporary)
+on:
+  workflow_dispatch:
+  push:
+    branches: [windows-startup]
+    paths: [".github/workflows/clr-debug.yml"]
+jobs:
+  probe:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: console, flags: "" }
+          - { name: windowed, flags: "--windowed" }
+          - { name: windowed-noupx-clean, flags: "--windowed --noupx --clean" }
+          - { name: collect-all-pythonnet, flags: "--collect-all pythonnet --collect-all clr_loader" }
+          - { name: no-bootloader-ignore, flags: "--windowed --hidden-import clr" }
+    name: ${{ matrix.name }}
+    steps:
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install pyinstaller pywebview
+      - name: Freeze a probe
+        shell: pwsh
+        run: |
+          @'
+          import sys, traceback
+          out = open("probe.txt", "w")
+          try:
+              import clr
+              out.write("clr ok\n")
+              import System
+              out.write("System ok " + str(System.Environment.Version) + "\n")
+          except BaseException:
+              out.write(traceback.format_exc())
+          out.close()
+          '@ | Set-Content probe.py
+          pyinstaller --noconfirm ${{ matrix.flags }} probe.py
+          Start-Process -FilePath "dist\probe\probe.exe" -Wait
+          Get-Content probe.txt
+          if (-not (Select-String -Path probe.txt -Pattern "System ok" -Quiet)) { exit 1 }
