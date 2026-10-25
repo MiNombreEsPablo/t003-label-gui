@@ -78,17 +78,21 @@ goes away with Qt (making them shared data would mean refactoring the frozen Qt 
       strip (preview only), crisp dots
 - [x] **Layout**: two columns on a wide window (controls left, the bezelled preview right, as in the Qt screenshots),
       one column on a phone; the preview stays visible while editing
-- [ ] **The other three looks**: Y2K Pink (colour changes only), Gunmetal (black LCD fields, lime text) and Handheld (four
-      olive shades, flat, Pixelify Sans, tinted preview), plus "System" (no custom look; dark/light by the OS)
-- [ ] **A theme switcher** (View › Theme, or a small picker on a phone) remembered through the store seam; first run
-      gets Y2K Blue
-- [~] Fonts for the look (title font done: Orbitron; Pixelify Sans comes with Handheld) served with the page like the label fonts; they are bundled and
+- [x] **The other three looks**: Y2K Pink (colour changes only), Gunmetal (black LCD fields, lime text) and Handheld (four
+      olive shades, flat, Pixelify Sans, tinted preview, the doodle ink tinted too), plus "System" (flat; dark/light by the OS)
+- [x] **A theme switcher**: a "Look" picker under the Print bar for now (it moves into View › Theme with the menus in
+      Phase 4), remembered through the store seam; first run gets Y2K Blue; in the browser the saved look is applied before
+      the first paint, so there is no flash
+- [x] Fonts for the look (Orbitron, VT323, Pixelify Sans: bundled, served on demand like the label fonts) served with the page like the label fonts; they are bundled and
       open-licensed already
-- [ ] Check every theme at phone and desktop widths, in the desktop shell's web engine and in a browser, and for
-      readable text and visible focus (the select styling already needed a fix in Qt's engine once)
-- **The cheap first cut is done** (Y2K Blue, layout, banner, bezel, checked at 960 px and at 390 px wide). Still to do:
-  the other three looks, the switcher, "System", the theme-wide checks, and the preset bar/menu bar that sit in the
-  Qt window's top rows (they arrive with Phase 4)
+- [x] Checked every look at 320, 360, 411, 520 and 960 px (nothing spills out of a panel, all five tabs fit), in the
+      browser and the desktop shell's engine, and for contrast (computed for every text/background pair: the Qt palettes
+      had never been checked; Gunmetal's buttons and tabs, Handheld's tabs and every look's placeholder text were below
+      4.5:1 and are fixed; left as in Qt: the Y2K banner title, 2.9:1 but large type with a hard shadow, and Gunmetal's
+      bold Print at 4.4:1). Y2K Blue itself is byte-identical to before (741 computed properties on 39 elements)
+- [x] The other looks on the phone (Pixel 7a, Chrome): fine, the pixel font and the dark controls included
+- **Phase 1.5 is done.** The preset bar and menu bar that sit in the Qt
+  window's top rows arrive with Phase 4
 
 ## Phase 2 — Images (L)
 

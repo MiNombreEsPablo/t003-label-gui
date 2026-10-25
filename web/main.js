@@ -8,6 +8,7 @@
 import { buildForm } from "./form.js";
 import { createImageWidget } from "./image.js";
 import { createDoodleWidget } from "./doodle.js";
+import { applyTheme, DEFAULT_THEME, previewColors, THEMES } from "./themes.js";
 
 const desktop = new URLSearchParams(location.search).get("client") === "desktop";
 const $ = (id) => document.getElementById(id);
@@ -155,13 +156,28 @@ async function main() {
 
   function draw(gray) {
     last = gray;
+    const { ink, paper } = previewColors(); // black on white, or the tint of the chosen look
     const image = context.createImageData(width, stickerHeight);
     for (let i = 0; i < width * stickerHeight; i++) {
-      const v = gray[i];
-      image.data.set([v, v, v, 255], i * 4);
+      image.data.set(gray[i] < 128 ? ink : paper, i * 4);
+      image.data[i * 4 + 3] = 255;
     }
     context.putImageData(image, 0, 0);
   }
+
+  // the look: remembered, applied at once; the preview and the doodle ink follow its tint
+  for (const [key, title] of THEMES) $("theme").append(new Option(title, key));
+  const retint = () => {
+    if (last) draw(last);
+    doodle.setInk(previewColors().ink);
+  };
+  $("theme").value = applyTheme(await store.get("theme", DEFAULT_THEME));
+  retint();
+  $("theme").addEventListener("input", () => {
+    applyTheme($("theme").value);
+    store.set("theme", $("theme").value);
+    retint();
+  });
 
   async function print() {
     const current = spec();

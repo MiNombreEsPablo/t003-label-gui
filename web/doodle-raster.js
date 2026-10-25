@@ -272,8 +272,8 @@ export class Doodle {
 
   // --- display -----------------------------------------------------------------------------------------------------
 
-  // The ink as black dots with alpha, plus what is being dragged out (a rubber-band shape) and the sticker's ghost.
-  toRgba(out) {
+  // The ink as dots (black unless a look tints it) with alpha, plus what is being dragged out (a rubber-band shape) and the sticker's ghost.
+  toRgba(out, ink = [0, 0, 0]) {
     let layer = this.pixels;
     let ghost = [];
     if (this.tool === "stamp" && (this._hover || this._start)) ghost = this._stampDots(this._start ? this._now : this._hover);
@@ -282,7 +282,9 @@ export class Doodle {
       this._shape(layer, this._start, this._now);
     }
     for (let i = 0; i < layer.length; i++) {
-      out[i * 4] = out[i * 4 + 1] = out[i * 4 + 2] = 0;
+      out[i * 4] = ink[0];
+      out[i * 4 + 1] = ink[1];
+      out[i * 4 + 2] = ink[2];
       out[i * 4 + 3] = layer[i] ? 255 : 0;
     }
     for (const [x, y] of ghost) {

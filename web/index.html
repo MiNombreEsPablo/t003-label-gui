@@ -4,7 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>T003 Label Studio</title>
+<link rel="stylesheet" href="themes.css">
 <link rel="stylesheet" href="style.css">
+<script>
+  /* the chosen look, before the first paint, so the page doesn't flash Y2K Blue first (the browser build only; the
+     desktop shell restores it a moment later through its own store) */
+  try { const look = JSON.parse(localStorage.getItem("t003:theme")); if (look) document.documentElement.dataset.theme = look; } catch (_) {}
+</script>
 </head>
 <body>
 <div class="app">
@@ -39,6 +45,11 @@
     <div class="actions">
       <button id="print" disabled>Print</button>
       <p id="status" role="status">Loading…</p>
+    </div>
+
+    <div class="look">
+      <label for="theme">Look</label>
+      <select id="theme"></select>
     </div>
   </section>
 </div>
