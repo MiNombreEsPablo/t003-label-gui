@@ -15,7 +15,8 @@ jobs:
           - { name: windowed, flags: "--windowed" }
           - { name: windowed-noupx-clean, flags: "--windowed --noupx --clean" }
           - { name: collect-all-pythonnet, flags: "--collect-all pythonnet --collect-all clr_loader" }
-          - { name: no-bootloader-ignore, flags: "--windowed --hidden-import clr" }
+          - { name: space-in-name, flags: "--windowed --name 'T003 Label Studio'" }
+          - { name: space-in-name-console, flags: "--name 'T003 Label Studio'" }
     name: ${{ matrix.name }}
     steps:
       - uses: actions/setup-python@v6
@@ -38,6 +39,8 @@ jobs:
           out.close()
           '@ | Set-Content probe.py
           pyinstaller --noconfirm ${{ matrix.flags }} probe.py
-          Start-Process -FilePath "dist\probe\probe.exe" -Wait
+          $exe = (Get-ChildItem dist -Recurse -Filter *.exe | Select-Object -First 1).FullName
+          Write-Host "running $exe"
+          Start-Process -FilePath $exe -Wait
           Get-Content probe.txt
           if (-not (Select-String -Path probe.txt -Pattern "System ok" -Quiet)) { exit 1 }
