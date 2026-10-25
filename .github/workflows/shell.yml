@@ -50,28 +50,30 @@ jobs:
           "dist/T003 Label Studio.app/Contents/MacOS/T003 Label Studio" --selftest
       - name: Self-test (Windows)
         if: runner.os == 'Windows'
-        shell: pwsh
+        shell: powershell  # Windows PowerShell 5: Set-Content -Stream (alternate data streams) isn't in PowerShell 7
         run: |
-          "{0:N0} MB" -f ((Get-ChildItem "dist\T003 Label Studio" -Recurse | Measure-Object Length -Sum).Sum / 1MB)
-          $exe = "dist\T003 Label Studio\T003 Label Studio.exe"
+          $dir = Join-Path (Get-Location) "dist\T003 Label Studio"
+          $exe = Join-Path $dir "T003 Label Studio.exe"
+          "{0:N0} MB" -f ((Get-ChildItem $dir -Recurse | Measure-Object Length -Sum).Sum / 1MB)
           function SelfTest($label) {
-            Remove-Item selftest.log -ErrorAction SilentlyContinue
-            $env:T003_SELFTEST_LOG = "$PWD\selftest.log"
+            $log = Join-Path (Get-Location) "selftest.log"
+            if (Test-Path $log) { Remove-Item $log }
+            $env:T003_SELFTEST_LOG = $log
             $p = Start-Process -FilePath $exe -ArgumentList "--selftest" -Wait -PassThru
-            Write-Host "=== $label : exit $($p.ExitCode)"
-            if (Test-Path selftest.log) { Get-Content selftest.log }
+            Write-Host "=== $label : exit $($p.ExitCode), log written: $(Test-Path $log)"
+            if (Test-Path $log) { Get-Content $log | ForEach-Object { Write-Host $_ } }
             return $p.ExitCode
           }
           $clean = SelfTest "files as built"
           # A downloaded zip's files carry a "from the internet" mark: mark ours the same way, then unblock them like a user would
-          $files = Get-ChildItem "dist\T003 Label Studio" -Recurse -File
-          $files | ForEach-Object { try { Set-Content -Path $_.FullName -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3" -ErrorAction Stop } catch { Write-Host "could not mark $($_.Exception.Message)" } }
+          $files = Get-ChildItem $dir -Recurse -File
+          foreach ($f in $files) { Set-Content -Path $f.FullName -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3" -ErrorAction SilentlyContinue }
           Write-Host ("marked: " + (@($files | Where-Object { Get-Item $_.FullName -Stream Zone.Identifier -ErrorAction SilentlyContinue }).Count) + " of " + $files.Count)
           $marked = SelfTest "files marked as downloaded"
-          Get-ChildItem "dist\T003 Label Studio" -Recurse | Unblock-File
+          Get-ChildItem $dir -Recurse -File | Unblock-File
           $unblocked = SelfTest "marked, then Unblock-File"
-          Write-Host "clean=$clean marked=$marked unblocked=$unblocked"
-          if ($clean -ne 0) { throw "the self-test fails on the files as built" }
+          Write-Host "RESULT clean=$clean marked=$marked unblocked=$unblocked"
+          if ($clean -ne 0) { exit 1 }
       - name: Diagnose the Windows toolkit
         if: failure() && runner.os == 'Windows'
         shell: pwsh
