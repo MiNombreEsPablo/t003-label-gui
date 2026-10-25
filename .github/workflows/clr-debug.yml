@@ -11,18 +11,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: console, flags: "" }
-          - { name: windowed, flags: "--windowed" }
-          - { name: windowed-noupx-clean, flags: "--windowed --noupx --clean" }
-          - { name: collect-all-pythonnet, flags: "--collect-all pythonnet --collect-all clr_loader" }
-          - { name: space-in-name, flags: "--windowed --name 'T003 Label Studio'" }
-          - { name: space-in-name-console, flags: "--name 'T003 Label Studio'" }
+          - { name: pillow, pre: "import PIL.Image, PIL.ImageFont, PIL.ImageDraw", extra: "pillow" }
+          - { name: fonttools-qrcode, pre: "import fontTools.ttLib, qrcode", extra: "fonttools qrcode" }
+          - { name: pyusb-libusb, pre: "import usb.core, libusb_package; libusb_package.get_libusb1_backend()", extra: "pyusb libusb-package", flags: "--collect-all libusb_package" }
+          - { name: webview-import, pre: "import webview", extra: "" }
+          - { name: bleak, pre: "import bleak", extra: "bleak" }
     name: ${{ matrix.name }}
     steps:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - run: python -m pip install pyinstaller pywebview
+      - run: python -m pip install pyinstaller pywebview ${{ matrix.extra }}
       - name: Freeze a probe
         shell: pwsh
         run: |
@@ -30,6 +29,8 @@ jobs:
           import sys, traceback
           out = open("probe.txt", "w")
           try:
+              PRE
+              out.write("pre ok\n")
               import clr
               out.write("clr ok\n")
               import System
@@ -37,10 +38,8 @@ jobs:
           except BaseException:
               out.write(traceback.format_exc())
           out.close()
-          '@ | Set-Content probe.py
-          pyinstaller --noconfirm ${{ matrix.flags }} probe.py
-          $exe = (Get-ChildItem dist -Recurse -Filter *.exe | Select-Object -First 1).FullName
-          Write-Host "running $exe"
-          Start-Process -FilePath $exe -Wait
+          '@.Replace("PRE", "${{ matrix.pre }}") | Set-Content probe.py
+          pyinstaller --noconfirm --windowed ${{ matrix.flags }} probe.py
+          Start-Process -FilePath "dist\probe\probe.exe" -Wait
           Get-Content probe.txt
           if (-not (Select-String -Path probe.txt -Pattern "System ok" -Quiet)) { exit 1 }
