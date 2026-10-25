@@ -4,7 +4,7 @@ import io
 import pytest
 from PIL import Image
 
-from t003gui import composition, core, doodle
+from t003gui import composition, core, doodle, stickers
 from t003gui.spec import SH, W, LabelSpec
 
 
@@ -73,3 +73,64 @@ def test_every_sticker_has_ink_and_fits_the_sticker_at_every_size():
             assert m.size[1] <= SH
         hist = stickers.mask(name, 1).histogram()
         assert hist[0] + hist[255] == GRID_DOTS
+
+
+# --- the vocabulary clients draw with (doodle.describe) ---------------------------------------------------------------
+
+def test_describe_is_plain_json_and_complete():
+    import json
+
+    info = json.loads(json.dumps(doodle.describe()))
+    assert [t for t, _ in info["tools"]] == list(doodle.TOOLS)
+    assert [i for i, _, _ in info["inks"]] == list(doodle.INKS)
+    assert set(info["uses_ink"]) <= set(doodle.TOOLS) and set(info["uses_brush"]) <= set(doodle.TOOLS)
+    assert all(len(rows) == 4 and all(len(r) == 4 for r in rows) for _, _, rows in info["inks"])
+    assert info["width"] == W and info["height"] == SH
+    lo, hi, start = info["brush"]
+    assert lo <= start <= hi
+    lo, hi, start = info["sticker_scale"]
+    assert lo <= start <= hi == stickers.MAX_SCALE
+
+
+def test_the_vocabulary_matches_the_qt_canvas_for_now():
+    widgets = pytest.importorskip("t003gui.widgets")  # needs PySide6; goes away with the Qt UI
+    panels = pytest.importorskip("t003gui.panels")
+    canvas = widgets.DoodleCanvas
+    assert doodle.TOOLS == canvas.TOOLS and doodle.INKS == canvas.INKS
+    assert doodle.UNDO_LIMIT == canvas.UNDO_LIMIT and doodle.SPRAY_MS == canvas.SPRAY_MS
+    assert doodle.USES_INK == panels.DoodlePanel.USES_INK and doodle.USES_BRUSH == panels.DoodlePanel.USES_BRUSH
+    for value, label in doodle.LABELS.items():
+        if value in panels.LABELS:
+            assert label == panels.LABELS[value], value
+
+
+def test_stickers_reach_clients_as_bitmaps_that_match_the_masks():
+    import json
+
+    from t003gui import api
+
+    published = json.loads(api.options())["stickers"]
+    assert set(published) == set(stickers.STICKERS)
+    for name, sticker in published.items():
+        mask = stickers.mask(name, 1)
+        assert len(sticker["rows"]) == stickers.GRID and all(len(r) == stickers.GRID for r in sticker["rows"])
+        assert sticker["label"] == stickers.STICKERS[name][0]
+        for y, row in enumerate(sticker["rows"]):
+            assert all((c == "1") == bool(mask.getpixel((x, y))) for x, c in enumerate(row)), name
+        assert "1" in "".join(sticker["rows"])  # none is empty
+
+
+def test_a_browser_canvas_png_is_a_valid_doodle():
+    """A browser writes the ink as an RGBA PNG (white = ink, on opaque black), not as the 1-bit PNG `encode` makes."""
+    import base64
+    import io
+
+    from PIL import Image
+
+    canvas = Image.new("RGBA", (W, SH), (0, 0, 0, 255))
+    canvas.paste((255, 255, 255, 255), (10, 20, 30, 40))
+    out = io.BytesIO()
+    canvas.save(out, "PNG")
+    mask = doodle.decode(base64.b64encode(out.getvalue()).decode())
+    assert mask is not None and mask.getbbox() == (10, 20, 30, 40) and mask.getpixel((15, 25)) == 255
+    assert mask.getpixel((0, 0)) == 0

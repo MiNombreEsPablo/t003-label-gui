@@ -55,7 +55,7 @@ def test_labels_match_the_qt_window_for_now():
 def test_the_form_is_in_the_options_and_is_plain_json():
     options = json.loads(api.options())
     assert options["form"] == json.loads(json.dumps(form.describe()))
-    assert [t["id"] for t in options["form"]["tabs"]] == ["content", "text", "image", "decoration"]
+    assert [t["id"] for t in options["form"]["tabs"]] == ["content", "text", "image", "decoration", "doodle"]
 
 
 def test_hints_say_when_image_only_drops_the_text():
@@ -85,3 +85,8 @@ def test_every_choice_has_the_wording_the_qt_window_uses():
         for value, label, _group in f.choices:
             if value in panels.LABELS:
                 assert label == panels.LABELS[value], value
+
+
+def test_the_doodle_is_the_last_control_to_get_a_place_in_the_schema():
+    assert form.PENDING == frozenset()
+    assert next(f for f in form.FIELDS if f.kind == "doodle").tab == "doodle"

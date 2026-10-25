@@ -108,11 +108,20 @@ goes away with Qt (making them shared data would mean refactoring the frozen Qt 
 
 ## Phase 3 — Doodle (L)
 
-- [ ] Drawing surface over the preview, one dot per pixel, hard-edged, pointer events so touch and pen work
-- [ ] Tools: pen, line, box, oval, eraser; brush size; undo (30 steps); clear
-- [ ] Stickers: the 12 masks come from the engine (`api` returns them), with a size; place on click
-- [ ] The doodle crosses as the spec's base64 PNG mask (exactly W×SH, 1-bit), so presets, files and the CLI carry it
-- [ ] Faint underlay of the rest of the label while the tab is open
+- [x] Drawing surface over the preview, one dot per pixel, hard-edged, pointer events so mouse, touch and pen work
+      (`web/doodle.js`; the engine is `web/doodle-raster.js`, pure functions with 15 Node tests)
+- [x] Tools: all ten of the Qt canvas (round, square and calligraphy brushes, spray, line, rectangle, ellipse, paint
+      bucket, sticker, eraser), five dither inks, brush size, undo (30), Ctrl+Z, clear
+- [x] Stickers: the 12 bitmaps come from the engine (`api.options()["stickers"]`), a picker grid, size 1–6×, ghost under
+      the pointer, placed on release
+- [x] The doodle crosses as the spec's base64 PNG mask (W×SH, white = ink), so presets, files and the CLI carry it. Stored
+      doodles load back; a damaged one becomes empty
+- [ ] (for Phase 4) Re-encode with `doodle.encode` when saving a preset or file: a browser canvas PNG is 4–8 KB of text,
+      the engine's 1-bit PNG a fraction of that
+- [x] The rest of the label shows through while drawing: the engine renders the label without its doodle, the overlay
+      draws the ink on it, the bucket uses that picture to stop at the text
+- Checked: 9 doodles built through the page (every tool kind, patterned inks, a bucket fill stopped by text) decode and
+  render natively bit for bit; real mouse input in the browser; the desktop shell's engine; **touch on the phone: to do**
 
 ## Phase 4 — Presets, files, themes, shortcuts (L)
 

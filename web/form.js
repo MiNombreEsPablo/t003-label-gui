@@ -2,7 +2,8 @@
 // without touching this file. The doodle and the printer are not described there; they have their own widgets, and
 // the picture chooser is drawn by a widget the page passes in.
 //   buildForm(schema, defaults, onChange, widgets) -> { tabs, output, read(), write(spec) }
-// onChange(field) is called after the user changes a control. widgets.image(field, notify) -> a control (below).
+// onChange(field) is called after the user changes a control; onTab(id) when a tab is opened (also for the first one).
+// widgets.image / widgets.doodle(field, notify) -> a control (below), drawn by the page.
 //
 // Every control is { root: Element, get(), set(value), disable(bool) } with its value in the label's own units.
 
@@ -16,7 +17,7 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 // A slider and its number box. Log sliders spread a range like 0.3-3 evenly around `neutral` (two log scales meeting at
 // the middle, as the Qt app does), so "no change" sits at the centre of the track like the zero of a symmetric slider.
-function makeSlider(field, startValue, notify) {
+export function makeSlider(field, startValue, notify) {
   const { minimum: min, maximum: max, step } = field;
   const places = decimals(step);
   const toInt = (v) => Math.round(v / step);
@@ -79,6 +80,7 @@ function makeSlider(field, startValue, notify) {
 
 function makeControl(field, startValue, notify, widgets) {
   if (field.kind === "image") return widgets.image(field, notify);
+  if (field.kind === "doodle") return widgets.doodle(field, notify);
   if (field.kind === "slider") return makeSlider(field, startValue, notify);
   const id = `f-${field.name}`;
   let input;
@@ -156,7 +158,9 @@ function layoutFields(fields, controls) {
     const first = group[0];
     const allToggles = group.every((f) => f.kind === "toggle");
     let row;
-    if (allToggles) {
+    if (first.kind === "doodle") {
+      row = controls.get(first.name).root; // the doodle's own panel, with its own rows
+    } else if (allToggles) {
       const checks = group.map((f) => el("label", { className: "check" }, controls.get(f.name).root, f.label));
       row = el("div", { className: first.row ? "field toggles" : "field toggles bare" },
         ...(first.row ? [el("span", { className: "row-title" }, first.row)] : []),
@@ -176,7 +180,7 @@ function layoutFields(fields, controls) {
   return { rows, nodes };
 }
 
-export function buildForm(schema, defaults, onChange, widgets = {}) {
+export function buildForm(schema, defaults, onChange, widgets = {}, onTab = () => {}) {
   const fields = schema.fields;
   const byName = new Map(fields.map((f) => [f.name, f]));
   const controls = new Map();
@@ -269,6 +273,7 @@ export function buildForm(schema, defaults, onChange, widgets = {}) {
       panels[i].hidden = i !== index;
     });
     if (focus) buttons[index].focus();
+    onTab(schema.tabs[index].id);
   }
   select(0, false);
 

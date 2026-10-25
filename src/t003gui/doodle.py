@@ -41,3 +41,33 @@ def decode(data: str) -> Image.Image | None:
         return img.convert("L").point([0] * 128 + [255] * 128)
     except (binascii.Error, ValueError, OSError, UnidentifiedImageError, Image.DecompressionBombError):
         return None
+
+
+# --- the drawing tools, as data: a client draws, the engine says what there is to draw with --------------------------
+
+TOOLS = ("pen", "square", "italic", "spray", "line", "box", "oval", "fill", "stamp", "eraser")
+INKS = {  # 4x4 dither tiles ("#" is ink), anchored to the label so neighbouring strokes line up
+    "solid": ("####",) * 4, "half": ("#.#.", ".#.#", "#.#.", ".#.#"), "quarter": ("#.#.", "....", "#.#.", "...."),
+    "lines": ("####", "....", "####", "...."), "diagonal": ("##..", ".##.", "..##", "#..#"),
+}
+USES_INK = ("pen", "square", "italic", "line", "box", "oval", "fill")  # tools that paint with the chosen pattern
+USES_BRUSH = ("pen", "square", "italic", "spray", "line", "box", "oval", "eraser")  # tools that have a width
+BRUSH = (1, 24, 4)  # width in dots: smallest, largest, start
+STICKER_SCALE = (1, 6, 2)  # stickers are enlarged by whole numbers: smallest, largest, start
+UNDO_LIMIT = 30
+SPRAY_MS = 25  # how often the spray can sprays while the button is held
+LABELS = {
+    "pen": "Round brush", "square": "Square brush", "italic": "Calligraphy", "spray": "Spray can", "line": "Line",
+    "box": "Rectangle", "oval": "Ellipse", "fill": "Paint bucket", "stamp": "Sticker", "eraser": "Eraser",
+    "solid": "Solid", "half": "50 % checker", "quarter": "25 % dots", "lines": "Lines", "diagonal": "Diagonal lines",
+}
+
+
+def describe() -> dict:
+    """The drawing tools for a client: what exists, how it is worded, which controls each tool uses, the limits."""
+    return {
+        "width": W, "height": SH,
+        "tools": [[t, LABELS[t]] for t in TOOLS], "inks": [[i, LABELS[i], list(rows)] for i, rows in INKS.items()],
+        "uses_ink": list(USES_INK), "uses_brush": list(USES_BRUSH),
+        "brush": list(BRUSH), "sticker_scale": list(STICKER_SCALE), "undo_limit": UNDO_LIMIT, "spray_ms": SPRAY_MS,
+    }

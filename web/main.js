@@ -7,6 +7,7 @@
 
 import { buildForm } from "./form.js";
 import { createImageWidget } from "./image.js";
+import { createDoodleWidget } from "./doodle.js";
 
 const desktop = new URLSearchParams(location.search).get("client") === "desktop";
 const $ = (id) => document.getElementById(id);
@@ -57,8 +58,11 @@ async function main() {
     try {
       do {
         again = false;
-        const { pixels, hints } = await engine.preview(spec());
+        // while drawing, the engine renders the label without its doodle: the overlay shows the ink, and the bucket
+        // needs the label alone to know where the text is
+        const { pixels, hints } = await engine.preview(activeTab === "doodle" ? { ...spec(), doodle: "" } : spec());
         draw(pixels);
+        if (activeTab === "doodle") doodle.setUnderlay(pixels);
         $("hint").textContent = hints.join(" ");
         $("hint").hidden = hints.length === 0;
       } while (again);
@@ -88,9 +92,19 @@ async function main() {
     }
   }
   const picture = createImageWidget(useFile, (text) => status(text, true));
+  const doodle = createDoodleWidget(options);
+  document.querySelector(".paper").append(doodle.overlay);
+  let activeTab = "";
   const form = buildForm(options.form, options.defaults, (field) => {
-    if (field.tab !== "output") refresh(); // copies and darkness don't change the picture
-  }, { image: picture.make });
+    if (field.tab === "output") return; // copies and darkness don't change the picture
+    if (field.name === "doodle" && activeTab === "doodle") return; // the overlay already shows what was drawn
+    refresh();
+  }, { image: picture.make, doodle: doodle.make }, (id) => {
+    const wasDrawing = activeTab === "doodle";
+    activeTab = id;
+    doodle.setActive(id === "doodle");
+    if (wasDrawing || id === "doodle") refresh(); // the doodle moves between the engine's picture and the overlay
+  });
 
   const pictureIn = (transfer) => Array.from((transfer && transfer.files) || []).find((f) => f.type.startsWith("image/"));
   addEventListener("dragover", (event) => {

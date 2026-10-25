@@ -4,8 +4,8 @@ A client (the web UI today) renders `describe()` instead of repeating the lists 
 and labels. Adding a choice in `spec.py` therefore shows up everywhere; adding a new `LabelSpec` field fails
 tests/test_form.py until it is described here (or listed in `PENDING`, the controls still to be built by hand).
 
-Not described here, because each needs its own widget: the doodle and the printer. The picture chooser is a field of
-kind "image": the schema places it, the client draws it.
+Not described here: the printer. The picture chooser and the doodle are fields of kind "image" and "doodle": the
+schema places them, the client draws them (the doodle's tools are described by `doodle.describe()`).
 No Qt in here.
 """
 from __future__ import annotations
@@ -27,9 +27,7 @@ LABELS = {  # how a choice is worded when `value.capitalize()` isn't enough
 OUTPUT = "output"  # not a tab: shown next to the Print button, whatever tab is open
 
 # LabelSpec fields without a control in the schema yet. Each phase of docs/web-port.md moves some of them out.
-PENDING = frozenset({
-    "doodle",  # the Doodle tab (phase 3)
-})
+PENDING = frozenset()  # (the doodle was the last one)
 
 
 @dataclass(frozen=True)
@@ -48,7 +46,7 @@ class Tab:
 @dataclass(frozen=True)
 class Field:
     name: str  # the LabelSpec field it sets
-    kind: str  # "text" | "textarea" | "choice" | "toggle" | "number" | "slider" | "image"
+    kind: str  # "text" | "textarea" | "choice" | "toggle" | "number" | "slider" | "image" | "doodle"
     label: str
     tab: str  # a tab id, or OUTPUT
     row: str = ""  # fields with the same row title sit side by side under it (Bold and Italic: "Style")
@@ -98,6 +96,7 @@ TABS = (
     Tab("text", "Text"),
     Tab("image", "Image", needs="image_path", needs_hint="Choose an image first (Content tab).", reset=_IMAGE_FIELDS),
     Tab("decoration", "Decoration"),
+    Tab("doodle", "Doodle"),
 )
 
 FIELDS = (
@@ -137,6 +136,7 @@ FIELDS = (
           toggle="border"),
     Field("background", "choice", "Background", "decoration", choices=_choices(spec.BACKGROUNDS)),
     Field("bars", "toggle", "Under-construction bars", "decoration"),
+    Field("doodle", "doodle", "Doodle", "doodle"),  # the drawing tools are the client's own; the schema places the tab
     Field("copies", "number", "Copies", OUTPUT, minimum=1, maximum=99),
     Field("density", "number", "Darkness", OUTPUT, minimum=0, maximum=15),
 )

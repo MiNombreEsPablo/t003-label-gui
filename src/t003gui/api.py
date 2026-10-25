@@ -13,7 +13,7 @@ import json
 from dataclasses import asdict
 from pathlib import PurePath
 
-from . import bluetooth, fonts, form, imaging, render, spec, stickers
+from . import bluetooth, doodle, fonts, form, imaging, render, spec, stickers
 from .protocol import STATUS_QUERY, status_problems, tspl  # noqa: F401
 
 
@@ -36,6 +36,11 @@ def preview_pixels(raw: str | bytes | dict) -> bytes:
 def tspl_bytes(raw: str | bytes | dict) -> bytes:
     """The complete TSPL payload for a label, ready to send over any transport."""
     return tspl(label_from_json(raw))
+
+
+def _rows(sticker: str):
+    mask = stickers.mask(sticker, 1)
+    return [[mask.getpixel((x, y)) for x in range(mask.width)] for y in range(mask.height)]
 
 
 def adopt_image(path: str, name: str = "") -> str:
@@ -84,6 +89,10 @@ def options() -> str:
         ],
         "bluetooth": {"name_prefix": bluetooth.NAME_PREFIX, "ble": bluetooth.BLE, "status_query": list(STATUS_QUERY)},
         "form": form.describe(),
-        "stickers": {name: label for name, (label, _) in stickers.STICKERS.items()},
+        "stickers": {  # each as 24 rows of "0"/"1" (1 = ink), for a client to draw and enlarge by whole numbers
+            name: {"label": label, "rows": ["".join("1" if p else "0" for p in row) for row in _rows(name)]}
+            for name, (label, _) in stickers.STICKERS.items()
+        },
+        "doodle": doodle.describe(),
         "defaults": asdict(spec.LabelSpec()),
     })
