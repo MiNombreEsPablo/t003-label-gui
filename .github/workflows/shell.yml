@@ -53,12 +53,24 @@ jobs:
         shell: pwsh
         run: |
           "{0:N0} MB" -f ((Get-ChildItem "dist\T003 Label Studio" -Recurse | Measure-Object Length -Sum).Sum / 1MB)
-          # A downloaded zip's files carry a "from the internet" mark that .NET refuses to load code from: mark ours the same way
-          Get-ChildItem "dist\T003 Label Studio" -Recurse -Include *.dll,*.pyd | ForEach-Object { Set-Content -Path $_.FullName -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3" }
-          $env:T003_SELFTEST_LOG = "$PWD\selftest.log"
-          $p = Start-Process -FilePath "dist\T003 Label Studio\T003 Label Studio.exe" -ArgumentList "--selftest" -Wait -PassThru
-          if (Test-Path selftest.log) { Get-Content selftest.log }
-          if ($p.ExitCode -ne 0) { throw "selftest exited with $($p.ExitCode)" }
+          $exe = "dist\T003 Label Studio\T003 Label Studio.exe"
+          function SelfTest($label) {
+            Remove-Item selftest.log -ErrorAction SilentlyContinue
+            $env:T003_SELFTEST_LOG = "$PWD\selftest.log"
+            $p = Start-Process -FilePath $exe -ArgumentList "--selftest" -Wait -PassThru
+            Write-Host "=== $label : exit $($p.ExitCode)"
+            if (Test-Path selftest.log) { Get-Content selftest.log }
+            return $p.ExitCode
+          }
+          $clean = SelfTest "files as built"
+          # A downloaded zip's files carry a "from the internet" mark: mark ours the same way, then unblock them like a user would
+          $files = Get-ChildItem "dist\T003 Label Studio" -Recurse -File
+          $files | ForEach-Object { Set-Content -Path $_.FullName -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3" }
+          $marked = SelfTest "files marked as downloaded"
+          Get-ChildItem "dist\T003 Label Studio" -Recurse | Unblock-File
+          $unblocked = SelfTest "marked, then Unblock-File"
+          Write-Host "clean=$clean marked=$marked unblocked=$unblocked"
+          if ($clean -ne 0) { throw "the self-test fails on the files as built" }
       - name: Diagnose the Windows toolkit
         if: failure() && runner.os == 'Windows'
         shell: pwsh
