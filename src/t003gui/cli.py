@@ -5,6 +5,7 @@ import argparse
 import sys
 
 from . import __version__, composition, core
+from .spec import has_content
 from .presets import PresetStore
 
 EXAMPLES = r"""
@@ -95,7 +96,7 @@ def main(argv: list[str] | None = None) -> None:
     for flag in ("mirror", "flip", "invert"):
         if getattr(args, flag):
             setattr(spec, flag, True)
-    if not (spec.text or spec.qr or spec.image_path):
+    if not has_content(spec):
         p.error("give some text, --qr, --image, --preset or --file")
 
     try:

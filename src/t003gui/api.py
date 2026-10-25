@@ -95,4 +95,5 @@ def options() -> str:
         },
         "doodle": doodle.describe(),
         "defaults": asdict(spec.LabelSpec()),
+        "content_fields": list(spec.CONTENT_FIELDS),  # a label with none of these set has nothing to print
     })
