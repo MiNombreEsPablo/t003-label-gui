@@ -7,12 +7,32 @@ Each OS must build for itself (PyInstaller does not cross-compile); the release 
 """
 import os
 import platform
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SYSTEM = platform.system()
+
+
+UNUSED_QT = ("Qt3DAnimation", "Qt3DCore", "Qt3DExtras", "Qt3DInput", "Qt3DLogic", "Qt3DRender", "QtCharts", "QtDataVisualization",
+             "QtDesigner", "QtGraphs", "QtHelp", "QtMultimedia", "QtMultimediaWidgets", "QtNetworkAuth", "QtNfc", "QtPdf",
+             "QtPdfWidgets", "QtQuick3D", "QtRemoteObjects", "QtScxml", "QtSensors", "QtSerialBus", "QtSerialPort", "QtSpatialAudio",
+             "QtSql", "QtStateMachine", "QtSvg", "QtSvgWidgets", "QtTest", "QtTextToSpeech", "QtUiTools", "QtWebSockets", "QtXml")
+
+
+def prune(folder: Path) -> None:
+    """Drop what the web window doesn't use from a Linux bundle: Qt's own translations and QML, and every Chromium
+    language pack but English."""
+    qt = next(folder.rglob("PySide6/Qt"), None)
+    if qt is None:
+        return
+    for name in ("translations", "qml"):
+        shutil.rmtree(qt / name, ignore_errors=True)
+    for pack in qt.rglob("qtwebengine_locales/*.pak"):
+        if pack.name != "en-US.pak":
+            pack.unlink()
 
 
 def main() -> None:
@@ -45,6 +65,9 @@ def main() -> None:
         for other in ("gtk", "cef", "android", "cocoa", "winforms", "qt", "edgechromium", "mshtml"):
             if other != mine and not (SYSTEM == "Windows" and other == "edgechromium"):
                 args += ["--exclude-module", f"webview.platforms.{other}"]
+        if SYSTEM == "Linux":  # PySide6 modules the web window never imports (QtWebEngine needs none of them from Python)
+            for module in UNUSED_QT:
+                args += ["--exclude-module", f"PySide6.{module}"]
         for foreign in ("gi", "PyQt5", "PyQt6", "PySide2") + (("PySide6", "qtpy") if mine != "qt" else ()):
             args += ["--exclude-module", foreign]
     icon = {"Windows": "t003-label-gui.ico", "Darwin": "t003-label-gui.icns"}.get(SYSTEM)
@@ -54,6 +77,8 @@ def main() -> None:
         args += ["--osx-bundle-identifier", "io.github.minombreespablo.t003labelstudio"]
     args.append(str(ROOT / "packaging" / ("entry_shell.py" if shell else "entry.py")))
     subprocess.check_call(args, cwd=ROOT)
+    if shell and SYSTEM == "Linux":
+        prune(ROOT / "dist" / name)
 
 
 if __name__ == "__main__":

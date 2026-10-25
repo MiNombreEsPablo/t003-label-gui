@@ -39,6 +39,9 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           du -sh dist/t003-label-studio
+          echo "--- the biggest files, and folders"
+          find dist/t003-label-studio -type f -printf '%s %P\n' | sort -rn | head -25 | awk '{printf "%7.1f MB  %s\n", $1/1e6, $2}'
+          du -h --max-depth=3 dist/t003-label-studio | sort -rh | head -12
           dist/t003-label-studio/t003-label-studio --selftest
       - name: Self-test (macOS)
         if: runner.os == 'macOS'
