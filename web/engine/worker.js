@@ -77,6 +77,11 @@ const handlers = {
       throw new Error(pythonMessage(e));
     }
   },
+  async exportPng({ spec, scale }) {
+    await ensureFonts(spec);
+    const data = takeBytes(api.export_png(spec, scale));
+    return { data, name: `${api.file_stem(spec)}.png` };
+  },
   async tspl({ spec }) {
     await ensureFonts(spec);
     return takeBytes(api.tspl_bytes(spec));
@@ -92,7 +97,7 @@ const handlers = {
 self.onmessage = async ({ data: { id, method, args } }) => {
   try {
     const result = await handlers[method](args || {});
-    const buffers = result instanceof Uint8Array ? [result.buffer] : result && result.pixels instanceof Uint8Array ? [result.pixels.buffer] : [];
+    const buffers = result instanceof Uint8Array ? [result.buffer] : result && result.pixels instanceof Uint8Array ? [result.pixels.buffer] : result && result.data instanceof Uint8Array ? [result.data.buffer] : [];
     self.postMessage({ id, result }, buffers);
   } catch (e) {
     self.postMessage({ id, error: String((e && e.message) || e) });

@@ -23,6 +23,11 @@ export function createEngine() {
       if (result.error) throw new Error(result.error);
       return result.path;
     },
+    async exportPng(spec, scale) {
+      const result = await api().export_png(JSON.stringify(spec), scale);
+      if (result.error) throw new Error(result.error);
+      return { data: fromBase64(result.data), name: result.name };
+    },
     async preview(spec) {
       const result = await api().preview(JSON.stringify(spec));
       return { pixels: fromBase64(result.pixels), hints: result.hints };

@@ -132,7 +132,12 @@ goes away with Qt (making them shared data would mean refactoring the frozen Qt 
 - [ ] Presets: save, load, delete (browser: localStorage; desktop: `presets.py` through the bridge)
 - [ ] `.t003label`: open and save with the image embedded (engine functions behind `api`, so the format has one
       implementation); drag and drop of either kind of file
-- [ ] Export PNG (scale 1–6) and copy the label as an image (Clipboard API; desktop through the bridge if needed)
+- [x] Export PNG and copy the label as an image (`export-image` branch): "Save image" and "Copy image" under the preview,
+      with the Qt app's two sizes (as printed, 4×) and its file naming (the label's first line), both from the engine
+      (`api.export_png`, `spec.file_stem`) so every client agrees; a new **files** seam (browser: a download and the
+      Clipboard API; desktop shell: the native save dialog through the bridge). The saved PNGs are pixel-identical to the
+      native engine's. They move into File / Edit menus with the menu bar. *Copy* was not exercised with a real click in
+      the browser here (a clipboard write hung the test tab, which was not focused): try it on the phone and the desktop
 - (themes moved to Phase 1.5)
 - [ ] A menu bar or toolbar for File / Edit / View / Help, and the shortcuts (Ctrl+O/S/E/P/V/Shift+C)
 - [ ] Accessible names on every control and a tested keyboard order (Qt had both; so should the web UI)
