@@ -40,6 +40,18 @@
   </section>
 
   <section class="controls">
+    <div class="presets">
+      <label for="preset">Preset</label>
+      <select id="preset"></select>
+      <button type="button" id="preset-save" class="gel">Save…</button>
+      <button type="button" id="preset-delete" class="gel" disabled>Delete</button>
+      <form id="preset-name-form" class="presets-name" hidden>
+        <input id="preset-name" placeholder="Preset name" maxlength="60" aria-label="Preset name" autocomplete="off">
+        <button type="submit" class="gel">Save</button>
+        <button type="button" id="preset-cancel" class="gel">Cancel</button>
+      </form>
+    </div>
+
     <div id="form"></div>
     <div id="output"></div>
 

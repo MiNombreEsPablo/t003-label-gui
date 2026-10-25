@@ -66,6 +66,7 @@ def test_the_server_serves_the_page_the_engine_and_fonts_but_not_arbitrary_files
         assert get("/fonts/DejaVuSans.ttf")[0] == 200 and get("/fonts/nope.ttf")[0] == 404
         assert get("/engine/manifest.json")[1] == "application/json"
         assert get("/files/browser.js")[0] == 200 and get("/files/bridge.js")[0] == 200
+        assert get("/presets/local.js")[0] == 200 and get("/presets/bridge.js")[0] == 200
         assert get("/assets/icon-mark.png")[0] == 200 and get("/assets/icon-mark.png")[1] == "image/png"
         assert get("/assets/icon-256.png")[0] == 404  # only what the page uses
         assert get("/dev_server.py")[0] == 404  # python in web/ is never served

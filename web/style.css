@@ -300,6 +300,13 @@ body.dropping .bezel { outline: 3px dashed var(--focus); outline-offset: 4px; }
 .reset-row.buttons { justify-content: flex-start; gap: 8px; }
 .doodle-hint { margin: 8px 0 0; }
 
+/* the preset bar above the tabs */
+.presets { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+.presets > label { color: var(--text); }
+.presets select { flex: 1 1 9rem; width: auto; min-width: 0; }
+.presets-name { display: flex; flex: 1 1 100%; gap: 8px; }
+.presets-name input { flex: 1; min-width: 0; }
+
 /* saving and copying the label as an image, under the preview */
 .stage-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
 .stage-tools select { flex: 1 1 11rem; width: auto; min-width: 0; }

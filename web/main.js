@@ -2,7 +2,8 @@
 //   engine:  options(), preview(spec) -> {pixels, hints}                 (engine/pyodide.js or engine/bridge.js)
 //   printer: modes, print(spec, {mode, address}) -> {problems, error}    (printer/ble.js or printer/bridge.js)
 //   store:   get(key, fallback), set(key, value)                         (store/local.js or store/bridge.js)
-//   files:   save(bytes, name, mime), copyImage(png)                     (files/browser.js or files/bridge.js)
+//   files:   save(bytes, name, mime, kind), copyImage(png)              (files/browser.js or files/bridge.js)
+//   presets: list(), get(name), save(name, label), delete(name)          (presets/local.js or presets/bridge.js)
 // The desktop shell opens this page with ?client=desktop; anywhere else it is the browser build.
 // The label's simple controls are built from the description the engine provides (form.js).
 
@@ -20,24 +21,32 @@ const status = (text, isError = false) => {
 
 async function connectSeams() {
   if (desktop) {
-    const [engineModule, printerModule, storeModule, filesModule] = await Promise.all([
+    const [engineModule, printerModule, storeModule, filesModule, presetsModule] = await Promise.all([
       import("./engine/bridge.js"), import("./printer/bridge.js"), import("./store/bridge.js"), import("./files/bridge.js"),
+      import("./presets/bridge.js"),
     ]);
     const engine = engineModule.createEngine();
     await engine.init();
-    return { engine, store: storeModule.createStore(), files: filesModule.createFiles(), makePrinter: () => printerModule.createPrinter() };
+    return {
+      engine, store: storeModule.createStore(), files: filesModule.createFiles(), presets: presetsModule.createPresets(),
+      makePrinter: () => printerModule.createPrinter(),
+    };
   }
-  const [engineModule, printerModule, storeModule, filesModule] = await Promise.all([
+  const [engineModule, printerModule, storeModule, filesModule, presetsModule] = await Promise.all([
     import("./engine/pyodide.js"), import("./printer/ble.js"), import("./store/local.js"), import("./files/browser.js"),
+    import("./presets/local.js"),
   ]);
   const engine = engineModule.createEngine(new URL("./", location.href).href);
   await engine.init(status);
-  return { engine, store: storeModule.createStore(), files: filesModule.createFiles(), makePrinter: (options) => printerModule.createPrinter(engine, options) };
+  return {
+    engine, store: storeModule.createStore(), files: filesModule.createFiles(), presets: presetsModule.createPresets(engine),
+    makePrinter: (options) => printerModule.createPrinter(engine, options),
+  };
 }
 
 async function main() {
   status("Starting…");
-  const { engine, store, files, makePrinter } = await connectSeams();
+  const { engine, store, files, presets, makePrinter } = await connectSeams();
   const options = await engine.options();
   const printer = makePrinter(options);
   const { width, sticker_height: stickerHeight } = options.geometry;
@@ -219,6 +228,81 @@ async function main() {
       status("Copied the label to the clipboard.");
     } catch (e) {
       status(`Couldn't copy the image: ${e.message}`, true);
+    }
+  });
+
+  // presets: named styles (the label without its picture); choosing one replaces the label, as in the Qt app
+  const NO_PRESET = "— presets —";
+  async function reloadPresets(select = "") {
+    const names = await presets.list();
+    $("preset").replaceChildren(new Option(NO_PRESET, ""), ...names.map((name) => new Option(name, name)));
+    $("preset").value = names.includes(select) ? select : "";
+    resetDelete();
+  }
+  let deleteTimer = null;
+  function resetDelete() {
+    clearTimeout(deleteTimer);
+    $("preset-delete").textContent = "Delete";
+    $("preset-delete").disabled = !$("preset").value;
+  }
+  function closeNameForm() {
+    $("preset-name-form").hidden = true;
+    $("preset-save").hidden = false;
+  }
+  try {
+    await reloadPresets();
+  } catch (_) {
+    document.querySelector(".presets").hidden = true; // storage that can't even be read: no preset bar rather than a broken one
+  }
+  $("preset").addEventListener("input", async () => {
+    resetDelete();
+    const name = $("preset").value;
+    if (!name) return;
+    const loaded = await presets.get(name);
+    if (!loaded) {
+      status(`There is no preset called “${name}”.`, true);
+      return reloadPresets();
+    }
+    form.write(loaded);
+    status("");
+    await refresh();
+  });
+  $("preset-save").addEventListener("click", () => {
+    $("preset-save").hidden = true;
+    $("preset-name-form").hidden = false;
+    $("preset-name").value = $("preset").value;
+    $("preset-name").focus();
+    $("preset-name").select();
+  });
+  $("preset-cancel").addEventListener("click", closeNameForm);
+  $("preset-name").addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeNameForm();
+  });
+  $("preset-name-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      const saved = await presets.save($("preset-name").value, spec());
+      closeNameForm();
+      await reloadPresets(saved);
+      status(`Saved preset “${saved}”.${spec().image_path ? " (A preset keeps the style, not the picture: Save label… keeps both.)" : ""}`);
+    } catch (e) {
+      status(`Couldn't save the preset: ${e.message}`, true);
+    }
+  });
+  $("preset-delete").addEventListener("click", async () => {
+    const name = $("preset").value;
+    if (!name) return;
+    if ($("preset-delete").textContent === "Delete") { // the first click asks; a second one soon after does it
+      $("preset-delete").textContent = "Really delete?";
+      deleteTimer = setTimeout(resetDelete, 4000);
+      return;
+    }
+    try {
+      await presets.delete(name);
+      await reloadPresets();
+      status(`Deleted preset “${name}”.`);
+    } catch (e) {
+      status(`Couldn't delete the preset: ${e.message}`, true);
     }
   });
 

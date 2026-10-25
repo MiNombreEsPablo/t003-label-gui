@@ -11,20 +11,23 @@ from __future__ import annotations
 
 import base64
 import binascii
+import json
 import os
 import tempfile
 
 from . import api, bluetooth, composition, core
 from .render import PrinterError
+from .presets import PresetStore
 from .settings import Settings
 
 
 class Bridge:
-    def __init__(self, settings: Settings | None = None, dialogs=None) -> None:
+    def __init__(self, settings: Settings | None = None, dialogs=None, presets: PresetStore | None = None) -> None:
         """`dialogs` is the shell's native file dialogs (the shell has them, this module doesn't know the toolkit):
         an object with save(suggested_name, kind) -> path or None, where `kind` words the file type ("PNG image")."""
         self._settings = settings or Settings()
         self._dialogs = dialogs
+        self._presets = presets or PresetStore()  # the file the CLI and the Qt app read too
 
     def options(self) -> str:
         """See `api.options`: the allowed choices, geometry, fonts and Bluetooth constants, as JSON text."""
@@ -101,6 +104,33 @@ class Bridge:
             return {"spec": api.composition_loads(text), "error": None}
         except (OSError, ValueError) as e:
             return {"spec": None, "error": str(e)}
+
+    def presets_list(self) -> dict:
+        """The names of the saved presets, sorted: {"names": [...]}."""
+        return {"names": self._presets.names()}
+
+    def preset_get(self, name: str) -> dict:
+        """A preset's label as JSON text: {"spec": ..., "error": None}, or {"spec": None, "error": "why"}."""
+        label = self._presets.get(name)
+        if label is None:
+            return {"spec": None, "error": f"There is no preset called {name!r}."}
+        return {"spec": api.label_to_json(label), "error": None}
+
+    def preset_save(self, name: str, spec_json: str) -> dict:
+        """Keep the label as a preset (see `api.preset_entry`): {"saved": the name, "error": None} or an error."""
+        try:
+            entry = json.loads(api.preset_entry(name, spec_json))
+            self._presets.save(entry["name"], api.label_from_json(entry["spec"]))
+        except (OSError, ValueError) as e:
+            return {"saved": None, "error": str(e)}
+        return {"saved": entry["name"], "error": None}
+
+    def preset_delete(self, name: str) -> dict:
+        try:
+            self._presets.delete(name)
+        except OSError as e:
+            return {"error": str(e)}
+        return {"error": None}
 
     def known_printers(self) -> list[dict]:
         """T003s the system's Bluetooth knows, for a picker: [{"address": ..., "name": ...}]."""
