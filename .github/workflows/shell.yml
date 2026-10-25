@@ -59,7 +59,9 @@ jobs:
             $log = Join-Path (Get-Location) "selftest.log"
             if (Test-Path $log) { Remove-Item $log }
             $env:T003_SELFTEST_LOG = $log
-            $p = Start-Process -FilePath $exe -ArgumentList "--selftest" -Wait -PassThru
+            $p = Start-Process -FilePath $exe -ArgumentList "--selftest" -PassThru
+            # a windowed app that crashes shows an error dialog and waits for a click: never wait for it forever
+            if (-not $p.WaitForExit(120000)) { Write-Host "no exit after 120 s (an error dialog?): killing it"; $p.Kill(); $p.WaitForExit() }
             Write-Host "=== $label : exit $($p.ExitCode), log written: $(Test-Path $log)"
             if (Test-Path $log) { Get-Content $log | ForEach-Object { Write-Host $_ } }
             return $p.ExitCode
