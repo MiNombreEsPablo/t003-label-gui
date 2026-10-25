@@ -145,10 +145,20 @@ goes away with Qt (making them shared data would mean refactoring the frozen Qt 
       native engine's. They move into File / Edit menus with the menu bar. *Copy* was not exercised with a real click in
       the browser here (a clipboard write hung the test tab, which was not focused): try it on the phone and the desktop
 - (themes moved to Phase 1.5)
-- [ ] A menu bar or toolbar for File / Edit / View / Help, and the shortcuts (Ctrl+O/S/E/P/V/Shift+C)
-- [ ] Accessible names on every control and a tested keyboard order (Qt had both; so should the web UI)
-- [ ] Decide: "Show all installed fonts" (desktop shell only, through the bridge, or drop it), update check (drop on
-      the web; keep or drop on desktop), "Open presets folder" (desktop shell only)
+- [x] A menu bar (`menus.js`, the ARIA menubar pattern: arrows, Home/End, Escape, hover-to-switch) with File (open / save
+      label, save image, print), Edit (paste image, clear image, clear doodle, copy label as image), View ▸ Look (the five looks
+      as radio items: the Look picker is gone) and Help (About with the real version, Report an issue). The shortcuts
+      Ctrl+O/S/E/P and Ctrl+Shift+C work (Ctrl+V is the browser's own paste; a browser may keep a few for itself, the menu
+      always works). Items name the shortcut they have. Targets grow on touch screens. Help ▸ links go through the bridge in
+      the shell, which opens only the project's own pages
+- [x] Accessible names on every control and a keyboard order that follows the reading order: audited in the browser (56
+      controls over all five tabs: every one has a name; the doodle's Tool and Ink had none; no duplicate ids; one `main`,
+      `nav`, `header`, `h1`; the About box is labelled; the status is a live region). The controls come before the preview in
+      the page, so Tab goes menu → presets → tabs → Print → the preview's buttons, as the layout reads. (The audit is a
+      script run by hand; there is no browser test runner in this repo, and adding one is not worth it yet)
+- [x] Decided (revisit if wanted): "Show all installed fonts" is left out (the web build has no system fonts; the 23 bundled
+      families are what prints the same everywhere), no update check (the Pages site is always current; the desktop app's
+      comes with its packaging), "Open presets folder" left out (a Linux desktop nicety)
 
 ## Phase 5 — Publish on GitHub Pages (M)
 

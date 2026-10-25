@@ -13,31 +13,12 @@
 </script>
 </head>
 <body>
-<div class="app">
+<main class="app">
+  <nav id="menubar" class="menubar" aria-label="Menu"></nav>
   <header class="banner">
     <img src="assets/icon-mark.png" alt="">
     <h1>T003 LABEL STUDIO</h1>
   </header>
-
-  <section class="stage" aria-label="Preview">
-    <div class="bezel">
-      <div class="screen">
-        <div class="paper"><canvas id="preview" width="384" height="224" aria-label="Label preview"></canvas></div>
-        <div class="gap" aria-hidden="true">gap between stickers, not printed</div>
-      </div>
-    </div>
-    <p id="hint" role="note" hidden></p>
-    <div class="stage-tools">
-      <select id="export-size" aria-label="Image size"></select>
-      <button type="button" id="save-image" class="gel">Save image</button>
-      <button type="button" id="copy-image" class="gel">Copy image</button>
-    </div>
-    <div class="stage-tools">
-      <button type="button" id="open-label" class="gel">Open label…</button>
-      <button type="button" id="save-label" class="gel">Save label…</button>
-      <input type="file" id="label-file" accept=".t003label,application/json" hidden>
-    </div>
-  </section>
 
   <section class="controls">
     <div class="presets">
@@ -69,12 +50,35 @@
       <p id="status" role="status">Loading…</p>
     </div>
 
-    <div class="look">
-      <label for="theme">Look</label>
-      <select id="theme"></select>
+  </section>
+
+  <section class="stage" aria-label="Preview">
+    <div class="bezel">
+      <div class="screen">
+        <div class="paper"><canvas id="preview" width="384" height="224" aria-label="Label preview"></canvas></div>
+        <div class="gap" aria-hidden="true">gap between stickers, not printed</div>
+      </div>
+    </div>
+    <p id="hint" role="note" hidden></p>
+    <div class="stage-tools">
+      <select id="export-size" aria-label="Image size"></select>
+      <button type="button" id="save-image" class="gel">Save image</button>
+      <button type="button" id="copy-image" class="gel">Copy image</button>
+    </div>
+    <div class="stage-tools">
+      <button type="button" id="open-label" class="gel">Open label…</button>
+      <button type="button" id="save-label" class="gel">Save label…</button>
+      <input type="file" id="label-file" accept=".t003label,application/json" hidden>
     </div>
   </section>
-</div>
+</main>
+<dialog id="about" aria-labelledby="about-title">
+  <h2 id="about-title"></h2>
+  <p>Design and print labels on the ORGBRO T003 thermal label printer.</p>
+  <p id="about-details"></p>
+  <p>MIT licence · <a id="about-repo" href="#">GitHub repository</a></p>
+  <form method="dialog"><button class="gel" autofocus>Close</button></form>
+</dialog>
 <noscript>This app needs JavaScript.</noscript>
 <script type="module" src="main.js"></script>
 </body>

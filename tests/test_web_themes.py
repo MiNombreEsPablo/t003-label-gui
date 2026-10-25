@@ -68,7 +68,7 @@ def test_the_picker_lists_exactly_the_looks_there_are():
 def test_the_page_loads_the_themes_and_restores_the_saved_look_before_painting():
     html = (WEB / "index.html").read_text(encoding="utf-8")
     assert html.index("themes.css") < html.index("style.css")
-    assert 'id="theme"' in html
+    assert 'id="menubar"' in html and 'id="theme"' not in html  # the looks are in the View menu now
     assert html.index("localStorage.getItem(\"t003:theme\")") < html.index("<body>")  # set before the first paint
 
 

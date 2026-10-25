@@ -20,10 +20,11 @@ body {
   max-width: 1180px;
   margin: 0 auto;
   padding: 12px;
-  grid-template-areas: "banner" "stage" "controls";
+  grid-template-areas: "menu" "banner" "stage" "controls";
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
 }
+.menubar { grid-area: menu; }
 .banner { grid-area: banner; }
 .stage { grid-area: stage; }
 .controls { grid-area: controls; }
@@ -32,9 +33,9 @@ body {
 }
 @media (min-width: 56rem) {
   .app {
-    grid-template-areas: "banner stage" "controls stage";
+    grid-template-areas: "menu menu" "banner stage" "controls stage";
     grid-template-columns: minmax(21rem, 26rem) minmax(0, 1fr);
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto auto 1fr;
   }
   .stage { position: sticky; top: 12px; }
 }
@@ -312,7 +313,74 @@ body.dropping .bezel { outline: 3px dashed var(--focus); outline-offset: 4px; }
 .stage-tools select { flex: 1 1 11rem; width: auto; min-width: 0; }
 .stage-tools .gel { flex: none; }
 
-/* the look picker, until the View menu exists */
-.look { display: flex; align-items: center; gap: 10px; margin: 10px 2px 4px; }
-.look label { color: var(--text); }
-.look select { width: auto; min-width: 9rem; }
+/* the menu bar: File, Edit, View, Help */
+.menubar {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  gap: 2px;
+  padding: 2px 6px;
+  background: var(--panel);
+  border: 2px solid;
+  border-color: var(--raised);
+  border-radius: var(--r-pane);
+}
+.menu { position: relative; }
+.menu-title {
+  padding: 3px 12px;
+  color: var(--text);
+  font: inherit;
+  background: none;
+  border: 0;
+  border-radius: var(--r-ctl);
+  cursor: pointer;
+}
+.menu-title:hover, .menu-title[aria-expanded="true"] { background: var(--btn-hot); }
+.menu-title:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.menu-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 15rem;
+  max-width: 90vw;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--input-bg);
+  border: 2px solid;
+  border-color: var(--raised);
+  border-radius: var(--r-pane);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+.menu-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  padding: 5px 10px 5px 26px;
+  color: var(--input-text);
+  font: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: var(--r-ctl);
+  cursor: pointer;
+}
+.menu-item[aria-checked="true"]::before { content: "✓"; position: absolute; margin-left: -18px; }
+.menu-item:hover:not(:disabled), .menu-item:focus-visible { color: var(--select-text); background: var(--select-bg); outline: none; }
+.menu-item:disabled { color: var(--dis-text); cursor: default; }
+.menu-shortcut { opacity: 0.75; white-space: nowrap; }
+.menu-separator { height: 2px; margin: 4px 6px; background: var(--raised); opacity: 0.5; }
+.menu-heading { padding: 4px 10px; color: var(--tab-unselected); font-weight: bold; }
+
+@media (pointer: coarse) { /* a finger needs bigger targets than a mouse */
+  .menu-title { padding: 9px 14px; }
+  .menu-item { padding-top: 11px; padding-bottom: 11px; }
+}
+
+/* the About box */
+#about { color: var(--text); background: var(--panel); border: 2px solid; border-color: var(--raised); border-radius: var(--r-pane); max-width: 26rem; }
+#about::backdrop { background: rgba(0, 0, 0, 0.45); }
+#about h2 { margin: 0 0 8px; font-size: 1.15rem; }
+#about a { color: var(--text); }
+#about form { margin: 12px 0 0; text-align: right; }
