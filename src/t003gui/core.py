@@ -12,6 +12,7 @@ import usb.core
 import usb.util
 from PIL import Image
 
+from .protocol import STATUS_FLAGS, STATUS_QUERY, status_problems, tspl  # noqa: F401
 from .render import PrinterError, font_path, list_font_families, render, to_bitmap  # noqa: F401
 from .spec import (  # noqa: F401
     ALIGNMENTS,
@@ -32,16 +33,6 @@ from .spec import (  # noqa: F401
 
 VID, PID = 0x0483, 0x5743
 EP_OUT, EP_IN = 0x01, 0x82
-STATUS_FLAGS = {0x01: "head open", 0x02: "paper jam", 0x04: "out of paper", 0x08: "out of ribbon", 0x80: "error"}
-
-
-def tspl(spec: LabelSpec) -> bytes:
-    data = to_bitmap(render(spec)).tobytes()  # 1 = white, 0 = black, same as TSPL BITMAP mode 0
-    head = (
-        f"SIZE 72 mm,30 mm\r\nGAP 2 mm,0 mm\r\nDIRECTION 1,0\r\nDENSITY {min(15, max(0, spec.density))}\r\nCLS\r\n"
-        f"BITMAP 0,0,{W // 8},{H},0,"
-    ).encode()
-    return head + data + f"\r\nPRINT {min(99, max(1, spec.copies))},1\r\n".encode()
 
 
 def _backend():
@@ -91,7 +82,7 @@ def send(payload: bytes) -> list[str]:
         for i in range(0, len(payload), 4096):
             dev.write(EP_OUT, payload[i : i + 4096], timeout=5000)
         time.sleep(0.5)
-        dev.write(EP_OUT, b"\x1b!?", timeout=1000)
+        dev.write(EP_OUT, STATUS_QUERY, timeout=1000)
         time.sleep(0.3)
         try:
             status = bytes(dev.read(EP_IN, 64, timeout=700))[0]
@@ -101,7 +92,7 @@ def send(payload: bytes) -> list[str]:
         raise PrinterError(f"USB error: {e}") from e
     finally:
         usb.util.dispose_resources(dev)
-    return [msg for bit, msg in STATUS_FLAGS.items() if status & bit]
+    return status_problems(status)
 
 
 def label_bitmap(spec: LabelSpec, scale: int = 1) -> Image.Image:

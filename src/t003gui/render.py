@@ -109,7 +109,10 @@ def _apply_weight(font: ImageFont.FreeTypeFont, bold: bool) -> None:
 def _font(path: str, size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
     for candidate in (path, *FALLBACK_FONT_PATHS):
         try:
-            font = ImageFont.truetype(candidate, size)
+            # BASIC layout on purpose: Raqm (when this Pillow has it) kerns differently and draws some fonts heavier, so
+            # labels would depend on how each machine's Pillow was built, and the web build (Pyodide: no Raqm) would
+            # print differently from the desktop.
+            font = ImageFont.truetype(candidate, size, layout_engine=ImageFont.Layout.BASIC)
         except OSError:
             continue
         _apply_weight(font, bold)
