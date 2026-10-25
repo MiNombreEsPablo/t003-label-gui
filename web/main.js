@@ -6,6 +6,7 @@
 // The label's simple controls are built from the description the engine provides (form.js).
 
 import { buildForm } from "./form.js";
+import { createImageWidget } from "./image.js";
 
 const desktop = new URLSearchParams(location.search).get("client") === "desktop";
 const $ = (id) => document.getElementById(id);
@@ -69,8 +70,52 @@ async function main() {
     }
   }
 
+  // a picture the user chose, dropped or pasted: the engine takes it in and hands back the path the label uses
+  async function useFile(file) {
+    if (!file) return;
+    status(`Reading ${file.name}…`);
+    const started = performance.now();
+    try {
+      const path = await engine.addImage(new Uint8Array(await file.arrayBuffer()), file.name);
+      picture.current().set(path, file.name);
+      form.refreshState();
+      status("");
+      await refresh();
+      const seconds = (performance.now() - started) / 1000;
+      if (seconds > 1.5) status(`${file.name} (${(file.size / 1e6).toFixed(1)} MB) took ${seconds.toFixed(1)} s to load.`);
+    } catch (e) {
+      status(`Couldn't use that picture: ${e.message}`, true);
+    }
+  }
+  const picture = createImageWidget(useFile, (text) => status(text, true));
   const form = buildForm(options.form, options.defaults, (field) => {
     if (field.tab !== "output") refresh(); // copies and darkness don't change the picture
+  }, { image: picture.make });
+
+  const pictureIn = (transfer) => Array.from((transfer && transfer.files) || []).find((f) => f.type.startsWith("image/"));
+  addEventListener("dragover", (event) => {
+    if (Array.from(event.dataTransfer.items || []).some((i) => i.kind === "file")) {
+      event.preventDefault();
+      document.body.classList.add("dropping");
+    }
+  });
+  addEventListener("dragleave", (event) => {
+    if (!event.relatedTarget) document.body.classList.remove("dropping");
+  });
+  addEventListener("drop", (event) => {
+    document.body.classList.remove("dropping");
+    const file = pictureIn(event.dataTransfer);
+    if (file) {
+      event.preventDefault();
+      useFile(file);
+    }
+  });
+  addEventListener("paste", (event) => { // a picture on the clipboard wins even in a text box; text pastes as usual
+    const file = pictureIn(event.clipboardData);
+    if (file) {
+      event.preventDefault();
+      useFile(file);
+    }
   });
   const spec = () => form.read();
   $("form").append(form.tabs);
@@ -106,7 +151,7 @@ async function main() {
 
   async function print() {
     const current = spec();
-    if (!current.text.trim() && !current.qr.trim()) return status("Nothing to print.");
+    if (!current.text.trim() && !current.qr.trim() && !current.image_path) return status("Nothing to print.");
     $("print").disabled = true;
     status("Printing…");
     const result = await printer.print(current, { mode: $("mode").value, address: $("address").value.trim() });

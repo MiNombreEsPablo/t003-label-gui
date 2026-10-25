@@ -13,7 +13,7 @@ import json
 from dataclasses import asdict
 from pathlib import PurePath
 
-from . import bluetooth, fonts, form, render, spec, stickers
+from . import bluetooth, fonts, form, imaging, render, spec, stickers
 from .protocol import STATUS_QUERY, status_problems, tspl  # noqa: F401
 
 
@@ -36,6 +36,12 @@ def preview_pixels(raw: str | bytes | dict) -> bytes:
 def tspl_bytes(raw: str | bytes | dict) -> bytes:
     """The complete TSPL payload for a label, ready to send over any transport."""
     return tspl(label_from_json(raw))
+
+
+def adopt_image(path: str, name: str = "") -> str:
+    """Take a picture a client wrote to `path` (an upload, a paste) and return the path to put in the label's
+    `image_path`. Raises ValueError with a sentence for the user when it isn't a picture we can use."""
+    return imaging.adopt(path, name)
 
 
 def hints(raw: str | bytes | dict) -> list[str]:

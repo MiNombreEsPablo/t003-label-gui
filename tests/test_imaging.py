@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from PIL import Image
 
@@ -199,3 +201,52 @@ def test_a_missing_file_still_raises_not_a_cached_ghost(tmp_path):
 
     with _pytest.raises(FileNotFoundError):
         imaging.load_gray(str(tmp_path / "nope.png"))
+
+
+def _picture(tmp_path, name="p.png", fmt="PNG", color=(10, 200, 30)):
+    path = tmp_path / name
+    Image.new("RGB", (40, 30), color).save(path, format=fmt)
+    return path
+
+
+def test_adopt_gives_a_picture_a_stable_home_named_by_its_content(tmp_path):
+    first = imaging.adopt(_picture(tmp_path), "holiday.png")
+    again = imaging.adopt(_picture(tmp_path, "copy.png"), "copy.png")
+    other = imaging.adopt(_picture(tmp_path, "o.png", color=(1, 2, 3)), "o.png")
+    assert first == again != other
+    assert Path(first).parent == imaging.pictures_dir() and Path(first).suffix == ".png"
+    assert Image.open(first).size == (40, 30)
+    assert not list(imaging.pictures_dir().glob("*.part"))
+
+
+@pytest.mark.parametrize("fmt, suffix", [("PNG", ".png"), ("JPEG", ".jpg"), ("BMP", ".bmp"), ("GIF", ".gif"), ("WEBP", ".webp")])
+def test_adopt_names_the_file_after_what_it_really_is(tmp_path, fmt, suffix):
+    path = imaging.adopt(_picture(tmp_path, "whatever.dat", fmt), "whatever.dat")  # the name's suffix doesn't matter
+    assert Path(path).suffix == suffix
+    assert core.render(core.LabelSpec(image_path=path)).size == (core.W, core.H)  # and it renders
+
+
+def test_adopt_refuses_what_is_not_a_picture_with_a_sentence(tmp_path):
+    text = tmp_path / "notes.png"
+    text.write_text("hello")
+    with pytest.raises(ValueError, match="notes.png isn't a picture"):
+        imaging.adopt(text, "notes.png")
+    empty = tmp_path / "empty"
+    empty.write_bytes(b"")
+    with pytest.raises(ValueError, match="That file isn't a picture"):
+        imaging.adopt(empty)
+
+
+def test_adopt_refuses_unsupported_picture_formats(tmp_path):
+    path = tmp_path / "x.tif"
+    Image.new("RGB", (8, 8)).save(path, format="TIFF")
+    with pytest.raises(ValueError, match="TIFF picture"):
+        imaging.adopt(path, "x.tif")
+
+
+def test_adopt_refuses_huge_files(tmp_path, monkeypatch):
+    monkeypatch.setattr(imaging, "MAX_PICTURE_BYTES", 100)
+    path = tmp_path / "big.png"
+    Image.effect_noise((64, 64), 100).convert("RGB").save(path)
+    with pytest.raises(ValueError, match="MB"):
+        imaging.adopt(path, "big.png")

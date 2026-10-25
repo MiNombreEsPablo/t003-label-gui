@@ -10,6 +10,9 @@ No Qt and no pywebview in here, so it is tested without either.
 from __future__ import annotations
 
 import base64
+import binascii
+import os
+import tempfile
 
 from . import api, bluetooth, core
 from .render import PrinterError
@@ -43,6 +46,19 @@ class Bridge:
         except (PrinterError, OSError, ValueError) as e:  # ValueError: bad JSON, or a QR code too big to encode
             return {"problems": [], "error": str(e)}
         return {"problems": problems, "error": None}
+
+    def upload_image(self, data_base64: str, name: str = "") -> dict:
+        """A picture chosen, pasted or dropped on the page: {"path": ..., "error": None} with the path to put in the
+        label (`api.adopt_image`), or {"path": None, "error": "a sentence for the user"}."""
+        fd, scratch = tempfile.mkstemp(prefix="t003-upload-")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                f.write(base64.b64decode(data_base64, validate=True))
+            return {"path": api.adopt_image(scratch, name), "error": None}
+        except (ValueError, binascii.Error, OSError) as e:  # ValueError: not a picture, too big
+            return {"path": None, "error": str(e)}
+        finally:
+            os.unlink(scratch)
 
     def known_printers(self) -> list[dict]:
         """T003s the system's Bluetooth knows, for a picker: [{"address": ..., "name": ...}]."""

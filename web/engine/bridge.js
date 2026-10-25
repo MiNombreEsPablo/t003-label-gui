@@ -16,6 +16,13 @@ export function createEngine() {
     async options() {
       return JSON.parse(await api().options());
     },
+    async addImage(bytes, name) {
+      let binary = "";
+      for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      const result = await api().upload_image(btoa(binary), name);
+      if (result.error) throw new Error(result.error);
+      return result.path;
+    },
     async preview(spec) {
       const result = await api().preview(JSON.stringify(spec));
       return { pixels: fromBase64(result.pixels), hints: result.hints };

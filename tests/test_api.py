@@ -124,3 +124,13 @@ def test_fonts_needed_covers_every_font_a_render_opens(monkeypatch):
 def test_the_matrix_background_asks_for_its_mono_font():
     assert "DejaVuSansMono.ttf" in api.fonts_needed({"background": "matrix"})
     assert "DejaVuSansMono.ttf" not in api.fonts_needed({"background": "dots"})
+
+
+def test_adopt_image_gives_back_a_path_for_the_label(tmp_path):
+    from PIL import Image
+
+    source = tmp_path / "in.png"
+    Image.new("RGB", (20, 20), (0, 0, 0)).save(source)
+    path = api.adopt_image(str(source), "in.png")
+    assert api.hints({"text": "hi", "image_path": path})  # "Image only" hides the text: the hint now has a real picture
+    assert 0 in api.preview_pixels({"image_path": path})

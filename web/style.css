@@ -295,3 +295,42 @@ fieldset.output legend {
 
 #status { min-height: 1.4em; margin: 6px 2px 0; color: var(--status); font-weight: bold; }
 #status.error { color: var(--error); }
+
+/* sliders: an inset track filled up to the handle, a gel handle */
+input[type="range"] { -webkit-appearance: none; appearance: none; flex: 1; min-width: 0; height: 20px; padding: 0; background: none; border: 0; border-radius: 0; --fill: 0%; }
+input[type="range"]:focus { outline: none; }
+input[type="range"]::-webkit-slider-runnable-track { height: 6px; border: 2px solid var(--edge); border-radius: 5px; background: linear-gradient(to right, var(--select-bg) var(--fill), var(--input-bg) var(--fill)); }
+input[type="range"]::-moz-range-track { height: 6px; border: 2px solid var(--edge); border-radius: 5px; background: linear-gradient(to right, var(--select-bg) var(--fill), var(--input-bg) var(--fill)); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -6px; border: 2px solid var(--edge); border-radius: 9px; background: var(--btn); cursor: pointer; }
+input[type="range"]::-moz-range-thumb { width: 10px; height: 10px; border: 2px solid var(--edge); border-radius: 9px; background: var(--btn); cursor: pointer; }
+input[type="range"]:focus-visible::-webkit-slider-thumb { border-color: var(--focus); }
+input[type="range"]:disabled { opacity: 0.5; }
+.slider { display: flex; align-items: center; gap: 8px; }
+.slider .value { flex: none; width: 5.2rem; }
+.suffixed { display: flex; align-items: center; gap: 6px; }
+.suffixed input { width: 5.5rem; }
+.suffix { color: var(--text); white-space: nowrap; }
+
+/* small gel buttons and the picture chooser */
+.gel {
+  padding: 3px 12px;
+  color: var(--text);
+  font: bold 13px var(--font);
+  background: var(--btn);
+  border: 2px solid var(--edge);
+  border-radius: var(--r-btn);
+  cursor: pointer;
+}
+.gel:hover { background: var(--btn-hot); border-color: var(--btn-hover-border); }
+.gel:active { background: var(--btn-down); }
+.gel:disabled { color: var(--dis-text); background: var(--btn-off); border-color: var(--dis-border); cursor: default; }
+.gel:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.picture { display: flex; align-items: center; gap: 6px; }
+.picture-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.picture .clear { padding: 3px 9px; }
+.reset-row { display: flex; justify-content: flex-end; margin-top: 6px; }
+
+/* a tab whose controls wait for a picture; a picture being dragged over the page */
+.panel.dimmed .field, .panel.dimmed .reset-row { opacity: 0.5; }
+.needs-hint { margin: 0 0 8px; color: var(--tab-unselected); font-weight: bold; }
+body.dropping .bezel { outline: 3px dashed var(--focus); outline-offset: 4px; }

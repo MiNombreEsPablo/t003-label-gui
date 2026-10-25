@@ -7,9 +7,13 @@ pure black/white here, which `to_bitmap` then passes through untouched.
 from __future__ import annotations
 
 import functools
+import hashlib
 import os
+import shutil
+import tempfile
+from pathlib import Path
 
-from PIL import Image, ImageChops, ImageEnhance, ImageOps
+from PIL import Image, ImageChops, ImageEnhance, ImageOps, UnidentifiedImageError
 
 from .spec import SH, W, LabelSpec
 
@@ -111,3 +115,39 @@ def process(spec: LabelSpec, box: tuple[int, int] = (W, SH), cover: bool = False
     if block > 1:
         img = img.resize((img.width * block, img.height * block), Image.Resampling.NEAREST).crop((0, 0, *size))
     return img
+
+
+MAX_PICTURE_BYTES = 40 * 1024 * 1024  # a phone photo is a few MB; this keeps a mistake (a video, an archive) out
+_FORMAT_SUFFIX = {"PNG": ".png", "JPEG": ".jpg", "BMP": ".bmp", "GIF": ".gif", "WEBP": ".webp"}
+
+
+def pictures_dir() -> Path:
+    return Path(tempfile.gettempdir()) / "t003-label-gui" / "images"
+
+
+def adopt(source, name: str = "") -> str:
+    """Give a picture a client has received (an upload, a paste, a drop) a stable home and return its path, ready for
+    `LabelSpec.image_path`. The file is checked to be a picture we can read, and stored under a name made from its
+    content, so choosing the same picture twice is one file. Raises ValueError with a sentence to show the user."""
+    source = Path(source)
+    label = name or "That file"
+    size = source.stat().st_size
+    if size > MAX_PICTURE_BYTES:
+        raise ValueError(f"{label} is {size / 1e6:.0f} MB; pictures up to {MAX_PICTURE_BYTES // 2**20} MB are accepted.")
+    try:
+        with Image.open(source) as img:
+            kind = img.format
+            img.verify()  # a cheap integrity check that doesn't decode every pixel
+    except (UnidentifiedImageError, OSError, SyntaxError, Image.DecompressionBombError) as e:
+        raise ValueError(f"{label} isn't a picture I can read (PNG, JPEG, BMP, GIF or WebP).") from e
+    suffix = _FORMAT_SUFFIX.get(kind)
+    if suffix is None:
+        raise ValueError(f"{label} is a {kind} picture; use PNG, JPEG, BMP, GIF or WebP.")
+    data = source.read_bytes()
+    target = pictures_dir() / f"{hashlib.sha256(data).hexdigest()[:16]}{suffix}"
+    if not target.exists():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        partial = target.with_suffix(".part")
+        partial.write_bytes(data)
+        partial.replace(target)  # never a half-written picture under its final name
+    return str(target)

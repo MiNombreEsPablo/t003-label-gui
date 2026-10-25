@@ -92,12 +92,18 @@ goes away with Qt (making them shared data would mean refactoring the frozen Qt 
 
 ## Phase 2 — Images (L)
 
-- [ ] Picture in: file picker, drag and drop, paste from the clipboard, clear ×. Browser: bytes into Pyodide's file
-      system (downscale huge photos in JS first, to keep wasm memory sane); desktop: the bridge writes a temp file
-- [ ] Layout (6) and the picture's share
-- [ ] Dither (4 modes) with the cutoff slider; brightness, contrast, gamma (log mapping), pixelate; mirror, flip,
-      invert; Reset; dimmed until a picture is chosen
-- [ ] Load time and memory of Pillow on a phone with a 12-megapixel photo (measure; set a limit if needed)
+- [x] Picture in: file picker, drag and drop, paste from the clipboard (Ctrl+V and a Paste button), clear ×. Both
+      clients hand the bytes to `api.adopt_image`, which checks they are a picture, caps them at 40 MB and stores them under
+      a content-hash name (browser: Pyodide's file system; desktop: `bridge.upload_image` and a temp file)
+- [x] Layout (6) and the picture's share (enabled only for left/right/top/bottom)
+- [x] Dither (4 modes) with the cutoff slider (shown only for the hard cutoff); brightness, contrast, gamma (the log
+      mapping gives the same values as Qt's at every sampled slider position), pixelate; mirror, flip, invert; Reset;
+      the tab dims, with its hint, until a picture is chosen
+- Checked: 24 image variations through the real controls are bit-identical to the native engine, except "Behind
+  text" with this picture (Pillow 13.0's resize differs from Pyodide's 12.2: same input, 12 % of the dots differ after
+  dithering; the browser equals Node-Pyodide exactly). Expect it to disappear when Pyodide ships a newer Pillow
+- [ ] Load time and memory of Pillow on a phone with a 12-megapixel photo (the page now says how long a picture took when
+      it is over 1.5 s; measure on the Pixel, set a limit or downscale in JS if needed)
 
 ## Phase 3 — Doodle (L)
 

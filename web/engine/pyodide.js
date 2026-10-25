@@ -1,6 +1,6 @@
 // Engine seam, browser adapter: the same calls as the desktop bridge, answered by Pyodide in a worker.
 //   init(onProgress)  options() -> object  preview(spec) -> {pixels: Uint8Array(W*H gray), hints: string[]}
-//   tspl(spec) -> Uint8Array
+//   tspl(spec) -> Uint8Array   addImage(bytes, name) -> path
 //   statusProblems(byte) -> string[]
 // `spec` is a plain object (the label's JSON); the worker gets it as text.
 
@@ -18,11 +18,11 @@ export function createEngine(baseUrl) {
     else call.resolve(data.result);
   };
 
-  const call = (method, args) =>
+  const call = (method, args, transfer = []) =>
     new Promise((resolve, reject) => {
       const id = nextId++;
       pending.set(id, { resolve, reject });
-      worker.postMessage({ id, method, args });
+      worker.postMessage({ id, method, args }, transfer);
     });
 
   return {
@@ -34,6 +34,8 @@ export function createEngine(baseUrl) {
       return JSON.parse(await call("options"));
     },
     preview: (spec) => call("preview", { spec: JSON.stringify(spec) }),
+    // bytes of a picture the user chose -> the path to put in the label (rejects with a sentence if it isn't usable)
+    addImage: (bytes, name) => call("addImage", { data: bytes, name }, [bytes.buffer]),
     tspl: (spec) => call("tspl", { spec: JSON.stringify(spec) }),
     statusProblems: (status) => call("statusProblems", { status }),
   };

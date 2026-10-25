@@ -71,3 +71,24 @@ def test_the_bridge_needs_neither_qt_nor_pywebview():
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
                             cwd=Path(__file__).resolve().parent.parent, timeout=60)
     assert result.returncode == 0 and "True" in result.stdout, result.stderr
+
+
+def test_a_picture_from_the_page_becomes_a_path_the_label_can_use():
+    import io
+
+    from PIL import Image
+
+    buffer = io.BytesIO()
+    Image.new("RGB", (30, 20), (200, 30, 30)).save(buffer, format="PNG")
+    result = Bridge().upload_image(base64.b64encode(buffer.getvalue()).decode(), "red.png")
+    assert result["error"] is None and result["path"].endswith(".png")
+    pixels = api.preview_pixels({"image_path": result["path"]})
+    assert 0 in pixels and len(pixels) == core.W * core.H
+
+
+def test_a_bad_upload_is_an_error_sentence_not_an_exception():
+    bridge = Bridge()
+    not_a_picture = bridge.upload_image(base64.b64encode(b"hello").decode(), "notes.png")
+    assert not_a_picture["path"] is None and "notes.png isn't a picture" in not_a_picture["error"]
+    broken = bridge.upload_image("***not base64***", "x.png")
+    assert broken["path"] is None and broken["error"]

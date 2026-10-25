@@ -26,6 +26,11 @@ async function ensureFonts(specJson) {
   }
 }
 
+// The last line of a Python error ("ValueError: That file isn't a picture…") without its class name, for the user.
+function pythonMessage(e) {
+  return String((e && e.message) || e).trim().split("\n").pop().replace(/^\w+(\.\w+)*(Error|Exception): /, "");
+}
+
 // A Python `bytes` result as a Uint8Array we own.
 function takeBytes(proxy) {
   const bytes = proxy.toJs();
@@ -62,6 +67,15 @@ const handlers = {
     const list = hints.toJs();
     hints.destroy();
     return { pixels, hints: list };
+  },
+  async addImage({ data, name }) {
+    py.FS.mkdirTree("/tmp/t003-incoming");
+    py.FS.writeFile("/tmp/t003-incoming/upload", data);
+    try {
+      return api.adopt_image("/tmp/t003-incoming/upload", name);
+    } catch (e) {
+      throw new Error(pythonMessage(e));
+    }
   },
   async tspl({ spec }) {
     await ensureFonts(spec);
