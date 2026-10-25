@@ -106,3 +106,27 @@ jobs:
           cd /tmp
           /tmp/clean/bin/t003-print --version
           /tmp/clean/bin/t003-gui --selftest
+
+  # The web app runs the very same Python in the browser (Pyodide). Render a fixed set of labels in Pyodide and natively
+  # and compare the dots, so the two engines can't drift apart unnoticed. Also runs the Node tests of the doodle engine
+  # (the other jobs' Node is too old for them, and they skip).
+  web-parity:
+    name: The web engine draws what the native one does
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[dev]"
+      - name: Pyodide, the version the site uses
+        run: |
+          version=$(python -c "import sys; sys.path.insert(0, 'web'); import dev_server; print(dev_server.PYODIDE)")
+          mkdir -p "$RUNNER_TEMP/pyodide" && cd "$RUNNER_TEMP/pyodide" && npm init -y >/dev/null && npm install "pyodide@$version"
+      - run: python -m pytest -q tests/test_web_parity.py tests/test_web_js.py
+        env:
+          T003_PARITY_PYODIDE: ${{ runner.temp }}/pyodide

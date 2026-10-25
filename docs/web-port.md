@@ -162,11 +162,19 @@ goes away with Qt (making them shared data would mean refactoring the frozen Qt 
 
 ## Phase 5 — Publish on GitHub Pages (M)
 
-- [ ] A build step that copies exactly the dev server's layout (`web/`, the engine modules, fonts) into the site
-- [ ] Host the `qrcode` wheel (and decide: Pyodide from the CDN, or self-hosted for offline use)
-- [ ] A GitHub Actions deploy workflow; project-path base URL works (`/t003-label-gui/`); fonts' licence texts shipped
-- [ ] One small CI job: Node + Pyodide renders a fixed set of labels and compares their hashes with the native
-      engine (the harness already exists), so the web and desktop engines can't drift apart unnoticed
+- [x] A build step that writes exactly the dev server's layout (`web/`, the engine modules, fonts, the manifest as a file)
+      into a folder: `python web/build_site.py OUT` (72 files, 20.5 MB). Served by a plain static file server it loads and
+      renders, QR code included (the server's log shows the manifest and wheel came from the site)
+- [x] The `qrcode` wheel is hosted by the site, pinned (8.2) and checked against its SHA-256 at build time, so a visit never
+      touches PyPI. Decided: Pyodide itself stays on the jsDelivr CDN at the pinned version (cached across sites, and
+      the site stays small); the page needs the network for it, so there is no offline mode. Revisit if that matters
+- [~] A GitHub Actions deploy workflow (`.github/workflows/pages.yml`): builds on every change to `web/` or `src/` (pull
+      requests too, to prove the site builds), deploys from `main` only when the repository variable `PAGES_ENABLED` is
+      `true`. **Needs you:** Settings ▸ Pages ▸ source "GitHub Actions", then add the variable. A test checks that no
+      URL in the page leaves a project path (`/t003-label-gui/`). Still to do: ship the fonts' licence texts with the site
+- [x] One small CI job (`web-parity`): Node + Pyodide renders 44 labels (every effect, border and background, alignments,
+      QR, a doodle) and the dots must equal the native engine's; the test is shown to fail on a label that differs. Not
+      covered, as documented: the four FreeType-sensitive fonts and pictures that need a non-square resize
 - [ ] A phone check of the deployed page (print over Web Bluetooth)
 - [ ] **Instant controls on repeat visits**: the form is built from the engine's options, so it only appears once
       Pyodide has booted (a couple of seconds on the phone). Keep the last options in the store seam, draw the form

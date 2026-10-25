@@ -47,7 +47,10 @@ const handlers = {
     py = await loadPyodide();
     progress("Loading Pillow…");
     await py.loadPackage(manifest.packages);
-    await py.runPythonAsync(`import micropip\nawait micropip.install(${JSON.stringify(manifest.pypi)})`);
+    // what Pyodide doesn't have: wheels the site hosts (a published site never depends on PyPI), else PyPI by name
+    const wheels = (manifest.wheels || []).map((name) => new URL(`${base}engine/wheels/${name}`, location.href).href);
+    const extras = wheels.length ? wheels : manifest.pypi;
+    await py.runPythonAsync(`import micropip\nawait micropip.install(${JSON.stringify(extras)})`);
     progress("Loading the label engine…");
     py.FS.mkdirTree("/pkg/t003gui/fonts");
     for (const name of manifest.python) {
