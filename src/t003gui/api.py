@@ -13,8 +13,8 @@ import json
 from dataclasses import asdict
 from pathlib import PurePath
 
-from . import fonts, render, spec, stickers
-from .protocol import tspl
+from . import bluetooth, fonts, render, spec, stickers
+from .protocol import STATUS_QUERY, status_problems, tspl  # noqa: F401
 
 
 def label_from_json(raw: str | bytes | dict) -> spec.LabelSpec:
@@ -67,6 +67,7 @@ def options() -> str:
         "fonts": [
             {"family": f.family, "category": f.category, "japanese": f.ja, "files": f.files} for f in fonts.BUNDLED
         ],
+        "bluetooth": {"name_prefix": bluetooth.NAME_PREFIX, "ble": bluetooth.BLE, "status_query": list(STATUS_QUERY)},
         "stickers": {name: label for name, (label, _) in stickers.STICKERS.items()},
         "defaults": asdict(spec.LabelSpec()),
     })

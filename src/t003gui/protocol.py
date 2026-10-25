@@ -5,6 +5,8 @@ same bytes over Bluetooth, so the payload is built in exactly one place.
 """
 from __future__ import annotations
 
+from typing import Iterator
+
 from .render import render, to_bitmap
 from .spec import H, W, LabelSpec
 
@@ -24,3 +26,9 @@ def tspl(spec: LabelSpec) -> bytes:
 def status_problems(status: int) -> list[str]:
     """The problems a status byte reports, as short phrases (empty when the printer is fine)."""
     return [msg for bit, msg in STATUS_FLAGS.items() if status & bit]
+
+
+def chunks(data: bytes, size: int) -> Iterator[bytes]:
+    """`data` in pieces of at most `size` bytes: every transport writes the payload in parts (USB 4096, Bluetooth less)."""
+    for i in range(0, len(data), size):
+        yield data[i : i + size]

@@ -82,6 +82,9 @@ class MainWindow(QMainWindow):
         self.decoration = panels.DecorationPanel()
         self.doodle = panels.DoodlePanel(PREVIEW_SCALE)
         self.output = panels.OutputPanel()
+        saved = QSettings()
+        self.output.set_connection(saved.value("connection", "usb", type=str) == "bluetooth", saved.value("btAddress", "", type=str))
+        self.output.connection_changed.connect(self._save_connection)
         self.panels = (self.content, self.text_panel, self.image_panel, self.decoration, self.doodle, self.output)
         self.content.image.textChanged.connect(lambda text: self.image_panel.set_active(bool(text.strip())))
 
@@ -527,6 +530,11 @@ class MainWindow(QMainWindow):
         QApplication.clipboard().setImage(QImage(bitmap.tobytes(), core.W, core.SH, core.W, QImage.Format_Grayscale8).copy())
         self.status.setText("Copied the label to the clipboard.")
 
+    def _save_connection(self) -> None:
+        settings = QSettings()
+        settings.setValue("connection", "usb" if self.output.bluetooth_target() is None else "bluetooth")
+        settings.setValue("btAddress", self.output.address.text().strip())
+
     def print_now(self) -> None:
         spec = self.spec()
         if not (spec.text or spec.qr or spec.image_path):
@@ -536,7 +544,8 @@ class MainWindow(QMainWindow):
         self.print_action.setEnabled(False)
         QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
-            problems = core.print_label(spec)
+            target = self.output.bluetooth_target()
+            problems = core.print_label(spec) if target is None else core.print_label(spec, bluetooth=target)
         except Exception as e:  # PrinterError, or a bad image path / oversized QR raised while rendering
             QMessageBox.critical(self, "Print failed", str(e))
             self.status.setText(str(e))

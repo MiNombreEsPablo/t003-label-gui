@@ -475,17 +475,18 @@ def test_keyboard_focus_cycle_follows_the_screen(window, app):
     window.preset_box.setFocus()
     app.processEvents()
     stops = []
-    for _ in range(12):
+    for _ in range(13):
         stops.append(QApplication.focusWidget())
         window.focusNextChild()
         app.processEvents()
     tab_bar = window.findChild(QTabWidget).tabBar()
     # (the Delete button and the layout box are disabled, so they are skipped)
     names = [type(w).__name__ for w in stops]
-    assert names[:11] == ["QComboBox", "QPushButton", "QTabBar", "QPlainTextEdit", "QLineEdit", "QLineEdit",
-                          "QPushButton", "QPushButton", "QSpinBox", "QSpinBox", "QPushButton"]
-    assert stops[0] is window.preset_box and stops[2] is tab_bar and stops[10] is window.print_button
-    assert stops[11] is window.preset_box  # after Print it wraps to the preset bar
+    assert names[:12] == ["QComboBox", "QPushButton", "QTabBar", "QPlainTextEdit", "QLineEdit", "QLineEdit",
+                          "QPushButton", "QPushButton", "QSpinBox", "QSpinBox", "QComboBox", "QPushButton"]
+    assert stops[0] is window.preset_box and stops[2] is tab_bar and stops[10] is window.output.printer
+    assert stops[11] is window.print_button
+    assert stops[12] is window.preset_box  # after Print it wraps to the preset bar
 
 
 def test_every_image_control_has_an_accessible_name(window):
@@ -727,3 +728,66 @@ def test_loading_a_label_that_differs_only_by_its_doodle_updates_the_status(wind
     mask.paste(255, (5, 5, 30, 30))
     window.set_spec(core.LabelSpec(doodle=doodle_mod.encode(mask)))
     assert "Clear doodle" in window.status.text()
+
+
+@pytest.fixture
+def clean_connection():
+    from PySide6.QtCore import QSettings
+
+    yield
+    QSettings().remove("connection")
+    QSettings().remove("btAddress")
+
+
+def test_output_box_prints_over_usb_by_default(window, monkeypatch):
+    assert window.output.bluetooth_target() is None and not window.output.address.isVisibleTo(window)
+    calls = []
+    monkeypatch.setattr(core, "print_label", lambda spec: calls.append("usb") or [])
+    window.content.text.setPlainText("hi")
+    window.print_now()
+    assert calls == ["usb"]
+
+
+def test_output_box_prints_over_bluetooth_when_chosen(window, monkeypatch, clean_connection):
+    sent = []
+    monkeypatch.setattr(core, "print_label", lambda spec, bluetooth=None: sent.append(bluetooth) or [])
+    window.content.text.setPlainText("hi")
+    window.output.printer.setCurrentIndex(1)
+    assert window.output.address.isVisibleTo(window) and window.output.bluetooth_target() == ""
+    window.print_now()  # "" means the first paired T003
+    window.output.address.setText(" 57:37:EB:A7:7A:36 ")
+    window.print_now()
+    assert sent == ["", "57:37:EB:A7:7A:36"]
+
+
+def test_a_bluetooth_failure_is_shown_like_a_usb_one(window, monkeypatch, clean_connection):
+    from PySide6.QtWidgets import QMessageBox
+
+    def refuse(spec, bluetooth=None):
+        raise core.PrinterError("No paired T003 found.")
+
+    shown = []
+    monkeypatch.setattr(core, "print_label", refuse)
+    monkeypatch.setattr(QMessageBox, "critical", lambda parent, title, text: shown.append(text))
+    window.content.text.setPlainText("hi")
+    window.output.printer.setCurrentIndex(1)
+    window.print_now()
+    assert shown == ["No paired T003 found."] and "No paired T003" in window.status.text()
+
+
+def test_the_printer_choice_is_remembered(app, clean_connection):
+    first = MainWindow()
+    first.output.address.setText("57:37:EB:A7:7A:36")
+    first.output.address.editingFinished.emit()
+    first.output.printer.setCurrentIndex(1)
+    first.close()
+    second = MainWindow()
+    try:
+        assert second.output.bluetooth_target() == "57:37:EB:A7:7A:36" and second.output.address.isVisibleTo(second)
+    finally:
+        second.close()
+
+
+def test_the_printer_choice_is_not_part_of_a_label(window, clean_connection):
+    window.output.printer.setCurrentIndex(1)
+    assert "bluetooth" not in window.spec().__dict__ and set(window.output.read()) == {"copies", "density"}

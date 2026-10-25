@@ -1,4 +1,4 @@
-"""Build the TSPL payload and send it to the ORGBRO T003 thermal printer over raw USB.
+"""Send a label to the ORGBRO T003 thermal printer: over raw USB here, or over Bluetooth (bluetooth.py).
 
 No Qt in here, so it can be tested and reused from a CLI. Rendering lives in render.py and the label
 description in spec.py; both are re-exported so `core` stays the one import for callers.
@@ -12,7 +12,8 @@ import usb.core
 import usb.util
 from PIL import Image
 
-from .protocol import STATUS_FLAGS, STATUS_QUERY, status_problems, tspl  # noqa: F401
+from . import bluetooth as bt
+from .protocol import STATUS_FLAGS, STATUS_QUERY, chunks, status_problems, tspl  # noqa: F401
 from .render import PrinterError, font_path, list_font_families, render, to_bitmap  # noqa: F401
 from .spec import (  # noqa: F401
     ALIGNMENTS,
@@ -79,8 +80,8 @@ def send(payload: bytes) -> list[str]:
         except (NotImplementedError, usb.core.USBError):  # Windows/macOS backends have no kernel-driver calls
             pass
         usb.util.claim_interface(dev, 0)
-        for i in range(0, len(payload), 4096):
-            dev.write(EP_OUT, payload[i : i + 4096], timeout=5000)
+        for part in chunks(payload, 4096):
+            dev.write(EP_OUT, part, timeout=5000)
         time.sleep(0.5)
         dev.write(EP_OUT, STATUS_QUERY, timeout=1000)
         time.sleep(0.3)
@@ -122,5 +123,10 @@ def printer_presence() -> str:
         return f"USB unavailable ({type(e).__name__})"
 
 
-def print_label(spec: LabelSpec) -> list[str]:
-    return send(tspl(spec))
+def print_label(spec: LabelSpec, bluetooth: str | None = None) -> list[str]:
+    """Print over USB, or over Bluetooth when `bluetooth` is given: the printer's address, or "" / "auto" for the first
+    known T003 (see `bluetooth.resolve`). Returns the problems the printer reports afterwards."""
+    payload = tspl(spec)
+    if bluetooth is None:
+        return send(payload)
+    return bt.send(payload, bt.resolve(bluetooth))
