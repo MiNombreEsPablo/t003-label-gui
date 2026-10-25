@@ -84,7 +84,7 @@ jobs:
           dnf install -y --skip-broken --setopt=install_weak_deps=False git tar gzip xz which file binutils curl \
             ca-certificates desktop-file-utils mesa-libEGL mesa-libGL libglvnd-glx libxkbcommon libxkbcommon-x11 \
             fontconfig freetype dbus-libs glib2 libX11 libXext libXrender libXi libSM libICE libxcb \
-            nss nspr libXcomposite libXdamage libXrandr libXtst alsa-lib mesa-libgbm libxshmfence libatomic \
+            nss nspr libXcomposite libXdamage libXrandr libXtst alsa-lib mesa-libgbm libxshmfence libatomic libxkbfile \
             xcb-util-cursor xcb-util-image xcb-util-keysyms xcb-util-renderutil xcb-util-wm
       - uses: actions/checkout@v5
       - name: Python 3.12 from python-build-standalone
@@ -105,6 +105,10 @@ jobs:
         run: /opt/venv/bin/python -m pytest -q
       - name: Build the app
         run: /opt/venv/bin/python packaging/build.py --shell
+      - name: Libraries the bundle needs but the build container lacks (they would be missing on a user's machine too)
+        run: |
+          find dist/t003-label-studio -name '*.so*' -type f | while read -r f; do LD_LIBRARY_PATH="$(dirname "$f"):dist/t003-label-studio/_internal:dist/t003-label-studio/_internal/PySide6/Qt/lib" ldd "$f" 2>/dev/null | grep "not found" | sed "s|^|$(basename "$f"): |"; done | sort -u | tee missing.txt
+          echo "$(wc -l < missing.txt) missing"
       - name: The build needs glibc 2.28 at most
         run: /opt/venv/bin/python packaging/check_glibc.py dist/t003-label-studio --max 2.28
       - name: Package and self-test (AppImage)
