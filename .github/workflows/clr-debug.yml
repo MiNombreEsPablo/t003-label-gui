@@ -11,11 +11,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: pillow, pre: "import PIL.Image, PIL.ImageFont, PIL.ImageDraw", extra: "pillow" }
-          - { name: fonttools-qrcode, pre: "import fontTools.ttLib, qrcode", extra: "fonttools qrcode" }
-          - { name: pyusb-libusb, pre: "import usb.core, libusb_package; libusb_package.get_libusb1_backend()", extra: "pyusb libusb-package", flags: "--collect-all libusb_package" }
-          - { name: webview-import, pre: "import webview", extra: "" }
-          - { name: bleak, pre: "import bleak", extra: "bleak" }
+          - { name: excludes, pre: "pass", extra: "", flags: "--exclude-module tkinter --exclude-module gi --exclude-module PyQt5 --exclude-module PyQt6 --exclude-module PySide2 --exclude-module PySide6 --exclude-module qtpy --exclude-module webview.platforms.gtk --exclude-module webview.platforms.cef --exclude-module webview.platforms.android --exclude-module webview.platforms.cocoa --exclude-module webview.platforms.qt --exclude-module webview.platforms.mshtml" }
+          - { name: webview-data, pre: "pass", extra: "", flags: "--collect-data webview --hidden-import webview.platforms.winforms --hidden-import webview.platforms.edgechromium" }
+          - { name: winforms-import, pre: "import webview.platforms.winforms", extra: "", flags: "--hidden-import webview.platforms.winforms" }
+          - { name: bleak-submodules, pre: "pass", extra: "bleak", flags: "--collect-submodules bleak" }
+          - { name: everything, pre: "import webview.platforms.winforms", extra: "bleak pyusb libusb-package pillow qrcode fonttools", flags: "--collect-data webview --hidden-import webview.platforms.winforms --hidden-import webview.platforms.edgechromium --collect-submodules bleak --collect-all libusb_package --exclude-module tkinter --exclude-module gi --exclude-module PySide6 --exclude-module qtpy --exclude-module webview.platforms.qt --exclude-module webview.platforms.gtk --noupx --clean" }
     name: ${{ matrix.name }}
     steps:
       - uses: actions/setup-python@v6
