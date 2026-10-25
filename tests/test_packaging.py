@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGE = ROOT / "src" / "t003gui"
 
@@ -79,6 +81,7 @@ def test_launcher_says_what_to_install_when_nothing_can_open_a_window():
 
 def test_launcher_falls_back_to_the_qt_window_when_pywebview_is_missing():
     """An install with only the old window keeps working; it is told about the new one."""
+    pytest.importorskip("PySide6")  # the job without Qt has nothing to fall back to (the test above covers its message)
     code = ("import sys; sys.modules['webview'] = None; sys.argv = ['t003-gui']; "
             "from t003gui import launcher; launcher.qt_window = lambda: print('QT OPENED'); launcher.main()")
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=ROOT, timeout=60)
