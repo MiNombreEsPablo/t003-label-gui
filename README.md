@@ -146,7 +146,7 @@ work to build and to keep working).
 **Needs hardware or research first**
 - [ ] `research` Hardware testing on Windows and macOS (CI builds them, but they are untested with a printer). Testers wanted.
 - [ ] `useful` `research` Windows printing through the spooler, so no Zadig/WinUSB driver is needed (needs a Windows machine to test)
-- [ ] `big` `research` A web app on GitHub Pages that prints from a phone over BLE (works from Chrome on Android, tested with a throwaway page; no Firefox or iOS; the label renderer would have to be ported to JS)
+- [ ] `big` One web UI for every client (in progress on the `web-ui` branch): the existing Python engine runs in the browser through Pyodide, prints over Web Bluetooth from Chrome on Android (tested), and the desktop app becomes a shell around the same page. No Firefox or iOS for printing. Only a text, font, effect and border slice exists so far
 
 ## Building releases
 

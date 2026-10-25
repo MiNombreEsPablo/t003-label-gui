@@ -1,0 +1,78 @@
+"""Serve the web UI for development: `python web/dev_server.py [port]`, then open http://localhost:8000.
+
+The URL layout is the one the published site will have: the files of web/ as they are, plus
+  /engine/<module>.py        the engine's Python sources, straight from src/t003gui
+  /engine/manifest.json      what the browser has to load (Pyodide version, packages, modules)
+  /fonts/<file>.ttf          the bundled fonts, fetched on demand
+so the browser build can be built later by copying exactly these files.
+"""
+from __future__ import annotations
+
+import json
+import mimetypes
+import sys
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import unquote, urlparse
+
+WEB = Path(__file__).resolve().parent
+PACKAGE = WEB.parent / "src" / "t003gui"
+FONTS = PACKAGE / "fonts"
+
+# api and what it imports, no more: the browser must not need Qt, USB or anything else
+ENGINE_MODULES = ["__init__.py", "spec.py", "render.py", "imaging.py", "doodle.py", "stickers.py", "fonts.py",
+                  "protocol.py", "bluetooth.py", "api.py"]
+PYODIDE = "314.0.7"
+mimetypes.add_type("text/javascript", ".js")
+mimetypes.add_type("text/x-python", ".py")
+mimetypes.add_type("font/ttf", ".ttf")
+
+
+def manifest() -> dict:
+    return {
+        "pyodide": PYODIDE,
+        "packages": ["Pillow", "fonttools", "micropip"],  # Pyodide's own builds
+        "pypi": ["qrcode"],  # pure Python, installed from PyPI at start-up (to be hosted with the site later)
+        "python": ENGINE_MODULES,
+        "fonts": sorted(p.name for p in FONTS.glob("*.ttf")),
+    }
+
+
+class Handler(BaseHTTPRequestHandler):
+    def _send(self, body: bytes, ctype: str, code: int = 200) -> None:
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _file(self, path: Path) -> None:
+        ctype = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+        self._send(path.read_bytes(), ctype if not ctype.startswith("text/") else ctype + "; charset=utf-8")
+
+    def do_GET(self) -> None:
+        path = unquote(urlparse(self.path).path)
+        if path == "/engine/manifest.json":
+            return self._send(json.dumps(manifest()).encode(), "application/json")
+        if path.startswith("/engine/") and path[len("/engine/"):] in ENGINE_MODULES:
+            return self._file(PACKAGE / path[len("/engine/"):])
+        if path.startswith("/fonts/") and path[len("/fonts/"):] in manifest()["fonts"]:
+            return self._file(FONTS / path[len("/fonts/"):])
+        target = (WEB / (path.lstrip("/") or "index.html")).resolve()
+        if target.is_file() and WEB in target.parents and target.suffix != ".py":
+            return self._file(target)
+        self._send(b"not found", "text/plain", 404)
+
+    def log_message(self, *args) -> None:
+        pass
+
+
+def make_server(port: int = 8000, bind: str = "127.0.0.1") -> ThreadingHTTPServer:
+    return ThreadingHTTPServer((bind, port), Handler)
+
+
+if __name__ == "__main__":
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
+    print(f"web UI on http://localhost:{port}  (Ctrl+C to stop)")
+    make_server(port).serve_forever()
