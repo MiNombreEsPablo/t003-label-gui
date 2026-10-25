@@ -14,7 +14,7 @@ import binascii
 import os
 import tempfile
 
-from . import api, bluetooth, core
+from . import api, bluetooth, composition, core
 from .render import PrinterError
 from .settings import Settings
 
@@ -71,8 +71,9 @@ class Bridge:
         except (PrinterError, OSError, ValueError) as e:  # a missing picture, a QR code too big to encode
             return {"data": None, "name": None, "error": str(e)}
 
-    def save_file(self, data_base64: str, name: str, kind: str = "PNG image") -> dict:
-        """Ask where to put a file the page made, and write it: {"saved": file name, "cancelled": bool, "error"}."""
+    def save_file(self, data_base64: str, name: str, kind: str = "File") -> dict:
+        """Ask where to put a file the page made, and write it: {"saved": file name, "cancelled": bool, "error"}.
+        The file type is the suffix of `name`; `kind` words it for the dialog ("PNG image", "T003 label")."""
         if self._dialogs is None:
             return {"saved": None, "cancelled": False, "error": "This window can't save files."}
         try:
@@ -84,6 +85,22 @@ class Bridge:
             return {"saved": os.path.basename(path), "cancelled": False, "error": None}
         except (OSError, ValueError, binascii.Error) as e:
             return {"saved": None, "cancelled": False, "error": str(e)}
+
+    def composition_dumps(self, spec_json: str) -> dict:
+        """The label as the text of a `.t003label` file, base64: {"data", "name", "error"}."""
+        try:
+            text = api.composition_dumps(spec_json)
+            return {"data": base64.b64encode(text.encode("utf-8")).decode("ascii"),
+                    "name": api.file_stem(spec_json) + composition.SUFFIX, "error": None}
+        except (OSError, ValueError) as e:
+            return {"data": None, "name": None, "error": str(e)}
+
+    def composition_loads(self, text: str) -> dict:
+        """What a `.t003label` file holds: {"spec": JSON text, "error": None}, or {"spec": None, "error": "why"}."""
+        try:
+            return {"spec": api.composition_loads(text), "error": None}
+        except (OSError, ValueError) as e:
+            return {"spec": None, "error": str(e)}
 
     def known_printers(self) -> list[dict]:
         """T003s the system's Bluetooth knows, for a picker: [{"address": ..., "name": ...}]."""

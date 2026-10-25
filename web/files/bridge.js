@@ -5,10 +5,10 @@ import { copyImage } from "./browser.js";
 
 export function createFiles() {
   return {
-    async save(bytes, name, mime) {
+    async save(bytes, name, mime, kind = "File") {
       let binary = "";
       for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-      return window.pywebview.api.save_file(btoa(binary), name, mime === "image/png" ? "PNG image" : "File");
+      return window.pywebview.api.save_file(btoa(binary), name, kind);
     },
     copyImage,
   };

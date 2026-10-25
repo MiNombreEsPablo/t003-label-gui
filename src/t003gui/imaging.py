@@ -9,6 +9,7 @@ from __future__ import annotations
 import functools
 import hashlib
 import os
+import re
 import shutil
 import tempfile
 from pathlib import Path
@@ -144,7 +145,8 @@ def adopt(source, name: str = "") -> str:
     if suffix is None:
         raise ValueError(f"{label} is a {kind} picture; use PNG, JPEG, BMP, GIF or WebP.")
     data = source.read_bytes()
-    target = pictures_dir() / f"{hashlib.sha256(data).hexdigest()[:16]}{suffix}"
+    stem = re.sub(r"[^A-Za-z0-9._ -]+", "_", Path(name).stem).strip(" .")[:40]  # the name the user knows it by
+    target = pictures_dir() / (f"{hashlib.sha256(data).hexdigest()[:16]}{'-' + stem if stem else ''}{suffix}")
     if not target.exists():
         target.parent.mkdir(parents=True, exist_ok=True)
         partial = target.with_suffix(".part")

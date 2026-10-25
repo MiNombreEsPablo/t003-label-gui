@@ -36,6 +36,9 @@ export function createEngine(baseUrl) {
     preview: (spec) => call("preview", { spec: JSON.stringify(spec) }),
     // bytes of a picture the user chose -> the path to put in the label (rejects with a sentence if it isn't usable)
     addImage: (bytes, name) => call("addImage", { data: bytes, name }, [bytes.buffer]),
+    // the label as a .t003label file ({data: Uint8Array of its text, name}) and back (-> the label as an object)
+    compositionDumps: (spec) => call("compositionDumps", { spec: JSON.stringify(spec) }),
+    compositionLoads: async (text) => JSON.parse(await call("compositionLoads", { text })),
     // the label as a PNG: {data: Uint8Array, name: "Neon Nights.png"}, at one of options.export.scales
     exportPng: (spec, scale) => call("exportPng", { spec: JSON.stringify(spec), scale }),
     tspl: (spec) => call("tspl", { spec: JSON.stringify(spec) }),

@@ -120,8 +120,7 @@ goes away with Qt (making them shared data would mean refactoring the frozen Qt 
       the pointer, placed on release
 - [x] The doodle crosses as the spec's base64 PNG mask (W×SH, white = ink), so presets, files and the CLI carry it. Stored
       doodles load back; a damaged one becomes empty
-- [ ] (for Phase 4) Re-encode with `doodle.encode` when saving a preset or file: a browser canvas PNG is 4–8 KB of text,
-      the engine's 1-bit PNG a fraction of that
+- [x] Re-encode the doodle when saving a file (`composition.dumps` does it for every client); presets will use the same call
 - [x] The rest of the label shows through while drawing: the engine renders the label without its doodle, the overlay
       draws the ink on it, the bucket uses that picture to stop at the text
 - Checked: 9 doodles built through the page (every tool kind, patterned inks, a bucket fill stopped by text) decode and
@@ -130,8 +129,11 @@ goes away with Qt (making them shared data would mean refactoring the frozen Qt 
 ## Phase 4 — Presets, files, themes, shortcuts (L)
 
 - [ ] Presets: save, load, delete (browser: localStorage; desktop: `presets.py` through the bridge)
-- [ ] `.t003label`: open and save with the image embedded (engine functions behind `api`, so the format has one
-      implementation); drag and drop of either kind of file
+- [x] `.t003label`: open and save with the picture embedded (`compositions` branch). `api.composition_dumps/loads` call the
+      same `composition.py` the Qt app uses, so the format has one implementation and the files are interchangeable
+      (a file the browser wrote loads in Qt's own loader; the picture bytes and the doodle survive). Buttons "Open label…" and
+      "Save label…" under the preview (they move into the File menu), and dropping a `.t003label` on the page opens it.
+      Saving re-encodes the doodle compactly (`doodle.canonical`: 4888 -> 500 characters in the test)
 - [x] Export PNG and copy the label as an image (`export-image` branch): "Save image" and "Copy image" under the preview,
       with the Qt app's two sizes (as printed, 4×) and its file naming (the label's first line), both from the engine
       (`api.export_png`, `spec.file_stem`) so every client agrees; a new **files** seam (browser: a download and the

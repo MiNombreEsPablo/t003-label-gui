@@ -185,11 +185,15 @@ export function createDoodleWidget(options) {
         if (stale) { encoded = pngFromMask(doodle.pixels, width, height); stale = false; }
         return encoded;
       },
-      set(text) { // a stored doodle (a preset, a file): shown straight away once decoded
+      set(text) { // a stored doodle (a preset, a file)
+        // its text is the label's doodle from this moment (the engine draws it from the text: the very next render must
+        // see it); decoding it into the canvas only matters for drawing on top of it, and can take a moment
+        encoded = text;
+        stale = false;
         maskFromPng(text, width, height).then((mask) => {
+          if (encoded !== text) return; // something newer was set or drawn meanwhile
           doodle.setMask(mask || new Uint8Array(width * height));
-          encoded = mask ? text : "";
-          stale = false;
+          if (!mask) encoded = ""; // damaged: the engine would ignore it anyway
           syncButtons();
           redraw();
         });

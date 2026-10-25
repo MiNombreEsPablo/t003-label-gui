@@ -10,6 +10,12 @@ const el = (tag, props = {}, ...children) => {
   return node;
 };
 
+// A stored picture's file name without the hash the engine puts in front of it ("e521…-holiday.jpg" -> "holiday.jpg").
+export function friendlyName(path) {
+  const name = path.split("/").pop().replace(/^([0-9a-f]{12,16}-)+/, "");
+  return /^[0-9a-f]{16}\.\w+$/.test(name) || !name ? "Picture" : name;
+}
+
 export function createImageWidget(useFile, say) {
   let widget = null;
 
@@ -26,7 +32,7 @@ export function createImageWidget(useFile, say) {
 
     function set(newPath, shownName) {
       path = newPath || "";
-      nameLabel.textContent = path ? shownName || path.split("/").pop() : "No picture";
+      nameLabel.textContent = path ? shownName || friendlyName(path) : "No picture";
       nameLabel.title = path ? nameLabel.textContent : "";
       clear.hidden = !path;
     }

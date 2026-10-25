@@ -209,14 +209,21 @@ def _picture(tmp_path, name="p.png", fmt="PNG", color=(10, 200, 30)):
     return path
 
 
-def test_adopt_gives_a_picture_a_stable_home_named_by_its_content(tmp_path):
+def test_adopt_gives_a_picture_a_stable_home_that_remembers_its_name(tmp_path):
     first = imaging.adopt(_picture(tmp_path), "holiday.png")
-    again = imaging.adopt(_picture(tmp_path, "copy.png"), "copy.png")
-    other = imaging.adopt(_picture(tmp_path, "o.png", color=(1, 2, 3)), "o.png")
+    again = imaging.adopt(_picture(tmp_path, "copy.png"), "holiday.png")  # the same picture, chosen again
+    other = imaging.adopt(_picture(tmp_path, "o.png", color=(1, 2, 3)), "holiday.png")  # another picture, the same name
     assert first == again != other
     assert Path(first).parent == imaging.pictures_dir() and Path(first).suffix == ".png"
+    assert Path(first).name.endswith("-holiday.png")  # the name survives into the file, so a saved label can show it
     assert Image.open(first).size == (40, 30)
     assert not list(imaging.pictures_dir().glob("*.part"))
+
+
+def test_adopt_makes_an_unnamed_or_odd_name_safe(tmp_path):
+    assert Path(imaging.adopt(_picture(tmp_path), "")).name.count("-") == 0  # a paste has no name: the hash alone
+    odd = Path(imaging.adopt(_picture(tmp_path), "../../etc/pass wd?.png"))
+    assert odd.parent == imaging.pictures_dir() and "/" not in odd.name and "?" not in odd.name
 
 
 @pytest.mark.parametrize("fmt, suffix", [("PNG", ".png"), ("JPEG", ".jpg"), ("BMP", ".bmp"), ("GIF", ".gif"), ("WEBP", ".webp")])

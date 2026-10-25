@@ -12,9 +12,10 @@ import hashlib
 import json
 import re
 import tempfile
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 
+from . import doodle
 from .spec import IMAGE_SUFFIXES, LabelSpec
 
 FORMAT = "t003-label"
@@ -23,6 +24,7 @@ SUFFIX = ".t003label"
 
 
 def dumps(spec: LabelSpec) -> str:
+    spec = replace(spec, doodle=doodle.canonical(spec.doodle))  # compact, whichever client drew it
     data = {"format": FORMAT, "version": VERSION, "spec": asdict(spec)}
     source = Path(spec.image_path) if spec.image_path else None
     if source and source.is_file():

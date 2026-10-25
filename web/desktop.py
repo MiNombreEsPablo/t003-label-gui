@@ -7,6 +7,7 @@ bridge (src/t003gui/bridge.py) instead of Pyodide and Web Bluetooth.
 """
 from __future__ import annotations
 
+import os
 import sys
 import threading
 from pathlib import Path
@@ -27,12 +28,13 @@ class Dialogs:
     def save(self, suggested_name: str, kind: str) -> str | None:
         import webview
 
+        suffix = os.path.splitext(suggested_name)[1]  # the file type: ".png", ".t003label"
         result = self.window.create_file_dialog(
-            webview.SAVE_DIALOG, save_filename=suggested_name, file_types=(f"{kind} (*.png)",))
+            webview.SAVE_DIALOG, save_filename=suggested_name, file_types=(f"{kind} (*{suffix})",))
         if isinstance(result, (list, tuple)):  # some toolkits answer with a tuple of one path
             result = result[0] if result else None
-        if result and not result.lower().endswith(".png"):
-            result += ".png"
+        if result and suffix and not result.lower().endswith(suffix.lower()):
+            result += suffix
         return result or None
 
 
