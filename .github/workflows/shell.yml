@@ -53,6 +53,8 @@ jobs:
         shell: pwsh
         run: |
           "{0:N0} MB" -f ((Get-ChildItem "dist\T003 Label Studio" -Recurse | Measure-Object Length -Sum).Sum / 1MB)
+          # A downloaded zip's files carry a "from the internet" mark that .NET refuses to load code from: mark ours the same way
+          Get-ChildItem "dist\T003 Label Studio" -Recurse -Include *.dll,*.pyd | ForEach-Object { Set-Content -Path $_.FullName -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3" }
           $env:T003_SELFTEST_LOG = "$PWD\selftest.log"
           $p = Start-Process -FilePath "dist\T003 Label Studio\T003 Label Studio.exe" -ArgumentList "--selftest" -Wait -PassThru
           if (Test-Path selftest.log) { Get-Content selftest.log }
