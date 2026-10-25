@@ -5,3 +5,8 @@ PySide6==6.8.3
 PySide6-Essentials==6.8.3
 PySide6-Addons==6.8.3
 shiboken6==6.8.3
+
+# Windows' window toolkit (pywebview -> pythonnet). pythonnet 3.2 / clr-loader 0.3 loaded fine from a normal install but
+# failed in the frozen app ("Failed to resolve Python.Runtime.Loader.Initialize"); these are the versions that were in use for years.
+pythonnet==3.0.5
+clr_loader==0.2.7
