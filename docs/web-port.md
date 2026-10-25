@@ -25,7 +25,8 @@ text is hidden by "Image only".
 `.t003label`), paste a picture, copy the label as an image.
 **Menus and keys** — File (open, save, export, print, quit), Edit (paste, clear image, clear doodle, copy label), View ›
 Theme, Help (about, updates, report an issue, presets folder); Ctrl+O/S/E/P/V/Shift+C/Q.
-**Look** — four themes (Y2K Blue, Y2K Pink, Gunmetal, Handheld) and the system look, remembered between runs.
+**Look** — four themes (Y2K Blue, Y2K Pink, Gunmetal, Handheld) and the system look, remembered between runs: gel
+buttons, LED checkboxes, plastic tabs, a glossy banner with the icon, the preview in a chrome bezel, a two-column layout.
 **Also** — keyboard focus order, accessible names on every control, remembered settings (theme, last folder, printer).
 
 ## Already in `web/` (the slice)
@@ -34,7 +35,7 @@ Theme, Help (about, updates, report an issue, presets folder); Ctrl+O/S/E/P/V/Sh
 - [x] Text, font (all 23, from `api.options()`), bold, effect, border (plain)
 - [x] Print: Web Bluetooth (browser), USB and Bluetooth with auto-find (desktop shell), status and errors
 - [x] Fonts fetched on demand; both clients checked against the native engine byte for byte
-- [x] Phone-width layout, dark/light by the system
+- [x] Phone-width layout, dark/light by the system (a placeholder look until Phase 1.5)
 
 ## Phase 0 — decisions before more controls (S)
 
@@ -60,6 +61,33 @@ Theme, Help (about, updates, report an issue, presets folder); Ctrl+O/S/E/P/V/Sh
 - Checked: 44 label variations driven through the real controls are bit-identical to the native engine (the one
   mismatch was a real bug, `fonts_needed` missing the matrix background's mono font; now fixed and guarded by a test)
 
+## Phase 1.5 — The vibe (M–L, before images, so every control after it is born in the right style)
+
+The web UI is plain dark/light right now; the Qt app is an iMac-G3 candy-plastic Y2K studio with three more looks. The
+look is part of the app's point (see "Scope" in AGENTS.md), so it comes before the big controls (sliders, the doodle
+toolbar), not after. CSS only: no framework, no build step. The four palettes are copied by hand from `theme.py`, which
+goes away with Qt (making them shared data would mean refactoring the frozen Qt UI for a file that is about to be deleted).
+
+- [ ] **Theme tokens**: one set of CSS custom properties (colours, bevel highlight/shadow pairs, gel gradient stops,
+      radii, font) that the whole stylesheet uses; no colour is written anywhere else
+- [ ] **Y2K Blue first, as the default**: sky-blue gradient window; gel buttons (bright top half, seam, glowing lower
+      half) and the orange gel Print button; bevelled inset fields; plastic tabs that join their pane; LED checkboxes
+      (green on, hollow off); round-cornered Output group with its caption sitting on the frame
+- [ ] **The banner**: the app icon mark (`assets/icon-mark.png`) and "T003 LABEL STUDIO" in the title font, on a glossy plate
+- [ ] **The preview as a screen**: chrome bezel around the canvas, the captioned "gap between stickers, not printed"
+      strip (preview only), crisp dots
+- [ ] **Layout**: two columns on a wide window (controls left, the bezelled preview right, as in the Qt screenshots),
+      one column on a phone; the preview stays visible while editing
+- [ ] **The other three looks**: Y2K Pink (colour changes only), Gunmetal (black LCD fields, lime text) and Handheld (four
+      olive shades, flat, Pixelify Sans, tinted preview), plus "System" (no custom look; dark/light by the OS)
+- [ ] **A theme switcher** (View › Theme, or a small picker on a phone) remembered through the store seam; first run
+      gets Y2K Blue
+- [ ] Fonts for the look (title font, Pixelify Sans) served with the page like the label fonts; they are bundled and
+      open-licensed already
+- [ ] Check every theme at phone and desktop widths, in the desktop shell's web engine and in a browser, and for
+      readable text and visible focus (the select styling already needed a fix in Qt's engine once)
+- Cheap first cut if wanted: Y2K Blue + layout + banner + bezel, then the other looks and the switcher
+
 ## Phase 2 — Images (L)
 
 - [ ] Picture in: file picker, drag and drop, paste from the clipboard, clear ×. Browser: bytes into Pyodide's file
@@ -83,7 +111,7 @@ Theme, Help (about, updates, report an issue, presets folder); Ctrl+O/S/E/P/V/Sh
 - [ ] `.t003label`: open and save with the image embedded (engine functions behind `api`, so the format has one
       implementation); drag and drop of either kind of file
 - [ ] Export PNG (scale 1–6) and copy the label as an image (Clipboard API; desktop through the bridge if needed)
-- [ ] Themes as CSS custom properties from `theme.py`'s four palettes + system; the Handheld theme's pixel font
+- (themes moved to Phase 1.5)
 - [ ] A menu bar or toolbar for File / Edit / View / Help, and the shortcuts (Ctrl+O/S/E/P/V/Shift+C)
 - [ ] Accessible names on every control and a tested keyboard order (Qt had both; so should the web UI)
 - [ ] Decide: "Show all installed fonts" (desktop shell only, through the bridge, or drop it), update check (drop on
