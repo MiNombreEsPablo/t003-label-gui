@@ -64,3 +64,37 @@ def test_an_empty_label_still_asks_for_something_to_print(monkeypatch):
     with pytest.raises(SystemExit) as e:
         cli.main([])
     assert e.value.code == 2
+
+
+# --- presets saved by the web UI -----------------------------------------------------------------------------------------
+
+def test_a_preset_name_is_cleaned_or_refused_with_a_sentence():
+    from t003gui import presets
+
+    assert presets.clean_name("  Neon   Nights \n") == "Neon Nights"
+    for bad, why in (("", "name"), ("   ", "name"), ("x" * 61, "60 characters")):
+        with pytest.raises(ValueError, match=why):
+            presets.clean_name(bad)
+
+
+def test_a_web_preset_is_a_plain_entry_the_cli_and_qt_can_read(tmp_path, monkeypatch):
+    import json
+
+    from t003gui import api, doodle
+    from t003gui.bridge import Bridge
+
+    ink = Image.new("L", (core.W, core.SH), 0)
+    ink.paste(255, (10, 10, 80, 30))
+    store = PresetStore(tmp_path / "presets.json")
+    bridge = Bridge(presets=store)
+    label = json.dumps({"text": "Fragile", "effect": "neon", "border": True, "border_style": "chamfer",
+                        "image_path": "/tmp/somewhere/picture.png", "doodle": doodle.encode(ink)})
+    assert bridge.preset_save("  Fragile  stuff ", label) == {"saved": "Fragile stuff", "error": None}
+    kept = store.get("Fragile stuff")
+    assert (kept.text, kept.effect, kept.border_style) == ("Fragile", "neon", "chamfer")
+    assert kept.image_path == "" and kept.doodle  # a preset is a style: no picture; the doodle stays
+    out = tmp_path / "p.png"
+    monkeypatch.setattr(PresetStore, "__init__", lambda self, path=None: setattr(self, "path", tmp_path / "presets.json"))
+    cli.main(["--preset", "Fragile stuff", "--preview", str(out)])  # t003-print reads what the web UI saved
+    assert out.exists()
+    assert json.loads(api.preset_entry("x", label))["spec"]["image_path"] == ""

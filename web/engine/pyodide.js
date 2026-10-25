@@ -36,6 +36,8 @@ export function createEngine(baseUrl) {
     preview: (spec) => call("preview", { spec: JSON.stringify(spec) }),
     // bytes of a picture the user chose -> the path to put in the label (rejects with a sentence if it isn't usable)
     addImage: (bytes, name) => call("addImage", { data: bytes, name }, [bytes.buffer]),
+    // a preset to keep (browser storage only; the desktop shell's bridge keeps its own): {name, spec}
+    presetEntry: async (name, spec) => JSON.parse(await call("presetEntry", { name, spec: JSON.stringify(spec) })),
     // the label as a .t003label file ({data: Uint8Array of its text, name}) and back (-> the label as an object)
     compositionDumps: (spec) => call("compositionDumps", { spec: JSON.stringify(spec) }),
     compositionLoads: async (text) => JSON.parse(await call("compositionLoads", { text })),

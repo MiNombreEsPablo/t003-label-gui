@@ -128,7 +128,11 @@ goes away with Qt (making them shared data would mean refactoring the frozen Qt 
 
 ## Phase 4 — Presets, files, themes, shortcuts (L)
 
-- [ ] Presets: save, load, delete (browser: localStorage; desktop: `presets.py` through the bridge)
+- [x] Presets (`presets` branch): a preset bar above the tabs (choose, Save…, Delete with a second click to confirm). A preset
+      is a **style**: the whole label without its picture (a picture can't outlive a page reload in the browser, and
+      "Save label…" keeps pictures), with the doodle stored compactly; choosing one replaces the label, as in Qt. Browser:
+      localStorage; desktop shell: `presets.py` through the bridge, i.e. the very `presets.json` that Qt and
+      `t003-print --preset` use (checked: a preset saved in the shell is read by the CLI)
 - [x] `.t003label`: open and save with the picture embedded (`compositions` branch). `api.composition_dumps/loads` call the
       same `composition.py` the Qt app uses, so the format has one implementation and the files are interchangeable
       (a file the browser wrote loads in Qt's own loader; the picture bytes and the doodle survive). Buttons "Open label…" and

@@ -11,10 +11,10 @@ from __future__ import annotations
 
 import io
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import PurePath
 
-from . import bluetooth, composition, doodle, fonts, form, imaging, render, spec, stickers
+from . import bluetooth, composition, doodle, fonts, form, imaging, presets, render, spec, stickers
 from .protocol import STATUS_QUERY, status_problems, tspl  # noqa: F401
 
 
@@ -58,6 +58,14 @@ def file_stem(raw: str | bytes | dict) -> str:
     return spec.file_stem(label_from_json(raw))
 
 
+def preset_entry(name: str, raw: str | bytes | dict) -> str:
+    """What to keep for a preset: {"name": the cleaned name, "spec": the label}, as JSON text. A preset is a style: the
+    picture is not kept (a picture lives in a saved label file), and the doodle is stored compactly. ValueError with a
+    sentence for a bad name."""
+    label = replace(label_from_json(raw), image_path="", doodle=doodle.canonical(label_from_json(raw).doodle))
+    return json.dumps({"name": presets.clean_name(name), "spec": asdict(label)})
+
+
 def composition_dumps(raw: str | bytes | dict) -> str:
     """The whole label design as the text of a `.t003label` file (the picture travels inside, the doodle is compact)."""
     return composition.dumps(label_from_json(raw))
@@ -73,6 +81,11 @@ def adopt_image(path: str, name: str = "") -> str:
     """Take a picture a client wrote to `path` (an upload, a paste) and return the path to put in the label's
     `image_path`. Raises ValueError with a sentence for the user when it isn't a picture we can use."""
     return imaging.adopt(path, name)
+
+
+def label_to_json(label: spec.LabelSpec) -> str:
+    """A label as JSON text, the form every client takes."""
+    return json.dumps(asdict(label))
 
 
 def hints(raw: str | bytes | dict) -> list[str]:

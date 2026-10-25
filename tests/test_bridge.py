@@ -157,3 +157,34 @@ def test_a_bad_label_file_is_an_error_sentence():
     result = Bridge().composition_loads("this is not a label")
     assert result["spec"] is None and "not a label file" in result["error"]
     assert Bridge().composition_loads('{"format": "t003-label", "version": 7, "spec": {}}')["error"].startswith("this file was made")
+
+
+# --- presets ------------------------------------------------------------------------------------------------------------
+
+def _presets_bridge(tmp_path):
+    from t003gui.presets import PresetStore
+
+    return Bridge(presets=PresetStore(tmp_path / "presets.json"))
+
+
+def test_presets_are_listed_saved_loaded_and_deleted(tmp_path):
+    bridge = _presets_bridge(tmp_path)
+    assert bridge.presets_list() == {"names": []}
+    for name in ("banana", "Apple", "cherry"):
+        assert bridge.preset_save(name, json.dumps({"text": name, "effect": "neon"}))["error"] is None
+    assert bridge.presets_list()["names"] == ["Apple", "banana", "cherry"]  # sorted without regard to case
+    loaded = bridge.preset_get("Apple")
+    assert loaded["error"] is None and json.loads(loaded["spec"])["text"] == "Apple" and json.loads(loaded["spec"])["effect"] == "neon"
+    assert bridge.preset_delete("banana") == {"error": None}
+    assert bridge.presets_list()["names"] == ["Apple", "cherry"]
+    assert bridge.preset_delete("never existed") == {"error": None}  # nothing to delete is fine
+
+
+def test_saving_over_a_preset_replaces_it_and_a_bad_name_is_a_sentence(tmp_path):
+    bridge = _presets_bridge(tmp_path)
+    bridge.preset_save("one", json.dumps({"text": "first"}))
+    bridge.preset_save("one", json.dumps({"text": "second"}))
+    assert json.loads(bridge.preset_get("one")["spec"])["text"] == "second" and len(bridge.presets_list()["names"]) == 1
+    result = bridge.preset_save("   ", json.dumps({"text": "x"}))
+    assert result["saved"] is None and "name" in result["error"]
+    assert bridge.preset_get("nope")["spec"] is None and "no preset" in bridge.preset_get("nope")["error"]

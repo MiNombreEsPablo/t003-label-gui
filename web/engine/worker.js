@@ -77,6 +77,13 @@ const handlers = {
       throw new Error(pythonMessage(e));
     }
   },
+  async presetEntry({ name, spec }) { // what to keep for a preset: {name, spec}
+    try {
+      return api.preset_entry(name, spec);
+    } catch (e) {
+      throw new Error(pythonMessage(e));
+    }
+  },
   async compositionDumps({ spec }) { // the label as the text of a .t003label file
     try {
       return { data: new TextEncoder().encode(api.composition_dumps(spec)), name: `${api.file_stem(spec)}.t003label` };
