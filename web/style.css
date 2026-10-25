@@ -92,6 +92,9 @@ body {
 .banner { grid-area: banner; }
 .stage { grid-area: stage; }
 .controls { grid-area: controls; }
+@media (max-width: 55.99rem) {
+  .screen { max-width: calc(34vh * 384 / 240); margin: 0 auto; } /* a tall, narrow window: keep the preview from taking it all */
+}
 @media (min-width: 56rem) {
   .app {
     grid-template-areas: "banner stage" "controls stage";
@@ -168,7 +171,8 @@ body {
 }
 
 /* tabs: plastic tabs that join their pane */
-.tablist { display: flex; gap: 2px; padding: 0 2px; overflow-x: auto; position: relative; z-index: 1; }
+.tablist { display: flex; gap: 2px; overflow-x: auto; overflow-y: hidden; position: relative; z-index: 1; scrollbar-width: none; }
+.tablist::-webkit-scrollbar { display: none; }
 .tab {
   margin: 3px 0 0;
   padding: 5px 12px;
@@ -181,8 +185,8 @@ body {
   white-space: nowrap;
   cursor: pointer;
 }
-.tab:hover { background: var(--btn-hot); border-top-color: var(--tab-accent); }
-.tab[aria-selected="true"] { margin-top: 0; padding-top: 8px; color: var(--text); background: #fff; border-top-color: var(--tab-accent); }
+.tab:hover { background: var(--btn-hot); box-shadow: inset 0 3px 0 var(--tab-accent); }
+.tab[aria-selected="true"] { margin-top: 0; padding-top: 8px; color: var(--text); background: #fff; box-shadow: inset 0 3px 0 var(--tab-accent); }
 .panel {
   margin-top: -2px;
   padding: 10px 12px 12px;
@@ -259,12 +263,23 @@ fieldset.output legend {
   border-radius: var(--r-title);
 }
 
+/* Print and the status stay at the bottom of the window however far the controls are scrolled */
+.actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin: 12px -12px 0;
+  padding: 14px 12px 8px;
+  background: linear-gradient(rgba(170, 216, 247, 0), rgba(170, 216, 247, 0.96) 28%); /* the window's bottom colour */
+}
+
+@media (max-height: 520px) { .actions { position: static; background: none; } } /* a very short window: don't cover the controls */
+
 /* buttons are gel; the Print button is the orange one */
 #print {
   display: block;
   width: 100%;
   min-height: 32px;
-  margin-top: 12px;
   padding: 5px 14px;
   color: var(--default-text);
   font: bold 17px var(--font);
@@ -278,5 +293,5 @@ fieldset.output legend {
 #print:disabled { color: #6f7c8c; background: var(--btn-off); border-color: #c9b48d; cursor: default; }
 #print:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
-#status { min-height: 1.4em; margin: 8px 2px 0; color: var(--status); font-weight: bold; }
+#status { min-height: 1.4em; margin: 6px 2px 0; color: var(--status); font-weight: bold; }
 #status.error { color: var(--error); }
