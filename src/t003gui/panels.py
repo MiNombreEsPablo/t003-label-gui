@@ -541,7 +541,11 @@ def _icon(sticker: str) -> QImage:
 
 
 class OutputPanel(QGroupBox):
-    """Print settings; they don't change the preview, so there is no `changed` signal."""
+    """Print settings; they don't change the preview, so there is no `changed` signal. How the printer is reached
+    (USB, or Bluetooth with an address) is not part of a label, so it is not in `read`/`write`: the window keeps it in
+    its settings and listens to `connection_changed`."""
+
+    connection_changed = Signal()
 
     def __init__(self) -> None:
         super().__init__("Output")
@@ -550,11 +554,39 @@ class OutputPanel(QGroupBox):
         self.density = QSpinBox()
         self.density.setRange(0, 15)
         self.density.setValue(7)
+        self.printer = QComboBox()
+        self.printer.addItems(["USB", "Bluetooth"])
+        self.printer.setAccessibleName("Printer connection")
+        self.address = QLineEdit()
+        self.address.setPlaceholderText("first T003 found")
+        self.address.setToolTip("The printer's Bluetooth address (AA:BB:CC:DD:EE:FF), or empty for the first T003 the system knows.\n"
+                                "The printer must be on and not connected to a phone; pairing isn't needed.")
+        self.address.setAccessibleName("Bluetooth address")
+        self.address.setVisible(False)
+        self.printer.currentIndexChanged.connect(self._printer_changed)
+        self.address.editingFinished.connect(self.connection_changed)
+        printer_row = QHBoxLayout()
+        printer_row.setSpacing(6)
+        printer_row.addWidget(self.printer)
+        printer_row.addWidget(self.address, 1)
 
         form = QFormLayout(self)
         form.addRow("Copies", self.copies)
         form.addRow("Darkness", self.density)
+        form.addRow("Printer", printer_row)
         _tidy(form, top=18)  # room for the caption sitting on the frame's top edge
+
+    def _printer_changed(self) -> None:
+        self.address.setVisible(self.printer.currentIndex() == 1)
+        self.connection_changed.emit()
+
+    def bluetooth_target(self) -> str | None:
+        """None for USB; for Bluetooth the typed address, "" meaning the first T003 the system knows."""
+        return self.address.text().strip() if self.printer.currentIndex() == 1 else None
+
+    def set_connection(self, bluetooth: bool, address: str) -> None:
+        self.address.setText(address)
+        self.printer.setCurrentIndex(1 if bluetooth else 0)  # shows the address box through _printer_changed
 
     def read(self) -> dict:
         return {"copies": self.copies.value(), "density": self.density.value()}

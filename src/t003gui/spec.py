@@ -80,3 +80,12 @@ class LabelSpec:
             if ok:
                 values[f.name] = value
         return cls(**values)
+
+
+def layout_hint(spec: LabelSpec) -> str:
+    """The text and QR code are silently dropped by the default "Image only" layout: say so, and where to change it.
+    Empty when there is nothing to say. Shared by every client, so they all word it the same."""
+    if spec.image_path and spec.image_layout == "only" and (spec.text or spec.qr):
+        what = "text and QR code aren't" if spec.text and spec.qr else ("text isn't" if spec.text else "QR code isn't")
+        return f"The {what} printed: the layout is \u201cImage only\u201d. Choose another layout on the Image tab."
+    return ""

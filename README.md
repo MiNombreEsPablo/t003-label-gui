@@ -112,6 +112,12 @@ The T003 speaks TSPL over a plain USB printer interface. The app renders a 384×
 28 mm stickers), sends it as a TSPL bitmap with pyusb/libusb, and needs no CUPS or kernel driver. See
 [AGENTS.md](AGENTS.md) for the hardware facts and the code layout.
 
+The T003 also has Bluetooth (classic serial and BLE) and takes the same TSPL over it. The app and CLI can print over
+classic Bluetooth: choose **Bluetooth** under *Printer* in the Output box, or run `t003-print "Hi" --bluetooth`
+(optionally `--bluetooth AA:BB:CC:DD:EE:FF`). The printer has to be on and not connected to a phone, and it doesn't
+need pairing. With no address the app looks for a T003 (Linux: `bluetoothctl`; it scans for about 5 seconds if the
+system hasn't seen the printer yet). Tested on Linux only: it needs Python's Bluetooth sockets, which macOS builds don't have and Windows may.
+
 ## Roadmap
 
 Ordered by priority, with no promised dates. Several ideas are inspired by 90s handheld cameras and their thermal
@@ -140,7 +146,7 @@ work to build and to keep working).
 **Needs hardware or research first**
 - [ ] `research` Hardware testing on Windows and macOS (CI builds them, but they are untested with a printer). Testers wanted.
 - [ ] `useful` `research` Windows printing through the spooler, so no Zadig/WinUSB driver is needed (needs a Windows machine to test)
-- [ ] `big` `research` Bluetooth printing (USB only for now; first check whether the T003 has Bluetooth at all)
+- [ ] `big` One web UI for every client (in progress on the `web-ui` branch): the existing Python engine runs in the browser through Pyodide, prints over Web Bluetooth from Chrome on Android (tested), and the desktop app becomes a shell around the same page. No Firefox or iOS for printing. Only a text, font, effect and border slice exists so far
 
 ## Building releases
 

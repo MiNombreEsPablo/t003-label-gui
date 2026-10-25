@@ -40,6 +40,7 @@ from PySide6.QtWidgets import (
 from . import __version__, about, composition, core, panels, theme, updates
 from . import fonts as bundled_fonts
 from .presets import PresetStore
+from .spec import layout_hint
 
 PREVIEW_SCALE = 2
 NO_PRESET = "— presets —"
@@ -82,6 +83,9 @@ class MainWindow(QMainWindow):
         self.decoration = panels.DecorationPanel()
         self.doodle = panels.DoodlePanel(PREVIEW_SCALE)
         self.output = panels.OutputPanel()
+        saved = QSettings()
+        self.output.set_connection(saved.value("connection", "usb", type=str) == "bluetooth", saved.value("btAddress", "", type=str))
+        self.output.connection_changed.connect(self._save_connection)
         self.panels = (self.content, self.text_panel, self.image_panel, self.decoration, self.doodle, self.output)
         self.content.image.textChanged.connect(lambda text: self.image_panel.set_active(bool(text.strip())))
 
@@ -502,11 +506,7 @@ class MainWindow(QMainWindow):
 
     @staticmethod
     def _layout_hint(spec: core.LabelSpec) -> str:
-        """The text and QR code are silently dropped by the default "Image only" layout: say so, and where to change it."""
-        if spec.image_path and spec.image_layout == "only" and (spec.text or spec.qr):
-            what = "text and QR code aren't" if spec.text and spec.qr else ("text isn't" if spec.text else "QR code isn't")
-            return f"The {what} printed: the layout is “Image only”. Choose another layout on the Image tab."
-        return ""
+        return layout_hint(spec)
 
     def paste_image_from_clipboard(self) -> None:
         if self.content.paste_image():
@@ -527,6 +527,11 @@ class MainWindow(QMainWindow):
         QApplication.clipboard().setImage(QImage(bitmap.tobytes(), core.W, core.SH, core.W, QImage.Format_Grayscale8).copy())
         self.status.setText("Copied the label to the clipboard.")
 
+    def _save_connection(self) -> None:
+        settings = QSettings()
+        settings.setValue("connection", "usb" if self.output.bluetooth_target() is None else "bluetooth")
+        settings.setValue("btAddress", self.output.address.text().strip())
+
     def print_now(self) -> None:
         spec = self.spec()
         if not (spec.text or spec.qr or spec.image_path):
@@ -536,7 +541,8 @@ class MainWindow(QMainWindow):
         self.print_action.setEnabled(False)
         QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
-            problems = core.print_label(spec)
+            target = self.output.bluetooth_target()
+            problems = core.print_label(spec) if target is None else core.print_label(spec, bluetooth=target)
         except Exception as e:  # PrinterError, or a bad image path / oversized QR raised while rendering
             QMessageBox.critical(self, "Print failed", str(e))
             self.status.setText(str(e))
