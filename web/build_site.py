@@ -7,6 +7,7 @@ The site is exactly the layout the dev server fakes: the files of web/, plus
                             so a visit never depends on PyPI
   fonts/*.ttf               the bundled fonts, fetched on demand
   assets/                   the banner's icon
+  licenses.txt              the project's licence and the licence of every bundled font
 Pyodide itself comes from the jsDelivr CDN at the version the manifest names.
 
 `--no-wheels` skips the download (for tests, which have no network).
@@ -77,6 +78,7 @@ def build(out: Path, wheels: bool = True) -> dict:
     for name in dev_server.SITE_ASSETS:
         shutil.copy(dev_server.ASSETS / name, out / "assets" / name)
 
+    (out / "licenses.txt").write_text(dev_server.licenses_text(), encoding="utf-8")  # the fonts' licences travel with them
     manifest = dev_server.manifest()
     if wheels:
         manifest["wheels"] = [fetch_wheel(engine / "wheels")]

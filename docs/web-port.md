@@ -171,7 +171,7 @@ goes away with Qt (making them shared data would mean refactoring the frozen Qt 
 - [~] A GitHub Actions deploy workflow (`.github/workflows/pages.yml`): builds on every change to `web/` or `src/` (pull
       requests too, to prove the site builds), deploys from `main` only when the repository variable `PAGES_ENABLED` is
       `true`. **Needs you:** Settings ▸ Pages ▸ source "GitHub Actions", then add the variable. A test checks that no
-      URL in the page leaves a project path (`/t003-label-gui/`). Still to do: ship the fonts' licence texts with the site
+      URL in the page leaves a project path (`/t003-label-gui/`). The fonts' licence texts ship with the site (`licenses.txt`, linked from About)
 - [x] One small CI job (`web-parity`): Node + Pyodide renders 44 labels (every effect, border and background, alignments,
       QR, a doodle) and the dots must equal the native engine's; the test is shown to fail on a label that differs. Not
       covered, as documented: the four FreeType-sensitive fonts and pictures that need a non-square resize

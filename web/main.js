@@ -360,6 +360,7 @@ async function main() {
     $("about-title").textContent = `${app.name} ${app.version}`;
     $("about-details").textContent = `Includes ${app.fonts} bundled open-source font families (SIL Open Font License).`;
     $("about-repo").href = app.repo_url;
+    $("about-licenses").hidden = desktop; // (the shell's window can't open a page of its own; the repository has the same texts)
     $("about").showModal();
   }
   $("about-repo").addEventListener("click", (event) => {

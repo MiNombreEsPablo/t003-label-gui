@@ -39,6 +39,18 @@ def test_the_site_has_the_page_the_engine_and_the_fonts(site):
     assert {p.name for p in (out / "fonts").glob("*.ttf")} == set(manifest["fonts"])
 
 
+def test_every_bundled_font_has_its_licence_on_the_site(site):
+    out, _, _ = site
+    text = (out / "licenses.txt").read_text(encoding="utf-8")
+    assert text.startswith("T003 Label Studio is MIT licensed") and "Permission is hereby granted" in text
+    from t003gui import fonts
+
+    for family in fonts.BUNDLED:
+        licence = (fonts.FONT_DIR / "LICENSES" / family.license_file)
+        assert licence.is_file(), family.family
+        assert licence.read_text(encoding="utf-8", errors="replace").strip()[:200] in text, family.family  # every text is in
+
+
 def test_the_site_has_only_what_the_browser_needs(site):
     out, manifest, _ = site
     python = {p.relative_to(out).as_posix() for p in out.rglob("*.py")}
