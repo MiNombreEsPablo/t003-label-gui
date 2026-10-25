@@ -59,3 +59,15 @@ jobs:
           $p = Start-Process -FilePath "dist\T003 Label Studio\T003 Label Studio.exe" -ArgumentList "--selftest" -Wait -PassThru
           if (Test-Path selftest.log) { Get-Content selftest.log }
           if ($p.ExitCode -ne 0) { throw "selftest exited with $($p.ExitCode)" }
+      - name: Diagnose the Windows toolkit
+        if: failure() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python -m pip list 2>$null | Select-String -Pattern "pythonnet|clr|pywebview|pyinstaller"
+          Write-Host "--- unfrozen: import clr"
+          python -c "import clr, sys; print('clr ok', clr.__file__)"
+          Write-Host "--- bundled pythonnet and clr_loader"
+          Get-ChildItem "dist\T003 Label Studio\_internal\pythonnet","dist\T003 Label Studio\_internal\clr_loader" -Recurse -File | ForEach-Object { "{0,10}  {1}" -f $_.Length, $_.FullName.Replace((Get-Location).Path + "\dist\T003 Label Studio\_internal\", "") }
+          Write-Host "--- installed (site-packages) pythonnet and clr_loader"
+          $sp = python -c "import site; print(site.getsitepackages()[-1])"
+          Get-ChildItem "$sp\pythonnet","$sp\clr_loader" -Recurse -File | Where-Object { $_.Extension -in ".dll",".json",".config" } | ForEach-Object { "{0,10}  {1}" -f $_.Length, $_.FullName.Replace("$sp\", "") }
