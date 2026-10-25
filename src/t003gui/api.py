@@ -14,7 +14,7 @@ import json
 from dataclasses import asdict, replace
 from pathlib import PurePath
 
-from . import bluetooth, composition, doodle, fonts, form, imaging, presets, render, spec, stickers
+from . import __version__, about, bluetooth, composition, doodle, fonts, form, imaging, presets, render, spec, stickers
 from .protocol import STATUS_QUERY, status_problems, tspl  # noqa: F401
 
 
@@ -135,6 +135,8 @@ def options() -> str:
         "doodle": doodle.describe(),
         "defaults": asdict(spec.LabelSpec()),
         "export": {"scales": [[s, spec.export_size_name(s)] for s in spec.EXPORT_SCALES], "extension": ".png"},
+        "app": {"name": "T003 Label Studio", "version": __version__, "repo_url": about.REPO_URL,
+                "issues_url": about.ISSUES_URL, "fonts": len(fonts.BUNDLED)},
         "composition": {"extension": composition.SUFFIX, "mime": "application/json"},
         "content_fields": list(spec.CONTENT_FIELDS),  # a label with none of these set has nothing to print
     })

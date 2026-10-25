@@ -68,14 +68,17 @@ export function createDoodleWidget(options) {
     });
   };
 
+  let control = null; // the control the form holds (the menus clear it)
   let encoded = ""; // the doodle as text, kept until the ink changes again
   let stale = false;
   let active = false;
 
   function make(field, notify) {
     const tool = el("select", { id: "doodle-tool" });
+    tool.setAttribute("aria-label", "Tool");
     for (const [value, label] of info.tools) tool.append(new Option(label, value));
     const ink = el("select", { id: "doodle-ink" });
+    ink.setAttribute("aria-label", "Ink");
     for (const [value, label] of info.inks) ink.append(new Option(label, value));
     const [bLo, bHi, bStart] = info.brush;
     const brush = makeSlider({ label: "Brush size", minimum: bLo, maximum: bHi, step: 1, scale: "linear", neutral: 0, zero_label: "", suffix: " dots",
@@ -179,7 +182,7 @@ export function createDoodleWidget(options) {
       }
     });
 
-    return {
+    control = {
       root,
       get() {
         if (stale) { encoded = pngFromMask(doodle.pixels, width, height); stale = false; }
@@ -199,11 +202,14 @@ export function createDoodleWidget(options) {
         });
       },
       disable() {},
+      clear() { if (doodle.clear()) changed(); },
     };
+    return control;
   }
 
   return {
     make,
+    current: () => control,
     overlay,
     setActive(on) { // only while the Doodle tab is open: elsewhere the engine draws the doodle into the preview itself
       active = on;

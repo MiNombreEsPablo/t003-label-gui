@@ -188,3 +188,26 @@ def test_saving_over_a_preset_replaces_it_and_a_bad_name_is_a_sentence(tmp_path)
     result = bridge.preset_save("   ", json.dumps({"text": "x"}))
     assert result["saved"] is None and "name" in result["error"]
     assert bridge.preset_get("nope")["spec"] is None and "no preset" in bridge.preset_get("nope")["error"]
+
+
+# --- the Help menu's links ------------------------------------------------------------------------------------------------
+
+def test_the_shell_opens_the_projects_own_pages_and_nothing_else(monkeypatch):
+    from t003gui import about
+
+    opened = []
+    monkeypatch.setattr("webbrowser.open", lambda url: opened.append(url) or True)
+    bridge = Bridge()
+    assert bridge.open_url(about.ISSUES_URL) == {"error": None} and bridge.open_url(about.REPO_URL) == {"error": None}
+    for refused in ("https://example.com/", "file:///etc/passwd", "javascript:alert(1)", about.REPO_URL + "evil.example/x",
+                    "http://localhost:1/", ""):
+        assert "project's pages" in bridge.open_url(refused)["error"], refused
+    assert opened == [about.ISSUES_URL, about.REPO_URL]
+
+
+def test_the_about_box_facts_come_from_the_engine():
+    from t003gui import __version__, about, fonts
+
+    app = json.loads(api.options())["app"]
+    assert app == {"name": "T003 Label Studio", "version": __version__, "repo_url": about.REPO_URL,
+                   "issues_url": about.ISSUES_URL, "fonts": len(fonts.BUNDLED)}

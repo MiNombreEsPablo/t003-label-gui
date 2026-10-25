@@ -10,6 +10,7 @@
 import { buildForm } from "./form.js";
 import { createImageWidget } from "./image.js";
 import { createDoodleWidget } from "./doodle.js";
+import { createMenubar } from "./menus.js";
 import { applyTheme, DEFAULT_THEME, previewColors, THEMES } from "./themes.js";
 
 const desktop = new URLSearchParams(location.search).get("client") === "desktop";
@@ -182,18 +183,17 @@ async function main() {
   }
 
   // the look: remembered, applied at once; the preview and the doodle ink follow its tint
-  for (const [key, title] of THEMES) $("theme").append(new Option(title, key));
   const retint = () => {
     if (last) draw(last);
     doodle.setInk(previewColors().ink);
   };
-  $("theme").value = applyTheme(await store.get("theme", DEFAULT_THEME));
+  let currentTheme = applyTheme(await store.get("theme", DEFAULT_THEME));
   retint();
-  $("theme").addEventListener("input", () => {
-    applyTheme($("theme").value);
-    store.set("theme", $("theme").value);
+  function setTheme(key) {
+    currentTheme = applyTheme(key);
+    store.set("theme", currentTheme);
     retint();
-  });
+  }
 
   const hasContent = (label) => options.content_fields.some((name) => String(label[name]).trim()); // as spec.has_content
 
@@ -209,7 +209,7 @@ async function main() {
     }
     return engine.exportPng(current, Number($("export-size").value));
   }
-  $("save-image").addEventListener("click", async () => {
+  async function saveImage() {
     try {
       const image = await makeImage("save");
       if (!image) return;
@@ -219,8 +219,8 @@ async function main() {
     } catch (e) {
       status(`Couldn't save the image: ${e.message}`, true);
     }
-  });
-  $("copy-image").addEventListener("click", async () => {
+  }
+  async function copyImage() {
     try {
       const image = await makeImage("copy");
       if (!image) return;
@@ -229,7 +229,9 @@ async function main() {
     } catch (e) {
       status(`Couldn't copy the image: ${e.message}`, true);
     }
-  });
+  }
+  $("save-image").addEventListener("click", saveImage);
+  $("copy-image").addEventListener("click", copyImage);
 
   // presets: named styles (the label without its picture); choosing one replaces the label, as in the Qt app
   const NO_PRESET = "— presets —";
@@ -322,7 +324,7 @@ async function main() {
     $("label-file").value = "";
     if (file) openLabelFile(file);
   });
-  $("save-label").addEventListener("click", async () => {
+  async function saveLabel() {
     try {
       const file = await engine.compositionDumps(spec());
       const result = await files.save(file.data, file.name, options.composition.mime, "T003 label");
@@ -331,7 +333,8 @@ async function main() {
     } catch (e) {
       status(`Couldn't save the label: ${e.message}`, true);
     }
-  });
+  }
+  $("save-label").addEventListener("click", saveLabel);
 
   async function print() {
     const current = spec();
@@ -345,6 +348,55 @@ async function main() {
   }
   $("print").addEventListener("click", print);
   $("print").disabled = false;
+
+  // the menu bar: every item calls an action the buttons already use
+  async function clearImage() {
+    picture.current().set("");
+    form.refreshState();
+    await refresh();
+  }
+  function showAbout() {
+    const app = options.app;
+    $("about-title").textContent = `${app.name} ${app.version}`;
+    $("about-details").textContent = `Includes ${app.fonts} bundled open-source font families (SIL Open Font License).`;
+    $("about-repo").href = app.repo_url;
+    $("about").showModal();
+  }
+  $("about-repo").addEventListener("click", (event) => {
+    event.preventDefault();
+    openLink(options.app.repo_url);
+  });
+  async function openLink(url) {
+    try {
+      await files.openLink(url);
+    } catch (e) {
+      status(`Couldn't open the page: ${e.message}`, true);
+    }
+  }
+  createMenubar($("menubar"), [
+    { label: "File", items: [
+      { label: "Open label…", shortcut: "Ctrl+O", run: () => $("label-file").click() },
+      { label: "Save label…", shortcut: "Ctrl+S", run: saveLabel },
+      "-",
+      { label: "Save image…", shortcut: "Ctrl+E", run: saveImage },  // (always on: with nothing to save, the action says so)
+      { label: "Print", shortcut: "Ctrl+P", run: print, enabled: () => !$("print").disabled },
+    ] },
+    { label: "Edit", items: [
+      { label: "Paste image", shortcut: "Ctrl+V", display: true, run: () => picture.current().paste() },
+      { label: "Clear image", run: clearImage, enabled: () => !!spec().image_path },
+      { label: "Clear doodle", run: () => doodle.current().clear(), enabled: () => !!spec().doodle },
+      "-",
+      { label: "Copy label as image", shortcut: "Ctrl+Shift+C", run: copyImage },
+    ] },
+    { label: "View", items: [
+      { heading: "Look" },
+      ...THEMES.map(([key, title]) => ({ label: title, checked: () => currentTheme === key, run: () => setTheme(key) })),
+    ] },
+    { label: "Help", items: [
+      { label: `About ${options.app.name}…`, run: showAbout },
+      { label: "Report an issue…", run: () => openLink(options.app.issues_url) },
+    ] },
+  ]);
   status("");
   await refresh();
   // For tests and the desktop checks: the label as the page sees it, and whether it is idle.

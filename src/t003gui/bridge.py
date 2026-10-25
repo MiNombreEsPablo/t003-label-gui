@@ -12,10 +12,11 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import webbrowser
 import os
 import tempfile
 
-from . import api, bluetooth, composition, core
+from . import about, api, bluetooth, composition, core
 from .render import PrinterError
 from .presets import PresetStore
 from .settings import Settings
@@ -104,6 +105,17 @@ class Bridge:
             return {"spec": api.composition_loads(text), "error": None}
         except (OSError, ValueError) as e:
             return {"spec": None, "error": str(e)}
+
+    def open_url(self, url: str) -> dict:
+        """Open one of the project's own pages (the Help menu's links) in the user's browser. Nothing else is opened:
+        a page can ask for any URL, and the shell has no business launching it."""
+        if not (url == about.REPO_URL or url.startswith(about.REPO_URL + "/")):
+            return {"error": "That isn't one of the project's pages."}
+        try:
+            webbrowser.open(url)
+        except webbrowser.Error as e:
+            return {"error": str(e)}
+        return {"error": None}
 
     def presets_list(self) -> dict:
         """The names of the saved presets, sorted: {"names": [...]}."""

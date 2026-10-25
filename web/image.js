@@ -24,11 +24,11 @@ export function createImageWidget(useFile, say) {
     const nameLabel = el("span", { className: "picture-name" }, "No picture");
     const picker = el("input", { type: "file", accept: ACCEPT, hidden: true });
     const browse = el("button", { type: "button", className: "gel", title: field.tip || "" }, "Browse…");
-    const paste = el("button", { type: "button", className: "gel", title: "Paste a picture from the clipboard (Ctrl+V)" }, "Paste");
+    const pasteButton = el("button", { type: "button", className: "gel", title: "Paste a picture from the clipboard (Ctrl+V)" }, "Paste");
     const clear = el("button", { type: "button", className: "gel clear", hidden: true }, "×");
     clear.setAttribute("aria-label", "Remove the picture");
     browse.setAttribute("aria-label", "Choose a picture");
-    const root = el("div", { className: "picture" }, nameLabel, browse, paste, clear, picker);
+    const root = el("div", { className: "picture" }, nameLabel, browse, pasteButton, clear, picker);
 
     function set(newPath, shownName) {
       path = newPath || "";
@@ -42,7 +42,7 @@ export function createImageWidget(useFile, say) {
       picker.value = ""; // choosing the same file again must still fire
       if (file) useFile(file);
     });
-    paste.addEventListener("click", async () => {
+    async function pasteFromClipboard() { // the Paste button and Edit > Paste image
       try {
         for (const item of await navigator.clipboard.read()) {
           const type = item.types.find((t) => t.startsWith("image/"));
@@ -52,13 +52,14 @@ export function createImageWidget(useFile, say) {
       } catch (_) {
         say("The browser didn't allow reading the clipboard: click on the page and press Ctrl+V instead.");
       }
-    });
+    }
+    pasteButton.addEventListener("click", pasteFromClipboard);
     clear.addEventListener("click", () => {
       set("");
       notify();
     });
 
-    widget = { root, get: () => path, set, disable: (off) => { browse.disabled = paste.disabled = clear.disabled = off; } };
+    widget = { root, get: () => path, set, paste: pasteFromClipboard, disable: (off) => { browse.disabled = pasteButton.disabled = clear.disabled = off; } };
     return widget;
   }
   return { make, current: () => widget };

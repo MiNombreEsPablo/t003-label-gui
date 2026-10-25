@@ -16,6 +16,9 @@ export async function copyImage(bytes) {
 
 export function createFiles() {
   return {
+    openLink(url) { // one of the project's pages, in a new tab
+      window.open(url, "_blank", "noopener");
+    },
     async save(bytes, name, mime, kind) {
       const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
       const link = Object.assign(document.createElement("a"), { href: url, download: name });
