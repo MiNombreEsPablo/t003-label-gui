@@ -102,7 +102,8 @@ goes away with Qt (making them shared data would mean refactoring the frozen Qt 
 - Checked: 24 image variations through the real controls are bit-identical to the native engine, except "Behind
   text" with this picture (Pillow 13.0's resize differs from Pyodide's 12.2: same input, 12 % of the dots differ after
   dithering; the browser equals Node-Pyodide exactly). Expect it to disappear when Pyodide ships a newer Pillow
-- [ ] Load time and memory of Pillow on a phone with a 12-megapixel photo (the page now says how long a picture took when
+- [x] (Pixel 7a, Chrome) choosing a big photo is quick, nothing felt slow; no load-time note appeared (under 1.5 s)
+- [~] Load time and memory of Pillow on a phone with a 12-megapixel photo (the page now says how long a picture took when
       it is over 1.5 s; measure on the Pixel, set a limit or downscale in JS if needed)
 
 ## Phase 3 — Doodle (L)
@@ -133,6 +134,9 @@ goes away with Qt (making them shared data would mean refactoring the frozen Qt 
 - [ ] One small CI job: Node + Pyodide renders a fixed set of labels and compares their hashes with the native
       engine (the harness already exists), so the web and desktop engines can't drift apart unnoticed
 - [ ] A phone check of the deployed page (print over Web Bluetooth)
+- [ ] **Instant controls on repeat visits**: the form is built from the engine's options, so it only appears once
+      Pyodide has booted (a couple of seconds on the phone). Keep the last options in the store seam, draw the form
+      straight away from them, boot the engine in the background and swap the form only if the options changed
 
 ## Phase 6 — Desktop packaging and retiring Qt (L, the riskiest, so last)
 

@@ -45,7 +45,7 @@ function makeSlider(field, startValue, notify) {
   function show() {
     range.value = position(toInt(value));
     range.style.setProperty("--fill", `${(range.value / range.max) * 100}%`);
-    box.value = field.zero_label && value === 0 ? "" : value;
+    box.value = field.zero_label && value === 0 ? "" : value.toFixed(places); // "1.0", as Qt shows it
   }
   function set(v) {
     value = clamp(fromInt(toInt(v)), min, max);
@@ -164,7 +164,8 @@ function layoutFields(fields, controls) {
     } else if (group.length === 1) {
       const control = controls.get(first.name);
       const label = el("label", { htmlFor: `f-${first.name}` }, first.label);
-      row = el("div", { className: "field" }, ...(first.kind === "image" ? [el("span", { className: "row-title" }, first.label)] : [label]), control.root);
+      row = el("div", { className: first.kind === "image" ? "field wide" : "field" },
+        ...(first.kind === "image" ? [el("span", { className: "row-title" }, first.label)] : [label]), control.root);
     } else {
       row = el("div", { className: "field" }, el("span", { className: "row-title" }, first.row),
         el("div", { className: "inline" }, ...group.map((f) => controls.get(f.name).root)));

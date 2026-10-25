@@ -241,10 +241,12 @@ input[type="checkbox"]:hover { border-color: var(--select-bg); }
 input[type="checkbox"]:checked { background: var(--led-on); border-color: var(--led-on-border); }
 input[type="checkbox"]:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .field.bare .checks { grid-column: 1 / -1; }
+.field.wide { grid-template-columns: minmax(0, 1fr); gap: 3px; } /* the picture row needs the full width: label above */
 .checks { display: flex; flex-wrap: wrap; gap: 6px 18px; }
 .check { display: inline-flex; align-items: center; gap: 8px; }
 .inline { display: flex; gap: 8px; }
 .inline > * { min-width: 0; }
+.inline > select, .inline > input { flex: 1 1 6rem; } /* in a shared row the choice gives way first */
 
 /* the Output group: a raised frame with its title sitting on the edge */
 fieldset.output {
@@ -307,8 +309,8 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { border-color: var(--fo
 input[type="range"]:disabled { opacity: 0.5; }
 .slider { display: flex; align-items: center; gap: 8px; }
 .slider .value { flex: none; width: 5.2rem; }
-.suffixed { display: flex; align-items: center; gap: 6px; }
-.suffixed input { width: 5.5rem; }
+.suffixed { display: flex; flex: none; align-items: center; gap: 6px; }
+.suffixed input { width: 4.4rem; min-width: 0; }
 .suffix { color: var(--text); white-space: nowrap; }
 
 /* small gel buttons and the picture chooser */
