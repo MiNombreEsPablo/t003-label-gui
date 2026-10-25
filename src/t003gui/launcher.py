@@ -1,19 +1,18 @@
-"""The `t003-gui` command: start the window, or say what to install if the optional Qt part is missing."""
+"""The `t003-gui` command: open the web UI in a native window (the Qt window is the legacy one, `--qt`)."""
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
 MISSING_QT = (
-    "The T003 Label Studio window needs PySide6, which isn't installed.\n"
+    "The legacy Qt window needs PySide6, which isn't installed.\n"
     "  pip install 't003-label-gui[gui]'\n"
     "The command-line tool works without it: t003-print --help"
 )
-
-
 MISSING_WEBVIEW = (
-    "The web window needs pywebview, which isn't installed.\n"
-    "  pip install 't003-label-gui[web]'      (Linux without WebKitGTK: 't003-label-gui[web-qt]')"
+    "The T003 Label Studio window needs pywebview, which isn't installed.\n"
+    "  pip install 't003-label-gui[web]'      (Linux without WebKitGTK: 't003-label-gui[web-qt]')\n"
+    "The command-line tool works without it: t003-print --help"
 )
 NO_TOOLKIT = (
     "pywebview found no window toolkit. On Linux install WebKitGTK and PyGObject from your distribution\n"
@@ -22,17 +21,22 @@ NO_TOOLKIT = (
 )
 
 
-def shell_main() -> None:
-    """The entry of the packaged web app: the window, or `--selftest` to prove the bundle is complete."""
-    if "--selftest" in sys.argv:
-        from .selftest import run
-
-        sys.exit(run(web=True))
-    web_shell()
+class ShellUnavailable(Exception):
+    """The web window can't start here: pywebview or its window toolkit is missing."""
 
 
-def web_shell() -> None:
-    """The web UI in a native window (src/t003gui/web/desktop.py), the Qt window's successor."""
+def qt_window() -> None:
+    try:
+        from .app import main as run
+    except ImportError as e:
+        if (e.name or "").split(".")[0] != "PySide6":
+            raise  # a genuine bug, not the missing optional dependency
+        sys.exit(MISSING_QT)
+    run()
+
+
+def run_shell() -> None:
+    """The web UI in a native window (src/t003gui/web/desktop.py); raises ShellUnavailable when it can't open."""
     web = Path(__file__).resolve().parent / "web"
     sys.path.insert(0, str(web))  # the shell and the dev server import each other as plain modules
     try:
@@ -41,20 +45,40 @@ def web_shell() -> None:
     except ImportError as e:
         if (e.name or "").split(".")[0] != "webview":
             raise
-        sys.exit(MISSING_WEBVIEW)
+        raise ShellUnavailable(MISSING_WEBVIEW) from e
     except Exception as e:
         if type(e).__name__ == "WebViewException":  # pywebview's own: no toolkit it can use
-            sys.exit(f"{NO_TOOLKIT}\n({e})")
+            raise ShellUnavailable(f"{NO_TOOLKIT}\n({e})") from e
         raise
 
 
+def web_shell() -> None:
+    try:
+        run_shell()
+    except ShellUnavailable as e:
+        sys.exit(str(e))
+
+
+def shell_main() -> None:
+    """The entry of the packaged app: the window, or `--selftest` to prove the bundle is complete."""
+    if "--selftest" in sys.argv:
+        from .selftest import run
+
+        sys.exit(run(web=True))
+    web_shell()
+
+
 def main() -> None:
-    if "--web" in sys.argv[1:]:
+    if "--qt" in sys.argv[1:]:
+        return qt_window()
+    if "--web" in sys.argv[1:]:  # what the flag said before the web window became the default
         return web_shell()
     try:
-        from .app import main as run
-    except ImportError as e:
-        if (e.name or "").split(".")[0] != "PySide6":
-            raise  # a genuine bug, not the missing optional dependency
-        sys.exit(MISSING_QT)
-    run()
+        run_shell()
+    except ShellUnavailable as e:
+        try:  # an install that has only the old window still works, with a pointer to the new one
+            import PySide6  # noqa: F401
+        except ImportError:
+            sys.exit(str(e))
+        print("The web window isn't available here, opening the legacy Qt window instead.\n" + str(e), file=sys.stderr)
+        qt_window()

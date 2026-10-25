@@ -56,8 +56,10 @@ jobs:
           t003-print --version
       - name: The window explains what to install
         run: |
-          if t003-gui 2> err.txt; then echo "t003-gui should fail without PySide6"; exit 1; fi
+          if t003-gui 2> err.txt; then echo "t003-gui should fail without pywebview and PySide6"; exit 1; fi
           cat err.txt
+          grep -q "pip install 't003-label-gui\[web\]'" err.txt
+          if t003-gui --qt 2> err.txt; then echo "t003-gui --qt should fail without PySide6"; exit 1; fi
           grep -q "pip install 't003-label-gui\[gui\]'" err.txt
 
   # The oldest versions we claim to support, so the lower bounds in pyproject.toml are tested, not guessed.

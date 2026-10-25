@@ -64,7 +64,7 @@ render, libusb) in CI before it is published.
 
 | OS | Get | Needs | Notes |
 |---|---|---|---|
-| **Linux** (x86-64) | `T003-Label-Studio-*-x86_64.AppImage` | glibc 2.28 or newer: Ubuntu 20.04+, Debian 10+, RHEL/Alma/Rocky 8+, Fedora, Arch and anything newer | `chmod +x` and run. On X11 it needs `libxcb-cursor0`. If it doesn't start, run it as `./T003-Label-Studio-*.AppImage --appimage-extract-and-run` (no FUSE needed). Install the udev rule below so you can use the printer without root. |
+| **Linux** (x86-64) | `T003-Label-Studio-*-x86_64.AppImage` | glibc 2.28 or newer: Ubuntu 20.04+, Debian 10+, RHEL/Alma/Rocky 8+, Fedora, Arch and anything newer | `chmod +x` and run. The window is Chromium inside: it needs the usual desktop libraries (`libnss3`, `libxcb-cursor0`, `libxkbcommon-x11`, `libasound2`, and on Fedora `libwayland-server`), which almost every desktop already has. If it doesn't start, run it as `./T003-Label-Studio-*.AppImage --appimage-extract-and-run` (no FUSE needed). Install the udev rule below so you can use the printer without root. |
 | **Windows** (x64) | `…-windows-x64.zip` | Windows 10 or 11 | Unzip and run `T003 Label Studio.exe`. libusb needs the printer bound to the **WinUSB** driver (e.g. with [Zadig](https://zadig.akeo.ie/)), which stops Windows' own printing to that device. |
 | **macOS** (Apple silicon or Intel) | `…-macos-arm64.zip` or `…-macos-x86_64.zip` | macOS 12 or newer | The app is unsigned: right-click → Open the first time. |
 
