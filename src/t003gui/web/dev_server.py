@@ -1,4 +1,4 @@
-"""Serve the web UI for development: `python web/dev_server.py [port]`, then open http://localhost:8000.
+"""Serve the web UI for development: `python src/t003gui/web/dev_server.py [port]`, then open http://localhost:8000.
 
 The URL layout is the one the published site will have: the files of web/ as they are, plus
   /engine/<module>.py        the engine's Python sources, straight from src/t003gui
@@ -18,7 +18,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 WEB = Path(__file__).resolve().parent
-PACKAGE = WEB.parent / "src" / "t003gui"
+PACKAGE = WEB.parent  # src/t003gui: the web UI lives inside the package, so every install ships it
 FONTS = PACKAGE / "fonts"
 
 # api and what it imports, no more: the browser must not need Qt, USB or anything else
@@ -34,7 +34,9 @@ mimetypes.add_type("font/ttf", ".ttf")
 
 def licenses_text() -> str:
     """The project's licence and the licence of every bundled font family, for the site to publish with them."""
-    parts = ["T003 Label Studio is MIT licensed:\n\n" + (WEB.parent / "LICENSE").read_text(encoding="utf-8").strip()]
+    licence = PACKAGE.parent.parent / "LICENSE"  # in a checkout; an installed copy keeps it in its dist-info instead
+    parts = ["T003 Label Studio is MIT licensed:\n\n" + (licence.read_text(encoding="utf-8").strip() if licence.is_file()
+                                                          else "see https://github.com/MiNombreEsPablo/t003-label-gui/blob/main/LICENSE")]
     folder = FONTS / "LICENSES"
     parts.append("The bundled fonts are open source; each family's licence follows.")
     for path in sorted(folder.iterdir(), key=lambda p: p.name.lower()):

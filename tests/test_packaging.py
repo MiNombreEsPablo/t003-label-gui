@@ -66,3 +66,11 @@ def test_launcher_does_not_hide_real_import_errors():
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=ROOT, timeout=60)
     assert result.returncode != 0 and "Traceback" in result.stderr and "boom" in result.stderr
     assert "pip install" not in result.stderr
+
+
+def test_launcher_says_what_to_install_when_pywebview_is_missing():
+    blocker = "import sys; sys.modules['webview'] = None; sys.argv = ['t003-gui', '--web']; "
+    result = subprocess.run([sys.executable, "-c", blocker + "from t003gui import launcher; launcher.main()"],
+                            capture_output=True, text=True, cwd=ROOT, timeout=60)
+    assert result.returncode != 0
+    assert "pip install 't003-label-gui[web]'" in result.stderr

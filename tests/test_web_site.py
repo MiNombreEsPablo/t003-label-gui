@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-WEB = ROOT / "web"
+WEB = ROOT / "src" / "t003gui" / "web"
 
 
 def _load(name):

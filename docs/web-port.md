@@ -40,7 +40,7 @@ buttons, LED checkboxes, plastic tabs, a glossy banner with the icon, the previe
 ## Phase 0 — decisions before more controls (S)
 
 - [x] **Form schema** (`src/t003gui/form.py`): `api.options()["form"]` describes the simple fields (name, kind, label, tab,
-      choices, range, tooltip) and `web/form.js` builds the controls from it. Kept: a new effect/background/border in
+      choices, range, tooltip) and `src/t003gui/web/form.js` builds the controls from it. Kept: a new effect/background/border in
       `spec.py` needs no UI change, and `tests/test_form.py` fails when a `LabelSpec` field has neither a control nor an
       entry in `PENDING`. The doodle, image picker, font picker and preset bar stay hand-written.
 - [x] Tabs + layout shell (ARIA tabs with arrow keys; Output and Print always visible), phone-friendly. Image and Doodle
@@ -113,7 +113,7 @@ goes away with Qt (making them shared data would mean refactoring the frozen Qt 
 ## Phase 3 — Doodle (L)
 
 - [x] Drawing surface over the preview, one dot per pixel, hard-edged, pointer events so mouse, touch and pen work
-      (`web/doodle.js`; the engine is `web/doodle-raster.js`, pure functions with 15 Node tests)
+      (`src/t003gui/web/doodle.js`; the engine is `src/t003gui/web/doodle-raster.js`, pure functions with 15 Node tests)
 - [x] Tools: all ten of the Qt canvas (round, square and calligraphy brushes, spray, line, rectangle, ellipse, paint
       bucket, sticker, eraser), five dither inks, brush size, undo (30), Ctrl+Z, clear
 - [x] Stickers: the 12 bitmaps come from the engine (`api.options()["stickers"]`), a picker grid, size 1–6×, ghost under
@@ -163,7 +163,7 @@ goes away with Qt (making them shared data would mean refactoring the frozen Qt 
 ## Phase 5 — Publish on GitHub Pages (M)
 
 - [x] A build step that writes exactly the dev server's layout (`web/`, the engine modules, fonts, the manifest as a file)
-      into a folder: `python web/build_site.py OUT` (72 files, 20.5 MB). Served by a plain static file server it loads and
+      into a folder: `python src/t003gui/web/build_site.py OUT` (72 files, 20.5 MB). Served by a plain static file server it loads and
       renders, QR code included (the server's log shows the manifest and wheel came from the site)
 - [x] The `qrcode` wheel is hosted by the site, pinned (8.2) and checked against its SHA-256 at build time, so a visit never
       touches PyPI. Decided: Pyodide itself stays on the jsDelivr CDN at the pinned version (cached across sites, and

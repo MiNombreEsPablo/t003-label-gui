@@ -20,6 +20,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+web = ["pywebview>=5.3"]  # the web UI in a native window: `t003-gui --web`
 gui = ["PySide6>=6.4"]  # 6.4 added QFormLayout.setRowVisible
 dev = ["pytest", "PySide6>=6.4"]
 
@@ -34,7 +35,7 @@ version = {attr = "t003gui.__version__"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-t003gui = ["fonts/*.ttf", "fonts/LICENSES/*", "assets/*"]
+t003gui = ["fonts/*.ttf", "fonts/LICENSES/*", "assets/*", "web/*.html", "web/*.css", "web/*.js", "web/*.mjs", "web/*/*.js", "web/*.py"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

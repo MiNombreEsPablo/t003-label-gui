@@ -1,6 +1,6 @@
 """The desktop shell: the same web UI in a native window, with the engine and printer running natively in Python.
 
-    python web/desktop.py          (needs pywebview and a web engine: `pip install pywebview`; on Linux Qt or GTK)
+    python src/t003gui/web/desktop.py          (needs pywebview and a web engine: `pip install pywebview`; on Linux Qt or GTK)
 
 The page is served by the dev server on a free local port and opened with ?client=desktop, which makes it use the
 bridge (src/t003gui/bridge.py) instead of Pyodide and Web Bluetooth.

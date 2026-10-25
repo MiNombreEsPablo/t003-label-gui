@@ -15,7 +15,12 @@ export function createPrinter(engine, options) {
   const isConnected = () => device && device.gatt.connected && writeChar;
 
   async function connect() {
-    if (!navigator.bluetooth) throw new Error("This browser has no Web Bluetooth. Use Chrome or Edge (Android or desktop).");
+    if (!navigator.bluetooth) {
+      const apple = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      throw new Error(apple
+        ? "iPhone and iPad browsers can't use Bluetooth (an Apple rule). Save the label as an image instead, or open this page in the Bluefy browser."
+        : "This browser has no Web Bluetooth. Use Chrome or Edge (Android or desktop).");
+    }
     if (!device) {
       device = await navigator.bluetooth.requestDevice({
         filters: [{ namePrefix }],
