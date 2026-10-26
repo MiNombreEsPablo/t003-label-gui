@@ -5,6 +5,16 @@
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Web Bluetooth calls can hang forever (Chromium on Linux does when BlueZ stalls), which leaves the page on "Printing...".
+// Every step gets a deadline and a name, so the error says where it stopped.
+function step(name, ms, promise) {
+  let timer;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`Bluetooth stopped at "${name}" (no answer after ${ms / 1000} s).`)), ms);
+  });
+  return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
+}
+
 // Why navigator.bluetooth is missing, from what the page can tell. Chrome and Edge are not enough on Linux: Web Bluetooth
 // is behind a flag there; it also needs a secure context (https or localhost).
 function webBluetoothHelp() {
@@ -51,21 +61,35 @@ export function createPrinter(engine, options) {
         optionalServices: [ble.service],
       });
     }
-    const server = await device.gatt.connect();
-    const service = await server.getPrimaryService(ble.service);
-    writeChar = await service.getCharacteristic(ble.write);
-    const notify = await service.getCharacteristic(ble.notify);
-    notify.addEventListener("characteristicvaluechanged", (event) => {
-      if (onStatus) onStatus(event.target.value.getUint8(0));
-    });
-    await notify.startNotifications();
+    try {
+      const server = await step("connecting to the printer", 20000, device.gatt.connect());
+      const service = await step("finding the print service", 10000, server.getPrimaryService(ble.service));
+      writeChar = await step("finding the write channel", 10000, service.getCharacteristic(ble.write));
+      try {
+        const notify = await step("finding the status channel", 10000, service.getCharacteristic(ble.notify));
+        notify.addEventListener("characteristicvaluechanged", (event) => {
+          if (onStatus) onStatus(event.target.value.getUint8(0));
+        });
+        await step("listening for the status", 5000, notify.startNotifications());
+      } catch (e) {
+        console.warn("T003: no status channel, printing without it:", e); // the label still prints; we just can't read problems
+      }
+    } catch (e) {
+      disconnect(); // start clean next time instead of reusing a half-open connection
+      throw e;
+    }
+  }
+
+  function disconnect() {
+    writeChar = null;
+    if (device && device.gatt.connected) device.gatt.disconnect();
   }
 
   async function write(bytes) {
     for (let i = 0; i < bytes.length; i += ble.chunk) {
       const part = bytes.slice(i, i + ble.chunk);
-      if (writeChar.properties.writeWithoutResponse) await writeChar.writeValueWithoutResponse(part);
-      else await writeChar.writeValueWithResponse(part);
+      if (writeChar.properties.writeWithoutResponse) await step("sending the label", 10000, writeChar.writeValueWithoutResponse(part));
+      else await step("sending the label", 10000, writeChar.writeValueWithResponse(part));
       await sleep(ble.gap_ms);
     }
   }
@@ -84,7 +108,12 @@ export function createPrinter(engine, options) {
 
   async function printNow(spec) {
     if (!isConnected()) await connect(); // first, while the click still counts as a user gesture (the chooser needs it)
-    await write(await engine.tspl(spec));
+    try {
+      await write(await engine.tspl(spec));
+    } catch (e) {
+      disconnect();
+      throw e;
+    }
     await sleep(300);
     const byte = await status();
     return { problems: byte === null ? [] : await engine.statusProblems(byte), error: null };
