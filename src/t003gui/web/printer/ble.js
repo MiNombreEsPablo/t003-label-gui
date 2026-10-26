@@ -5,6 +5,30 @@
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Why navigator.bluetooth is missing, from what the page can tell. Chrome and Edge are not enough on Linux: Web Bluetooth
+// is behind a flag there; it also needs a secure context (https or localhost).
+function webBluetoothHelp() {
+  const ua = navigator.userAgent;
+  if (!window.isSecureContext) return "Web Bluetooth needs a secure page (https).";
+  if (/Firefox\//.test(ua) || (/Safari\//.test(ua) && !/Chrome\/|Chromium\//.test(ua))) {
+    return "This browser has no Web Bluetooth. Use Chrome or Edge (Android or desktop).";
+  }
+  if (/Linux/.test(ua) && !/Android/.test(ua)) {
+    return "Chrome and Edge on Linux keep Web Bluetooth switched off. Open chrome://flags/#enable-web-bluetooth (edge://flags on Edge), set it to Enabled, restart the browser and try again.";
+  }
+  return "Web Bluetooth is not available in this browser. Use a current Chrome or Edge (Android or desktop).";
+}
+
+// Chromium on Linux reports a failed GATT connection (BlueZ) as "Unknown error when connecting to the device". It is
+// seen when the system already holds the printer over classic Bluetooth, or has a stale pairing for it.
+function explain(e) {
+  const message = e.message || String(e);
+  if (e.name === "NetworkError" && /connect/i.test(message) && /Linux/.test(navigator.userAgent)) {
+    return `${message} Try disconnecting or removing the printer in the system's Bluetooth settings (or "bluetoothctl remove <address>"), switch the printer off and on, and print again so the browser can pair it itself.`;
+  }
+  return message;
+}
+
 export function createPrinter(engine, options) {
   const { ble, name_prefix: namePrefix, status_query: statusQuery } = options.bluetooth;
   let device = null;
@@ -19,7 +43,7 @@ export function createPrinter(engine, options) {
       const apple = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
       throw new Error(apple
         ? "iPhone and iPad browsers can't use Bluetooth (an Apple rule). Save the label as an image instead, or open this page in the Bluefy browser."
-        : "This browser has no Web Bluetooth. Use Chrome or Edge (Android or desktop).");
+        : webBluetoothHelp());
     }
     if (!device) {
       device = await navigator.bluetooth.requestDevice({
@@ -71,7 +95,7 @@ export function createPrinter(engine, options) {
     print(spec) {
       const run = busy.then(() => printNow(spec)).catch((e) => ({
         problems: [],
-        error: e.name === "NotFoundError" ? "No printer chosen." : e.message || String(e),
+        error: e.name === "NotFoundError" ? "No printer chosen." : explain(e),
       }));
       busy = run;
       return run;
