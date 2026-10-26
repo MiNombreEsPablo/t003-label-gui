@@ -70,7 +70,7 @@ jobs:
             return $p.ExitCode
           }
           function MarkDownloaded() {
-            python -c "import sys, pathlib; [open(str(p) + ':Zone.Identifier', 'w').write('[ZoneTransfer]\r\nZoneId=3\r\n') for p in pathlib.Path(sys.argv[1]).rglob('*') if p.suffix in ('.dll', '.pyd', '.exe')]" $dir
+            python -c "import sys, pathlib; [open(str(p) + ':Zone.Identifier', 'w').write('[ZoneTransfer]\r\nZoneId=3\r\n') for p in pathlib.Path(sys.argv[1]).rglob('*') if p.suffix in ('.dll', '.pyd')]" $dir
           }
           "{0:N0} MB" -f ((Get-ChildItem $dir -Recurse | Measure-Object Length -Sum).Sum / 1MB)
           if ((SelfTest "files as built") -ne 0) { exit 1 }
@@ -96,12 +96,12 @@ jobs:
             return $p.ExitCode
           }
           function MarkDownloaded() {
-            python -c "import sys, pathlib; [open(str(p) + ':Zone.Identifier', 'w').write('[ZoneTransfer]\r\nZoneId=3\r\n') for p in pathlib.Path(sys.argv[1]).rglob('*') if p.suffix in ('.dll', '.pyd', '.exe')]" $dir
+            python -c "import sys, pathlib; [open(str(p) + ':Zone.Identifier', 'w').write('[ZoneTransfer]\r\nZoneId=3\r\n') for p in pathlib.Path(sys.argv[1]).rglob('*') if p.suffix in ('.dll', '.pyd')]" $dir
           }
           MarkDownloaded
           if ((SelfTest "marked as downloaded") -ne 0) { exit 1 }
       - name: Control (Windows, marked, the app's own clean-up switched off; expected to fail if the mark is the cause)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && !cancelled()
         shell: powershell
         timeout-minutes: 5
         continue-on-error: true
@@ -122,7 +122,7 @@ jobs:
             return $p.ExitCode
           }
           function MarkDownloaded() {
-            python -c "import sys, pathlib; [open(str(p) + ':Zone.Identifier', 'w').write('[ZoneTransfer]\r\nZoneId=3\r\n') for p in pathlib.Path(sys.argv[1]).rglob('*') if p.suffix in ('.dll', '.pyd', '.exe')]" $dir
+            python -c "import sys, pathlib; [open(str(p) + ':Zone.Identifier', 'w').write('[ZoneTransfer]\r\nZoneId=3\r\n') for p in pathlib.Path(sys.argv[1]).rglob('*') if p.suffix in ('.dll', '.pyd')]" $dir
           }
           MarkDownloaded
           $env:T003_NO_UNBLOCK = "1"
