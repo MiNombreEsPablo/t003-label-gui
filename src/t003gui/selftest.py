@@ -41,6 +41,16 @@ def run(web: bool = False) -> int:
             import webview  # noqa: F401
         except ImportError as e:
             problems.append(f"the window toolkit (pywebview) is missing: {e}")
+        if sys.platform == "win32" and getattr(sys, "frozen", False):
+            try:  # the window toolkit really loads (.NET and WebView2's wrapper): importing webview alone doesn't try
+                import webview.platforms.winforms  # noqa: F401
+            except Exception as e:  # not only ImportError: a .NET failure is a RuntimeError
+                problems.append(f"the Windows window toolkit doesn't load: {e}")
+        if not sys.platform.startswith("linux"):
+            try:  # the Bluetooth backend (WinRT, CoreBluetooth) is picked by name at run time: prove it was bundled
+                from bleak import BleakClient, BleakScanner  # noqa: F401
+            except ImportError as e:
+                problems.append(f"Bluetooth printing (bleak) is missing: {e}")
         if getattr(sys, "frozen", False) and sys.platform.startswith("linux"):
             try:  # loads Chromium and the system libraries it needs, so a missing one fails here and not on a user's screen
                 from PySide6 import QtWebEngineWidgets  # noqa: F401
