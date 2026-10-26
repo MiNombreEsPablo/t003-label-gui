@@ -1,6 +1,7 @@
 """The `t003-gui` command: open the web UI in a native window (the Qt window is the legacy one, `--qt`)."""
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -59,13 +60,45 @@ def web_shell() -> None:
         sys.exit(str(e))
 
 
+def unblock_downloaded_files() -> int:
+    """Windows marks the files of a downloaded zip "from the internet", and .NET won't load code carrying that mark (the
+    window toolkit needs it). Clear the mark on the app's own files so a freshly extracted download starts; returns how
+    many files had one. T003_NO_UNBLOCK=1 skips it (for testing)."""
+    if sys.platform != "win32" or not getattr(sys, "frozen", False) or os.environ.get("T003_NO_UNBLOCK"):
+        return 0
+    cleared = 0
+    for path in Path(sys.executable).parent.rglob("*"):
+        if path.suffix.lower() in (".dll", ".pyd", ".exe"):
+            try:
+                os.remove(f"{path}:Zone.Identifier")
+                cleared += 1
+            except OSError:
+                pass  # no mark on this file (the usual case), or not ours to change
+    return cleared
+
+
 def shell_main() -> None:
     """The entry of the packaged app: the window, or `--selftest` to prove the bundle is complete."""
+    from . import applog
+
+    applog.start()  # a windowed build has no console: whatever goes wrong is in this file
+    cleared = unblock_downloaded_files()
+    if cleared:
+        import logging
+
+        logging.getLogger("t003gui").info("cleared the downloaded-from-the-internet mark on %d files", cleared)
     if "--selftest" in sys.argv:
         from .selftest import run
 
         sys.exit(run(web=True))
-    web_shell()
+    try:
+        run_shell()
+    except ShellUnavailable as e:
+        applog.record(e)
+        sys.exit(f"{e}\n\nLog: {applog.log_path()}")
+    except Exception as e:
+        applog.record(e)
+        raise SystemExit(f"T003 Label Studio couldn't start: {e}\n\nLog: {applog.log_path()}") from e
 
 
 def main() -> None:
