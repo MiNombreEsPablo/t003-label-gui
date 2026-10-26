@@ -13,6 +13,7 @@ permissions:
 jobs:
   shell:
     name: ${{ matrix.label }}
+    timeout-minutes: 40  # a hung step must not run for six hours
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -50,34 +51,83 @@ jobs:
           "dist/T003 Label Studio.app/Contents/MacOS/T003 Label Studio" --selftest
       - name: Self-test (Windows)
         if: runner.os == 'Windows'
-        shell: powershell  # Windows PowerShell 5: Set-Content -Stream (alternate data streams) isn't in PowerShell 7
+        shell: powershell
+        timeout-minutes: 5
         run: |
           $dir = Join-Path (Get-Location) "dist\T003 Label Studio"
           $exe = Join-Path $dir "T003 Label Studio.exe"
-          "{0:N0} MB" -f ((Get-ChildItem $dir -Recurse | Measure-Object Length -Sum).Sum / 1MB)
+          $log = Join-Path (Get-Location) "selftest.log"
+          $applog = Join-Path $env:LOCALAPPDATA "T003 Label Studio\t003-label-studio.log"
           function SelfTest($label) {
-            $log = Join-Path (Get-Location) "selftest.log"
-            if (Test-Path $log) { Remove-Item $log }
+            foreach ($f in $log, $applog) { if (Test-Path $f) { Remove-Item $f } }
             $env:T003_SELFTEST_LOG = $log
             $p = Start-Process -FilePath $exe -ArgumentList "--selftest" -PassThru
             # a windowed app that crashes shows an error dialog and waits for a click: never wait for it forever
-            if (-not $p.WaitForExit(120000)) { Write-Host "no exit after 120 s (an error dialog?): killing it"; $p.Kill(); $p.WaitForExit() }
+            if (-not $p.WaitForExit(90000)) { Write-Host "no exit after 90 s (an error dialog?): killing it"; Stop-Process -Id $p.Id -Force }
             Write-Host "=== $label : exit $($p.ExitCode), log written: $(Test-Path $log)"
             if (Test-Path $log) { Get-Content $log | ForEach-Object { Write-Host $_ } }
-            $applog = Join-Path $env:LOCALAPPDATA "T003 Label Studio\t003-label-studio.log"
-            if (Test-Path $applog) { Write-Host "--- the app's own log:"; Get-Content $applog -Tail 60 | ForEach-Object { Write-Host $_ }; Remove-Item $applog }
+            if (Test-Path $applog) { Write-Host "--- the app's own log:"; Get-Content $applog -Tail 40 | ForEach-Object { Write-Host $_ } }
             return $p.ExitCode
           }
-          $clean = SelfTest "files as built"
-          # A downloaded zip's files carry a "from the internet" mark: mark ours the same way, then unblock them like a user would
-          $files = Get-ChildItem $dir -Recurse -File | Where-Object { $_.Extension -in ".dll", ".pyd", ".exe" }
-          python -c "import sys, pathlib; [open(str(p) + ':Zone.Identifier', 'w').write('[ZoneTransfer]\r\nZoneId=3\r\n') for p in pathlib.Path(sys.argv[1]).rglob('*') if p.suffix in ('.dll', '.pyd', '.exe')]" $dir
-          Write-Host ("marked " + $files.Count + " files")
-          $marked = SelfTest "files marked as downloaded"
-          Get-ChildItem $dir -Recurse -File | Unblock-File
-          $unblocked = SelfTest "marked, then Unblock-File"
-          Write-Host "RESULT clean=$clean marked=$marked unblocked=$unblocked"
-          if ($clean -ne 0) { exit 1 }
+          function MarkDownloaded() {
+            python -c "import sys, pathlib; [open(str(p) + ':Zone.Identifier', 'w').write('[ZoneTransfer]\r\nZoneId=3\r\n') for p in pathlib.Path(sys.argv[1]).rglob('*') if p.suffix in ('.dll', '.pyd', '.exe')]" $dir
+          }
+          "{0:N0} MB" -f ((Get-ChildItem $dir -Recurse | Measure-Object Length -Sum).Sum / 1MB)
+          if ((SelfTest "files as built") -ne 0) { exit 1 }
+      # What a user gets from a downloaded zip: every file carries Windows' "from the internet" mark. The app clears it itself.
+      - name: Self-test (Windows, files marked as downloaded)
+        if: runner.os == 'Windows'
+        shell: powershell
+        timeout-minutes: 5
+        run: |
+          $dir = Join-Path (Get-Location) "dist\T003 Label Studio"
+          $exe = Join-Path $dir "T003 Label Studio.exe"
+          $log = Join-Path (Get-Location) "selftest.log"
+          $applog = Join-Path $env:LOCALAPPDATA "T003 Label Studio\t003-label-studio.log"
+          function SelfTest($label) {
+            foreach ($f in $log, $applog) { if (Test-Path $f) { Remove-Item $f } }
+            $env:T003_SELFTEST_LOG = $log
+            $p = Start-Process -FilePath $exe -ArgumentList "--selftest" -PassThru
+            # a windowed app that crashes shows an error dialog and waits for a click: never wait for it forever
+            if (-not $p.WaitForExit(90000)) { Write-Host "no exit after 90 s (an error dialog?): killing it"; Stop-Process -Id $p.Id -Force }
+            Write-Host "=== $label : exit $($p.ExitCode), log written: $(Test-Path $log)"
+            if (Test-Path $log) { Get-Content $log | ForEach-Object { Write-Host $_ } }
+            if (Test-Path $applog) { Write-Host "--- the app's own log:"; Get-Content $applog -Tail 40 | ForEach-Object { Write-Host $_ } }
+            return $p.ExitCode
+          }
+          function MarkDownloaded() {
+            python -c "import sys, pathlib; [open(str(p) + ':Zone.Identifier', 'w').write('[ZoneTransfer]\r\nZoneId=3\r\n') for p in pathlib.Path(sys.argv[1]).rglob('*') if p.suffix in ('.dll', '.pyd', '.exe')]" $dir
+          }
+          MarkDownloaded
+          if ((SelfTest "marked as downloaded") -ne 0) { exit 1 }
+      - name: Control (Windows, marked, the app's own clean-up switched off; expected to fail if the mark is the cause)
+        if: runner.os == 'Windows'
+        shell: powershell
+        timeout-minutes: 5
+        continue-on-error: true
+        run: |
+          $dir = Join-Path (Get-Location) "dist\T003 Label Studio"
+          $exe = Join-Path $dir "T003 Label Studio.exe"
+          $log = Join-Path (Get-Location) "selftest.log"
+          $applog = Join-Path $env:LOCALAPPDATA "T003 Label Studio\t003-label-studio.log"
+          function SelfTest($label) {
+            foreach ($f in $log, $applog) { if (Test-Path $f) { Remove-Item $f } }
+            $env:T003_SELFTEST_LOG = $log
+            $p = Start-Process -FilePath $exe -ArgumentList "--selftest" -PassThru
+            # a windowed app that crashes shows an error dialog and waits for a click: never wait for it forever
+            if (-not $p.WaitForExit(90000)) { Write-Host "no exit after 90 s (an error dialog?): killing it"; Stop-Process -Id $p.Id -Force }
+            Write-Host "=== $label : exit $($p.ExitCode), log written: $(Test-Path $log)"
+            if (Test-Path $log) { Get-Content $log | ForEach-Object { Write-Host $_ } }
+            if (Test-Path $applog) { Write-Host "--- the app's own log:"; Get-Content $applog -Tail 40 | ForEach-Object { Write-Host $_ } }
+            return $p.ExitCode
+          }
+          function MarkDownloaded() {
+            python -c "import sys, pathlib; [open(str(p) + ':Zone.Identifier', 'w').write('[ZoneTransfer]\r\nZoneId=3\r\n') for p in pathlib.Path(sys.argv[1]).rglob('*') if p.suffix in ('.dll', '.pyd', '.exe')]" $dir
+          }
+          MarkDownloaded
+          $env:T003_NO_UNBLOCK = "1"
+          $code = SelfTest "marked, no clean-up"
+          Write-Host "CONTROL exit code: $code (non-zero = the mark breaks the toolkit)"
       - name: Diagnose the Windows toolkit
         if: failure() && runner.os == 'Windows'
         shell: pwsh
